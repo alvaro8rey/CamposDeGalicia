@@ -1,0 +1,655 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		38F4B8752DC501C800E42E7B /* Auth in Frameworks */ = {isa = PBXBuildFile; productRef = 38F4B8742DC501C800E42E7B /* Auth */; };
+		38F4B8772DC501C800E42E7B /* Functions in Frameworks */ = {isa = PBXBuildFile; productRef = 38F4B8762DC501C800E42E7B /* Functions */; };
+		38F4B8792DC501C800E42E7B /* PostgREST in Frameworks */ = {isa = PBXBuildFile; productRef = 38F4B8782DC501C800E42E7B /* PostgREST */; };
+		38F4B87B2DC501C800E42E7B /* Realtime in Frameworks */ = {isa = PBXBuildFile; productRef = 38F4B87A2DC501C800E42E7B /* Realtime */; };
+		38F4B87D2DC501C800E42E7B /* Storage in Frameworks */ = {isa = PBXBuildFile; productRef = 38F4B87C2DC501C800E42E7B /* Storage */; };
+		38F4B87F2DC501C800E42E7B /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = 38F4B87E2DC501C800E42E7B /* Supabase */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		38F4B84E2DC4FDA500E42E7B /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 38F4B8352DC4FDA300E42E7B /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 38F4B83C2DC4FDA300E42E7B;
+			remoteInfo = "Campos de Galicia";
+		};
+		38F4B8582DC4FDA500E42E7B /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 38F4B8352DC4FDA300E42E7B /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 38F4B83C2DC4FDA300E42E7B;
+			remoteInfo = "Campos de Galicia";
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		38BA81EE2E9B018100106C75 /* Embed Watch Content */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "$(CONTENTS_FOLDER_PATH)/Watch";
+			dstSubfolderSpec = 16;
+			files = (
+			);
+			name = "Embed Watch Content";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		38F4B83D2DC4FDA300E42E7B /* Campos de Galicia.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Campos de Galicia.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		38F4B84D2DC4FDA500E42E7B /* Campos de GaliciaTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Campos de GaliciaTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		38F4B8572DC4FDA500E42E7B /* Campos de GaliciaUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Campos de GaliciaUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		38F4B83F2DC4FDA300E42E7B /* Campos de Galicia */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = "Campos de Galicia";
+			sourceTree = "<group>";
+		};
+		38F4B8502DC4FDA500E42E7B /* Campos de GaliciaTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = "Campos de GaliciaTests";
+			sourceTree = "<group>";
+		};
+		38F4B85A2DC4FDA500E42E7B /* Campos de GaliciaUITests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = "Campos de GaliciaUITests";
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		38F4B83A2DC4FDA300E42E7B /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				38F4B8792DC501C800E42E7B /* PostgREST in Frameworks */,
+				38F4B8772DC501C800E42E7B /* Functions in Frameworks */,
+				38F4B87F2DC501C800E42E7B /* Supabase in Frameworks */,
+				38F4B8752DC501C800E42E7B /* Auth in Frameworks */,
+				38F4B87D2DC501C800E42E7B /* Storage in Frameworks */,
+				38F4B87B2DC501C800E42E7B /* Realtime in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		38F4B84A2DC4FDA500E42E7B /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		38F4B8542DC4FDA500E42E7B /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		38F4B8342DC4FDA300E42E7B = {
+			isa = PBXGroup;
+			children = (
+				38F4B83F2DC4FDA300E42E7B /* Campos de Galicia */,
+				38F4B8502DC4FDA500E42E7B /* Campos de GaliciaTests */,
+				38F4B85A2DC4FDA500E42E7B /* Campos de GaliciaUITests */,
+				38F4B83E2DC4FDA300E42E7B /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		38F4B83E2DC4FDA300E42E7B /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				38F4B83D2DC4FDA300E42E7B /* Campos de Galicia.app */,
+				38F4B84D2DC4FDA500E42E7B /* Campos de GaliciaTests.xctest */,
+				38F4B8572DC4FDA500E42E7B /* Campos de GaliciaUITests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		38F4B83C2DC4FDA300E42E7B /* Campos de Galicia */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 38F4B8612DC4FDA500E42E7B /* Build configuration list for PBXNativeTarget "Campos de Galicia" */;
+			buildPhases = (
+				38F4B8392DC4FDA300E42E7B /* Sources */,
+				38F4B83A2DC4FDA300E42E7B /* Frameworks */,
+				38F4B83B2DC4FDA300E42E7B /* Resources */,
+				38BA81EE2E9B018100106C75 /* Embed Watch Content */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				38F4B83F2DC4FDA300E42E7B /* Campos de Galicia */,
+			);
+			name = "Campos de Galicia";
+			packageProductDependencies = (
+				38F4B8742DC501C800E42E7B /* Auth */,
+				38F4B8762DC501C800E42E7B /* Functions */,
+				38F4B8782DC501C800E42E7B /* PostgREST */,
+				38F4B87A2DC501C800E42E7B /* Realtime */,
+				38F4B87C2DC501C800E42E7B /* Storage */,
+				38F4B87E2DC501C800E42E7B /* Supabase */,
+			);
+			productName = "Campos de Galicia";
+			productReference = 38F4B83D2DC4FDA300E42E7B /* Campos de Galicia.app */;
+			productType = "com.apple.product-type.application";
+		};
+		38F4B84C2DC4FDA500E42E7B /* Campos de GaliciaTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 38F4B8642DC4FDA500E42E7B /* Build configuration list for PBXNativeTarget "Campos de GaliciaTests" */;
+			buildPhases = (
+				38F4B8492DC4FDA500E42E7B /* Sources */,
+				38F4B84A2DC4FDA500E42E7B /* Frameworks */,
+				38F4B84B2DC4FDA500E42E7B /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				38F4B84F2DC4FDA500E42E7B /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				38F4B8502DC4FDA500E42E7B /* Campos de GaliciaTests */,
+			);
+			name = "Campos de GaliciaTests";
+			packageProductDependencies = (
+			);
+			productName = "Campos de GaliciaTests";
+			productReference = 38F4B84D2DC4FDA500E42E7B /* Campos de GaliciaTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		38F4B8562DC4FDA500E42E7B /* Campos de GaliciaUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 38F4B8672DC4FDA500E42E7B /* Build configuration list for PBXNativeTarget "Campos de GaliciaUITests" */;
+			buildPhases = (
+				38F4B8532DC4FDA500E42E7B /* Sources */,
+				38F4B8542DC4FDA500E42E7B /* Frameworks */,
+				38F4B8552DC4FDA500E42E7B /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				38F4B8592DC4FDA500E42E7B /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				38F4B85A2DC4FDA500E42E7B /* Campos de GaliciaUITests */,
+			);
+			name = "Campos de GaliciaUITests";
+			packageProductDependencies = (
+			);
+			productName = "Campos de GaliciaUITests";
+			productReference = 38F4B8572DC4FDA500E42E7B /* Campos de GaliciaUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		38F4B8352DC4FDA300E42E7B /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1620;
+				LastUpgradeCheck = 1620;
+				TargetAttributes = {
+					38F4B83C2DC4FDA300E42E7B = {
+						CreatedOnToolsVersion = 16.2;
+					};
+					38F4B84C2DC4FDA500E42E7B = {
+						CreatedOnToolsVersion = 16.2;
+						TestTargetID = 38F4B83C2DC4FDA300E42E7B;
+					};
+					38F4B8562DC4FDA500E42E7B = {
+						CreatedOnToolsVersion = 16.2;
+						TestTargetID = 38F4B83C2DC4FDA300E42E7B;
+					};
+				};
+			};
+			buildConfigurationList = 38F4B8382DC4FDA300E42E7B /* Build configuration list for PBXProject "Campos de Galicia" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 38F4B8342DC4FDA300E42E7B;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				38F4B86A2DC4FDF100E42E7B /* XCRemoteSwiftPackageReference "supabase-swift" */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 38F4B83E2DC4FDA300E42E7B /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				38F4B83C2DC4FDA300E42E7B /* Campos de Galicia */,
+				38F4B84C2DC4FDA500E42E7B /* Campos de GaliciaTests */,
+				38F4B8562DC4FDA500E42E7B /* Campos de GaliciaUITests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		38F4B83B2DC4FDA300E42E7B /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		38F4B84B2DC4FDA500E42E7B /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		38F4B8552DC4FDA500E42E7B /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		38F4B8392DC4FDA300E42E7B /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		38F4B8492DC4FDA500E42E7B /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		38F4B8532DC4FDA500E42E7B /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		38F4B84F2DC4FDA500E42E7B /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 38F4B83C2DC4FDA300E42E7B /* Campos de Galicia */;
+			targetProxy = 38F4B84E2DC4FDA500E42E7B /* PBXContainerItemProxy */;
+		};
+		38F4B8592DC4FDA500E42E7B /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 38F4B83C2DC4FDA300E42E7B /* Campos de Galicia */;
+			targetProxy = 38F4B8582DC4FDA500E42E7B /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		38F4B85F2DC4FDA500E42E7B /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.2;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		38F4B8602DC4FDA500E42E7B /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.2;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		38F4B8622DC4FDA500E42E7B /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "\"Campos de Galicia/Preview Content\"";
+				DEVELOPMENT_TEAM = 99B6P28FRP;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Campos-de-Galicia-Info.plist";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.sports";
+				INFOPLIST_KEY_NSCameraUsageDescription = "La app necesita acceso a tu cámara para tomar fotos.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Necesitamos tu ubicación para mostrar los campos cercanos a ti.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "La app necesita acceso a tu galería para seleccionar fotos.";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UIStatusBarStyle = "";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "ARG.Campos-de-Galicia";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		38F4B8632DC4FDA500E42E7B /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "\"Campos de Galicia/Preview Content\"";
+				DEVELOPMENT_TEAM = 99B6P28FRP;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Campos-de-Galicia-Info.plist";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.sports";
+				INFOPLIST_KEY_NSCameraUsageDescription = "La app necesita acceso a tu cámara para tomar fotos.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Necesitamos tu ubicación para mostrar los campos cercanos a ti.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "La app necesita acceso a tu galería para seleccionar fotos.";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UIStatusBarStyle = "";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "ARG.Campos-de-Galicia";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		38F4B8652DC4FDA500E42E7B /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 99B6P28FRP;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.2;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "ARG.Campos-de-GaliciaTests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Campos de Galicia.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Campos de Galicia";
+			};
+			name = Debug;
+		};
+		38F4B8662DC4FDA500E42E7B /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 99B6P28FRP;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.2;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "ARG.Campos-de-GaliciaTests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Campos de Galicia.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Campos de Galicia";
+			};
+			name = Release;
+		};
+		38F4B8682DC4FDA500E42E7B /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 99B6P28FRP;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "ARG.Campos-de-GaliciaUITests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = "Campos de Galicia";
+			};
+			name = Debug;
+		};
+		38F4B8692DC4FDA500E42E7B /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 99B6P28FRP;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "ARG.Campos-de-GaliciaUITests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = "Campos de Galicia";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		38F4B8382DC4FDA300E42E7B /* Build configuration list for PBXProject "Campos de Galicia" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				38F4B85F2DC4FDA500E42E7B /* Debug */,
+				38F4B8602DC4FDA500E42E7B /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		38F4B8612DC4FDA500E42E7B /* Build configuration list for PBXNativeTarget "Campos de Galicia" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				38F4B8622DC4FDA500E42E7B /* Debug */,
+				38F4B8632DC4FDA500E42E7B /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		38F4B8642DC4FDA500E42E7B /* Build configuration list for PBXNativeTarget "Campos de GaliciaTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				38F4B8652DC4FDA500E42E7B /* Debug */,
+				38F4B8662DC4FDA500E42E7B /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		38F4B8672DC4FDA500E42E7B /* Build configuration list for PBXNativeTarget "Campos de GaliciaUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				38F4B8682DC4FDA500E42E7B /* Debug */,
+				38F4B8692DC4FDA500E42E7B /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		38F4B86A2DC4FDF100E42E7B /* XCRemoteSwiftPackageReference "supabase-swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/supabase/supabase-swift";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.5.1;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		38F4B8742DC501C800E42E7B /* Auth */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 38F4B86A2DC4FDF100E42E7B /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Auth;
+		};
+		38F4B8762DC501C800E42E7B /* Functions */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 38F4B86A2DC4FDF100E42E7B /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Functions;
+		};
+		38F4B8782DC501C800E42E7B /* PostgREST */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 38F4B86A2DC4FDF100E42E7B /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = PostgREST;
+		};
+		38F4B87A2DC501C800E42E7B /* Realtime */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 38F4B86A2DC4FDF100E42E7B /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Realtime;
+		};
+		38F4B87C2DC501C800E42E7B /* Storage */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 38F4B86A2DC4FDF100E42E7B /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Storage;
+		};
+		38F4B87E2DC501C800E42E7B /* Supabase */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 38F4B86A2DC4FDF100E42E7B /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Supabase;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = 38F4B8352DC4FDA300E42E7B /* Project object */;
+}

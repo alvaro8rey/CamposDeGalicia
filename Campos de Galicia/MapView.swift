@@ -38,6 +38,7 @@ struct Filtros: Equatable {
 }
 
 struct MapaView: View {
+    @EnvironmentObject var camposViewModel: CamposViewModel
     @State private var region: MKCoordinateRegion
     @State private var isSatelliteView: Bool = false
     @State private var selectedCampo: CampoModel? = nil
@@ -50,7 +51,6 @@ struct MapaView: View {
     @State private var errorMessage: String? = nil
     @State private var userTrackingMode: MKUserTrackingMode = .none
     
-    let campos: [CampoModel]
     private let geocoder = CLGeocoder()
     private let cache = UserDefaults.standard
     
@@ -58,9 +58,7 @@ struct MapaView: View {
         return supabase.auth.currentUser != nil
     }
     
-    init(campos: [CampoModel]) {
-        self.campos = campos
-        self._filteredCampos = State(initialValue: campos)
+    init() {
         let initialRegion = MKCoordinateRegion(
             center: CLLocationCoordinate2D(latitude: 42.5, longitude: -8.5),
             span: MKCoordinateSpan(latitudeDelta: 2, longitudeDelta: 2)
@@ -68,7 +66,7 @@ struct MapaView: View {
         self._region = State(initialValue: initialRegion)
     }
 
-    @State private var filteredCampos: [CampoModel]
+    @State private var filteredCampos: [CampoModel] = []
     @State private var mapView: MKMapView?
 
     var body: some View {
@@ -233,7 +231,7 @@ struct MapaView: View {
             }
         }
         .sheet(item: $selectedCampo) { campo in
-            CampoDetalleView(campo: campo)
+            CampoDetalleView(campoID: campo.id)
         }
         .sheet(isPresented: $showFiltros) {
             FiltrosView(filtros: $filtros, onApply: { newFiltros in
@@ -247,7 +245,7 @@ struct MapaView: View {
                 applyFiltros()
             }
         }
-        .onChange(of: campos) { _ in
+        .onChange(of: camposViewModel.campos) { _ in
             applyFiltros()
         }
         .onChange(of: filtros) { _ in
@@ -262,7 +260,7 @@ struct MapaView: View {
     }
     
     private func applyFiltros() {
-        filteredCampos = campos.filter { campo in
+        filteredCampos = camposViewModel.campos.filter { campo in
             var matches = true
             
             if let tipo = filtros.tipo, !tipo.isEmpty {

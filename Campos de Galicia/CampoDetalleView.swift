@@ -18,7 +18,7 @@ struct CampoContribucion: Encodable {
     let aprobada: Bool
 }
 
-struct ContribucionAprobada: Decodable {
+struct ContribucionAprobada: Codable {
     let id_usuario: String
     let fotos_adicionales: [String]?
     let tiene_cantina: Bool?
@@ -36,7 +36,9 @@ struct UserProfile: Decodable {
 }
 
 struct CampoDetalleView: View {
-    let campo: CampoModel
+    let campoID: UUID
+    @EnvironmentObject var camposViewModel: CamposViewModel
+    @State private var campo: CampoModel?
     @Environment(\.colorScheme) var colorScheme
     @State private var errorMessage: String? = nil
     @State private var isVisited: Bool = false
@@ -55,8 +57,18 @@ struct CampoDetalleView: View {
     // URL de la imagen predeterminada de Supabase
     private let defaultImageURL = "https://ooqdrhkzsexjnmnvpwqw.supabase.co/storage/v1/object/public/fotos-campos/sin-imagen.png"
 
+    private var campoValue: CampoModel? {
+        campo ?? camposViewModel.campo(with: campoID)
+    }
+
+    private func syncCampo() {
+        campo = camposViewModel.campo(with: campoID)
+    }
+
     var body: some View {
-        ZStack {
+        Group {
+            if let campo = campo {
+                ZStack {
             GeometryReader { geometry in
                 ScrollView {
                     VStack(alignment: .leading, spacing: 16) {
@@ -444,15 +456,27 @@ struct CampoDetalleView: View {
                 .frame(maxWidth: .infinity, alignment: .center)
                 .ignoresSafeArea(.keyboard, edges: .bottom)
             }
+                }
+            } else {
+                VStack(spacing: 12) {
+                    ProgressView("Cargando campo...")
+                    Text("No se encontró la información del campo.")
+                        .font(.footnote)
+                        .foregroundColor(.secondary)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
         }
-        .navigationTitle(campo.nombre)
+        .navigationTitle(campo?.nombre ?? "Campo")
         .navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $showingContribucionForm) {
-            ContribucionFormView(campo: campo, onSubmit: { contribucion in
-                Task {
-                    await submitContribucion(contribucion)
-                }
-            })
+            if let campo = campoValue {
+                ContribucionFormView(campo: campo, onSubmit: { contribucion in
+                    Task {
+                        await submitContribucion(contribucion)
+                    }
+                })
+            }
         }
         .sheet(isPresented: $showingImageViewer) {
             if let todasLasFotos = getAllPhotos(), !todasLasFotos.isEmpty {
@@ -460,10 +484,18 @@ struct CampoDetalleView: View {
             }
         }
         .onAppear {
+            syncCampo()
+            if let extras = camposViewModel.extras(for: campoID) {
+                contribucionesAprobadas = extras.contribuciones
+                Task { await preloadUserNames(for: extras.contribuciones) }
+            }
             Task {
                 await checkIfVisited()
-                await fetchContribucionesAprobadas()
+                await fetchContribucionesAprobadas(forceRefresh: false)
             }
+        }
+        .onChange(of: camposViewModel.campos) { _ in
+            syncCampo()
         }
         .alert(isPresented: $showLocationAlert) {
             Alert(
@@ -478,7 +510,7 @@ struct CampoDetalleView: View {
 
     private func markVisitWithProximityCheck() async {
         // 1) Coordenadas del campo
-        guard let lat = campo.latitud, let lon = campo.longitud else {
+        guard let campo = campoValue, let lat = campo.latitud, let lon = campo.longitud else {
             locationAlertMessage = "Este campo no tiene coordenadas válidas."
             showLocationAlert = true
             return
@@ -530,6 +562,10 @@ struct CampoDetalleView: View {
             return
         }
 
+        guard let campo = campoValue else {
+            return
+        }
+
         do {
             let response = try await supabase.from("visitas")
                 .select("id_campo")
@@ -553,6 +589,10 @@ struct CampoDetalleView: View {
     private func markAsVisited() async {
         guard let currentUser = supabase.auth.currentUser else {
             errorMessage = "Usuario no autenticado"
+            return
+        }
+
+        guard let campo = campoValue else {
             return
         }
 
@@ -580,6 +620,10 @@ struct CampoDetalleView: View {
             return
         }
 
+        guard let campo = campoValue else {
+            return
+        }
+
         do {
             let response = try await supabase.from("visitas")
                 .delete()
@@ -596,25 +640,22 @@ struct CampoDetalleView: View {
         }
     }
 
-    private func fetchContribucionesAprobadas() async {
+    private func fetchContribucionesAprobadas(forceRefresh: Bool) async {
         do {
-            let response = try await supabase.from("campo_contribuciones")
-                .select("id_usuario, fotos_adicionales, tiene_cantina, aforo_grada, medidas_campo, tipo_iluminacion, estado_cesped, accesibilidad, notas")
-                .eq("id_campo", value: campo.id.uuidString)
-                .eq("aprobada", value: true)
-                .execute()
+            let extras = try await camposViewModel.loadExtras(for: campoID, forceRefresh: forceRefresh)
+            contribucionesAprobadas = extras.contribuciones
+            errorMessage = nil
 
-            let data = response.data
-            let decoder = JSONDecoder()
-            let contribuciones = try decoder.decode([ContribucionAprobada].self, from: data)
-            self.contribucionesAprobadas = contribuciones
-
-            for contribucion in contribuciones {
-                await fetchUsername(for: contribucion.id_usuario)
-            }
+            await preloadUserNames(for: extras.contribuciones)
         } catch {
             errorMessage = "Error al cargar contribuciones aprobadas: \(error.localizedDescription)"
             print("Error al cargar contribuciones aprobadas: \(error)")
+        }
+    }
+
+    private func preloadUserNames(for contribuciones: [ContribucionAprobada]) async {
+        for contribucion in contribuciones {
+            await fetchUsername(for: contribucion.id_usuario)
         }
     }
 
@@ -637,6 +678,10 @@ struct CampoDetalleView: View {
     }
 
     private func submitContribucion(_ contribucion: CampoContribucion) async {
+
+        guard let campo = campoValue else {
+            return
+        }
         do {
             let response = try await supabase.from("campo_contribuciones")
                 .insert(contribucion)
@@ -644,6 +689,8 @@ struct CampoDetalleView: View {
             errorMessage = "Contribución enviada con éxito. ¡Gracias por tu ayuda!"
             print("Contribución enviada para campo: \(campo.nombre), respuesta: \(response)")
             showingContribucionForm = false
+            await camposViewModel.invalidateExtras(for: campoID)
+            await fetchContribucionesAprobadas(forceRefresh: true)
         } catch {
             errorMessage = "Error al enviar la contribución: \(error.localizedDescription)"
             print("Error al enviar contribución: \(error)")

@@ -9,7 +9,7 @@ extension CLLocationCoordinate2D: Equatable {
 }
 
 struct CamposCercanosView: View {
-    @Binding var campos: [CampoModel]
+    @EnvironmentObject var camposViewModel: CamposViewModel
     @Binding var userLocation: CLLocationCoordinate2D?
     @Binding var isLoadingLocation: Bool
     @Binding var distanciaPredeterminada: Double
@@ -22,13 +22,11 @@ struct CamposCercanosView: View {
     private let distanceOptions: [Double] = [10.0, 25.0, 50.0]
 
     init(
-        campos: Binding<[CampoModel]>,
         userLocation: Binding<CLLocationCoordinate2D?>,
         isLoadingLocation: Binding<Bool>,
         distanciaPredeterminada: Binding<Double>,
         requestLocation: @escaping () -> Void
     ) {
-        self._campos = campos
         self._userLocation = userLocation
         self._isLoadingLocation = isLoadingLocation
         self._distanciaPredeterminada = distanciaPredeterminada
@@ -67,7 +65,7 @@ struct CamposCercanosView: View {
                                 // ✅ Misma estructura que en ContentView
                                 LazyVStack(spacing: 0) {
                                     ForEach(nearbyCampos, id: \.campo.id) { item in
-                                        NavigationLink(destination: CampoDetalleView(campo: item.campo)) {
+                                        NavigationLink(destination: CampoDetalleView(campoID: item.campo.id)) {
                                             CampoRowView_Classic(campoWithDistance: item)
                                         }
                                         .buttonStyle(PlainButtonStyle())
@@ -105,7 +103,7 @@ struct CamposCercanosView: View {
                 if userLocation == nil { requestLocation() }
             }
             .onChange(of: userLocation) { _ in updateNearbyCampos() }
-            .onChange(of: campos) { _ in updateNearbyCampos() }
+            .onChange(of: camposViewModel.campos) { _ in updateNearbyCampos() }
             .onChange(of: selectedDistance) { _ in updateNearbyCampos() }
             .onChange(of: distanciaPredeterminada) { newDistance in
                 let validDistance = distanceOptions.min(by: { abs($0 - newDistance) < abs($1 - newDistance) }) ?? 10.0
@@ -136,7 +134,7 @@ struct CamposCercanosView: View {
     // MARK: - Cálculos
     private func updateNearbyCampos() {
         guard let userLocation = userLocation else { return }
-        nearbyCampos = campos
+        nearbyCampos = camposViewModel.campos
             .compactMap { campo -> CampoWithDistance? in
                 guard let lat = campo.latitud, let lon = campo.longitud else { return nil }
                 let dist = calculateDistance(

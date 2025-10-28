@@ -22,6 +22,7 @@
 	<array>
 		<string>fetch</string>
 		<string>remote-notification</string>
+		<string>location</string>
 	</array>
 </dict>
 </plist>

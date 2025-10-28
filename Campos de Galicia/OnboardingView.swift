@@ -47,7 +47,7 @@ struct OnboardingView: View {
     @State private var notifRequesting = false
 
     @State private var page = 0
-    private let totalPages = 4
+    private let totalPages = 5
 
     var body: some View {
         NavigationView {
@@ -55,8 +55,9 @@ struct OnboardingView: View {
                 TabView(selection: $page) {
                     introPage.tag(0)
                     howItWorksPage.tag(1)
-                    notificationsPage.tag(2)
-                    locationPermissionPage.tag(3)
+                    autoCheckinPage.tag(2)
+                    notificationsPage.tag(3)
+                    locationPermissionPage.tag(4)
                 }
                 .tabViewStyle(.page)
                 .indexViewStyle(.page(backgroundDisplayMode: .always))
@@ -67,6 +68,16 @@ struct OnboardingView: View {
                     .background(.ultraThinMaterial)
             }
             .navigationBarHidden(true)
+            .onChange(of: page) { newValue in
+                // Solicita permisos solo cuando se llega a cada pantalla correspondiente
+                if newValue == 3 { // Notificaciones
+                    requestNotificationPermissionIfNeeded()
+                } else if newValue == 4 { // Ubicación
+                    if locationPerm.status == .notDetermined {
+                        locationPerm.requestWhenInUse()
+                    }
+                }
+            }
             .onAppear {
                 refreshNotifStatus()
             }
@@ -111,80 +122,47 @@ struct OnboardingView: View {
         .padding(.top, 24)
     }
 
+    private var autoCheckinPage: some View {
+        VStack(spacing: 16) {
+            Spacer(minLength: 10)
+            Image(systemName: "location.circle.fill")
+                .font(.system(size: 64))
+                .foregroundColor(.green)
+            Text("Auto Check-in")
+                .font(.title3).fontWeight(.bold)
+            Text("El auto check-in registra automáticamente tu visita cuando estás **a menos de 250 m** de un campo y permaneces allí unos minutos.")
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 24)
+
+            VStack(alignment: .leading, spacing: 8) {
+                bullet("Funciona con geovallas del sistema (muy bajo consumo).")
+                bullet("No usa tu ubicación constantemente.")
+                bullet("Si ya habías visitado ese campo, no se repite.")
+            }
+            .padding(.horizontal, 24)
+
+            Spacer()
+        }
+        .padding(.top, 24)
+    }
+
     private var notificationsPage: some View {
         VStack(spacing: 16) {
             Spacer(minLength: 10)
             Image(systemName: "bell.badge.fill")
                 .font(.system(size: 64))
                 .foregroundColor(.purple)
-            Text("Permitir notificaciones")
+            Text("Notificaciones")
                 .font(.title3).fontWeight(.bold)
-            Text("Te avisaremos cuando tu **recompensa diaria** esté lista. Puedes activarlas ahora o más tarde en Ajustes.")
+            Text("Te avisaremos cuando tu **recompensa diaria** esté lista y cuando se registre automáticamente una visita.")
                 .font(.subheadline)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 24)
 
-            // Estado
             permissionStatusView(type: .notifications)
-
-            // Botón
-            if notifStatus == .notDetermined {
-                Button {
-                    requestNotificationPermission()
-                } label: {
-                    HStack {
-                        Image(systemName: "bell.fill")
-                        Text("Permitir notificaciones")
-                            .fontWeight(.semibold)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(Color.purple)
-                    .foregroundColor(.white)
-                    .cornerRadius(12)
-                    .shadow(radius: 2, y: 1)
-                }
-                .padding(.horizontal, 24)
-                .padding(.top, 8)
-                .disabled(notifRequesting)
-            } else if notifStatus == .authorized || notifStatus == .provisional || notifStatus == .ephemeral {
-                Button {
-                } label: {
-                    HStack {
-                        Image(systemName: "checkmark.circle.fill")
-                        Text("Notificaciones activadas")
-                            .fontWeight(.semibold)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(Color.purple.opacity(0.2))
-                    .foregroundColor(.purple)
-                    .cornerRadius(12)
-                }
-                .padding(.horizontal, 24)
-                .padding(.top, 8)
-                .disabled(true)
-            } else {
-                Button {
-                    openSettings()
-                } label: {
-                    HStack {
-                        Image(systemName: "gearshape.fill")
-                        Text("Abrir Ajustes")
-                            .fontWeight(.semibold)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(Color.orange)
-                    .foregroundColor(.white)
-                    .cornerRadius(12)
-                    .shadow(radius: 2, y: 1)
-                }
-                .padding(.horizontal, 24)
-                .padding(.top, 8)
-            }
-
             Spacer()
         }
         .padding(.top, 24)
@@ -193,46 +171,18 @@ struct OnboardingView: View {
     private var locationPermissionPage: some View {
         VStack(spacing: 16) {
             Spacer(minLength: 10)
-            Image(systemName: "location.circle.fill")
+            Image(systemName: "location.fill.viewfinder")
                 .font(.system(size: 64))
                 .foregroundColor(.pink)
             Text("Permitir ubicación")
                 .font(.title3).fontWeight(.bold)
-            Text("Usamos tu ubicación **solo** para verificar que estás cerca del campo y así registrar visitas reales (evita marcar campos desde casa).")
+            Text("Usamos tu ubicación **solo** para verificar que estás cerca del campo y así registrar visitas reales.")
                 .font(.subheadline)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 24)
 
-            Button {
-                locationPerm.requestWhenInUse()
-            } label: {
-                HStack {
-                    Image(systemName: locationPerm.status == .authorizedWhenInUse || locationPerm.status == .authorizedAlways ? "checkmark.circle.fill" : "location.fill")
-                    Text(locationPerm.status == .authorizedWhenInUse || locationPerm.status == .authorizedAlways ? "Permiso concedido" : "Permitir ubicación")
-                        .fontWeight(.semibold)
-                }
-                .frame(maxWidth: .infinity)
-                .padding()
-                .background(
-                    locationPerm.status == .authorizedWhenInUse || locationPerm.status == .authorizedAlways
-                        ? Color.green.opacity(0.25)
-                        : Color.blue
-                )
-                .foregroundColor(
-                    locationPerm.status == .authorizedWhenInUse || locationPerm.status == .authorizedAlways
-                        ? .green
-                        : .white
-                )
-                .cornerRadius(12)
-                .shadow(radius: 2, y: 1)
-            }
-            .padding(.horizontal, 24)
-            .padding(.top, 8)
-            .disabled(locationPerm.status == .authorizedWhenInUse || locationPerm.status == .authorizedAlways)
-
             permissionStatusView(type: .location)
-
             Spacer()
         }
         .padding(.top, 24)
@@ -275,12 +225,14 @@ struct OnboardingView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    private func requestNotificationPermission() {
-        notifRequesting = true
-        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { granted, _ in
-            DispatchQueue.main.async {
-                notifRequesting = false
-                refreshNotifStatus()
+    private func requestNotificationPermissionIfNeeded() {
+        UNUserNotificationCenter.current().getNotificationSettings { settings in
+            if settings.authorizationStatus == .notDetermined {
+                UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { _, _ in
+                    DispatchQueue.main.async {
+                        refreshNotifStatus()
+                    }
+                }
             }
         }
     }
@@ -290,12 +242,6 @@ struct OnboardingView: View {
             DispatchQueue.main.async {
                 notifStatus = settings.authorizationStatus
             }
-        }
-    }
-
-    private func openSettings() {
-        if let url = URL(string: UIApplication.openSettingsURLString) {
-            UIApplication.shared.open(url)
         }
     }
 
@@ -355,7 +301,9 @@ struct OnboardingView: View {
                             .foregroundColor(.red)
                             .font(.footnote).bold()
                         Button("Abrir Ajustes") {
-                            openSettings()
+                            if let url = URL(string: UIApplication.openSettingsURLString) {
+                                UIApplication.shared.open(url)
+                            }
                         }
                         .font(.caption).bold()
                         .padding(.vertical, 6)

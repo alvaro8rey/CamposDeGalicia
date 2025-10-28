@@ -1,7 +1,9 @@
 
 import SwiftUI
 import Supabase
-
+import CoreLocation
+import UserNotifications
+import UIKit
 // MARK: - UserView
 
 struct UserView: View {
@@ -64,10 +66,16 @@ struct UserView: View {
     @State private var resetPasswordError: String? = nil
 
     @Environment(\.colorScheme) var colorScheme
+    @EnvironmentObject var geofenceManager: GeofenceManager
+    @State private var showInfoSheet = false
+    @EnvironmentObject var locationManager: LocationManager
+    @AppStorage("auto_checkin_enabled") private var autoCheckinStored: Bool = false
+
+
 
     // MARK: Body
     var body: some View {
-        VStack(spacing: 30) {
+        Group {
             if isAuthenticated, let user = user {
                 authenticatedView(user: user)
                     .navigationTitle("Perfil")
@@ -98,9 +106,7 @@ struct UserView: View {
                 loginView()
                     .navigationBarTitleDisplayMode(.inline)
             }
-            Spacer()
         }
-        .frame(maxHeight: .infinity, alignment: .top)
         .background(
             LinearGradient(
                 gradient: Gradient(colors: [
@@ -142,7 +148,6 @@ struct UserView: View {
             Task { await loadAchievementsCount() }
         }
         .onReceive(NotificationCenter.default.publisher(for: .showResetPassword)) { _ in
-            // Cierra el sheet de solicitud y abre el de nueva contraseña
             showingResetPassword = false
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                 showingResetPasswordSheet = true
@@ -161,9 +166,10 @@ struct UserView: View {
         .sheet(isPresented: $showingResetPasswordSheet) {
             resetPasswordFromLinkSheet()
                 .presentationDetents([.medium])
-                .presentationDragIndicator(.visible)
+            .presentationDragIndicator(.visible)
         }
     }
+
 }
 
 // MARK: - Sheets
@@ -558,14 +564,61 @@ extension UserView {
     private func welcomeSection(user: User) -> some View {
         VStack(spacing: 12) {
             HStack {
-                Image(systemName: "person.fill").foregroundColor(.yellow).font(.title2)
+                Image(systemName: "person.fill")
+                    .foregroundColor(.yellow)
+                    .font(.title2)
                 Text("\(nombre) \(apellidos)")
                     .font(.system(size: 26, weight: .bold, design: .rounded))
                     .foregroundColor(.primary)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
 
+            // Barra de XP
             progressBarView()
+
+            // 🔄 Auto Check-in toggle + botón info
+            VStack(alignment: .leading, spacing: 6) {
+                HStack {
+                    Toggle(isOn: Binding(
+                        get: { autoCheckinStored },
+                        set: { newValue in
+                            autoCheckinStored = newValue
+                            if newValue {
+                                // Activa geovallas (solo geofences, sin GPS continuo)
+                                geofenceManager.setAutoCheckin(true, campos: campos)
+                            } else {
+                                geofenceManager.setAutoCheckin(false, campos: campos)
+                            }
+                        }
+                    )) {
+                        Label("Auto Check-in", systemImage: "location.circle.fill")
+                            .font(.headline)
+                            .foregroundColor(.primary)
+                    }
+                    .toggleStyle(SwitchToggleStyle(tint: .blue))
+                    .padding(.top, 8)
+
+                    // ℹ️ Botón de información
+                    Button {
+                        showInfoSheet.toggle()
+                    } label: {
+                        Image(systemName: "info.circle")
+                            .foregroundColor(.blue)
+                            .font(.title3)
+                    }
+                }
+
+                if autoCheckinStored {
+                    Text("El auto check-in está activo.")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                } else {
+                    Text("Actívalo para registrar automáticamente visitas cercanas (2 min dentro del área).")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+            }
+            .padding(.top, 4)
 
             if let errorMessageLevel = errorMessageLevel {
                 Text(errorMessageLevel)
@@ -577,10 +630,26 @@ extension UserView {
         .padding()
         .background(Color(UIColor.secondarySystemBackground))
         .cornerRadius(15)
-        .overlay(RoundedRectangle(cornerRadius: 15).stroke(Color.gray.opacity(0.3), lineWidth: 1))
+        .overlay(
+            RoundedRectangle(cornerRadius: 15)
+                .stroke(Color.gray.opacity(0.3), lineWidth: 1)
+        )
         .shadow(color: Color.black.opacity(0.1), radius: 8, x: 0, y: 4)
         .frame(maxWidth: .infinity)
+        // Hoja de información (tu hoja existente)
+        .sheet(isPresented: $showInfoSheet) {
+            AutoCheckinInfoSheet(locationManager: locationManager)
+        }
+        // Al entrar en la vista, sincroniza el estado persistido con el manager
+        .onAppear {
+            if autoCheckinStored {
+                geofenceManager.setAutoCheckin(true, campos: campos)
+            } else {
+                geofenceManager.setAutoCheckin(false, campos: campos)
+            }
+        }
     }
+
 
     // MARK: - Barra de progreso XP final
     private func progressBarView() -> some View {
@@ -1473,5 +1542,201 @@ struct RoundedCorner: Shape {
             cornerRadii: CGSize(width: radius, height: radius)
         )
         return Path(path.cgPath)
+    }
+}
+
+struct AutoCheckinInfoSheet: View {
+    @ObservedObject var locationManager: LocationManager
+    @Environment(\.dismiss) private var dismiss
+    
+    // Estado de permisos
+    @State private var notifAuthorized: Bool = false
+    @State private var notifProvisional: Bool = false
+
+    var body: some View {
+        NavigationView {
+            ScrollView {
+                VStack(spacing: 16) {
+
+                    // Qué es
+                    infoCard {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("¿Qué es el Auto Check-in?")
+                                .font(.headline)
+                            Text("Cuando estás cerca de un campo (≈500 m) y permaneces unos 2 minutos, registramos la visita automáticamente y te avisamos con una notificación.")
+                                .foregroundColor(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+
+                    // Cómo funciona
+                    infoCard {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("¿Cómo funciona?")
+                                .font(.headline)
+                            VStack(alignment: .leading, spacing: 6) {
+                                bullet("Usa **geovallas** del sistema (muy bajo consumo).")
+                                bullet("No rastreamos tu ubicación constantemente.")
+                                bullet("Solo se comprueba si sigues dentro del área durante ~2 minutos.")
+                                bullet("Si ya habías visitado ese campo, **no se repite**.")
+                            }
+                        }
+                    }
+
+                    // Permisos requeridos
+                    infoCard {
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("Permisos necesarios")
+                                .font(.headline)
+
+                            permRow(
+                                title: "Ubicación (Cuando se use la app / Siempre)",
+                                ok: isLocationAtLeastWhenInUse
+                            )
+                            permRow(
+                                title: notifProvisional ? "Notificaciones (Provisional)" : "Notificaciones",
+                                ok: notifAuthorized || notifProvisional
+                            )
+
+                            Text("Para que funcione con la app cerrada, activa “Siempre” en Ajustes.")
+                                .font(.footnote)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+
+                    // Botón Ajustes
+                    infoCard {
+                        VStack(spacing: 10) {
+                            Button {
+                                openAppSettings()
+                            } label: {
+                                HStack {
+                                    Image(systemName: "gearshape.fill")
+                                    Text("Abrir Ajustes de la app")
+                                        .fontWeight(.semibold)
+                                }
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 12)
+                                .foregroundColor(.white)
+                                .background(Color.blue)
+                                .cornerRadius(12)
+                            }
+                        }
+                    }
+
+                    // Estado actual
+                    infoCard {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Estado actual")
+                                .font(.headline)
+                            VStack(alignment: .leading, spacing: 6) {
+                                Text("• Ubicación: \(readableLocationStatus)")
+                                Text("• Notificaciones: \(readableNotifStatus)")
+                            }
+                            .foregroundColor(.secondary)
+                        }
+                    }
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+            }
+            .background(
+                LinearGradient(
+                    gradient: Gradient(colors: [Color.blue.opacity(0.15), Color(UIColor.systemBackground).opacity(0.95)]),
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                ).ignoresSafeArea()
+            )
+            .navigationTitle("Auto Check-in")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cerrar") {
+                        dismiss()
+                    }
+                }
+            }
+            .onAppear {
+                refreshNotifStatus()
+            }
+        }
+    }
+
+    // MARK: - Subvistas reutilizables
+
+    @ViewBuilder
+    private func infoCard<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
+        VStack { content() }
+            .padding(16)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(Color(UIColor.secondarySystemBackground))
+                    .shadow(color: Color.black.opacity(0.06), radius: 6, x: 0, y: 3)
+            )
+    }
+
+    private func bullet(_ text: String) -> some View {
+        HStack(alignment: .top, spacing: 8) {
+            Text("•").bold()
+            Text(LocalizedStringKey(text))
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    private func permRow(title: String, ok: Bool) -> some View {
+        HStack {
+            Image(systemName: ok ? "checkmark.circle.fill" : "xmark.circle.fill")
+                .foregroundColor(ok ? .green : .red)
+            Text(title)
+            Spacer()
+            Text(ok ? "Otorgado" : "Pendiente")
+                .font(.caption)
+                .foregroundColor(ok ? .green : .secondary)
+        }
+    }
+
+    // MARK: - Estado
+
+    private var isLocationAtLeastWhenInUse: Bool {
+        switch locationManager.authorizationStatus {
+        case .authorizedWhenInUse, .authorizedAlways:
+            return true
+        default:
+            return false
+        }
+    }
+
+    private var readableLocationStatus: String {
+        switch locationManager.authorizationStatus {
+        case .notDetermined: return "No determinado"
+        case .restricted:    return "Restringido"
+        case .denied:        return "Denegado"
+        case .authorizedWhenInUse: return "Cuando se use la app"
+        case .authorizedAlways:    return "Siempre"
+        @unknown default:    return "Desconocido"
+        }
+    }
+
+    private var readableNotifStatus: String {
+        if notifAuthorized { return "Permitidas" }
+        if notifProvisional { return "Provisionales" }
+        return "Denegadas"
+    }
+
+    // MARK: - Acciones
+
+    private func refreshNotifStatus() {
+        UNUserNotificationCenter.current().getNotificationSettings { settings in
+            DispatchQueue.main.async {
+                self.notifAuthorized = (settings.authorizationStatus == .authorized)
+                self.notifProvisional = (settings.authorizationStatus == .provisional)
+            }
+        }
+    }
+
+    private func openAppSettings() {
+        guard let url = URL(string: UIApplication.openSettingsURLString) else { return }
+        UIApplication.shared.open(url)
     }
 }

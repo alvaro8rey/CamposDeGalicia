@@ -12,6 +12,7 @@ struct AppMain: App {
     @State private var campos: [CampoModel] = []
     @State private var isLoading: Bool = true
     @StateObject private var locationManager = LocationManager()
+    @StateObject private var geofenceManager = GeofenceManager()   // ✅ nuevo
     @State private var distanciaPredeterminada: Double = 10.0
 
     @State private var showVerificationAlert: Bool = false
@@ -19,6 +20,11 @@ struct AppMain: App {
 
     init() {
         fetchCampos()
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { ok, err in
+            if let err = err { print("🔔 notif auth err: \(err.localizedDescription)") }
+            print("🔔 notif auth granted: \(ok)")
+        }
+        UNUserNotificationCenter.current().delegate = NotificationDelegate.shared
     }
 
     var body: some Scene {
@@ -69,6 +75,7 @@ struct AppMain: App {
                         distanciaPredeterminada: $distanciaPredeterminada
                     )
                 }
+                .environmentObject(locationManager)
                 .tabItem {
                     Image(systemName: "person.fill")
                     Text("Usuario")
@@ -76,25 +83,25 @@ struct AppMain: App {
                 .tag(3)
             }
             .accentColor(.blue)
+            .environmentObject(geofenceManager) // ✅ inyectamos el manager
             .onAppear {
-                // ✅ Usa el NotificationDelegate que ya tienes en tu otro archivo
-                UNUserNotificationCenter.current().delegate = NotificationDelegate.shared
-
                 fetchCampos()
                 locationManager.requestLocation()
 
-                // Log de estado de permisos de notificaciones (útil para depurar)
-                UNUserNotificationCenter.current().getNotificationSettings { settings in
-                    print("🔧 Estado de notificaciones: \(settings.authorizationStatus.rawValue)")
+                if geofenceManager.autoCheckinEnabled {
+                    geofenceManager.refreshWith(campos: campos)
                 }
-                
             }
             .onChange(of: locationManager.authorizationStatus) { status in
                 if status == .authorizedWhenInUse || status == .authorizedAlways {
                     locationManager.requestLocation()
                 }
             }
-            // ✅ Manejo de enlaces de Supabase
+            .onChange(of: campos) { _ in
+                if geofenceManager.autoCheckinEnabled {
+                    geofenceManager.refreshWith(campos: campos)
+                }
+            }
             .onOpenURL { url in
                 handleDeepLink(url: url)
             }
@@ -112,15 +119,11 @@ struct AppMain: App {
     func fetchCampos() {
         print("Iniciando fetchCampos()")
         Task {
-            DispatchQueue.main.async {
-                isLoading = true
-            }
-
+            DispatchQueue.main.async { isLoading = true }
             do {
                 let response = try await supabase.from("campos").select("*").execute()
-                let data = response.data
                 let decoder = JSONDecoder()
-                let camposResponse = try decoder.decode([CampoModel].self, from: data)
+                let camposResponse = try decoder.decode([CampoModel].self, from: response.data)
 
                 DispatchQueue.main.async {
                     campos = camposResponse.sorted { $0.nombre.lowercased() < $1.nombre.lowercased() }
@@ -129,21 +132,15 @@ struct AppMain: App {
                 }
             } catch {
                 print("Error al cargar campos: \(error)")
-                DispatchQueue.main.async {
-                    isLoading = false
-                }
+                DispatchQueue.main.async { isLoading = false }
             }
         }
     }
 
-    // MARK: - Manejo de Deep Links de Supabase
+    // MARK: - Deep Links de Supabase (igual que tenías)
     func handleDeepLink(url: URL) {
         print("🔗 Deep link recibido: \(url)")
-
-        guard url.scheme == "camposdegalicia" else {
-            print("❌ Esquema no reconocido.")
-            return
-        }
+        guard url.scheme == "camposdegalicia" else { print("❌ Esquema no reconocido."); return }
 
         if let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
            let code = components.queryItems?.first(where: { $0.name == "code" })?.value,
@@ -154,7 +151,7 @@ struct AppMain: App {
                     print("✅ Sesión establecida vía exchangeCodeForSession.")
                     NotificationCenter.default.post(name: .showResetPassword, object: nil)
                 } catch {
-                    print("❌ Error en exchangeCodeForSession: \(error.localizedDescription)")
+                    print("❌ exchangeCodeForSession: \(error.localizedDescription)")
                     NotificationCenter.default.post(name: .showResetPassword, object: nil)
                 }
             }
@@ -173,7 +170,7 @@ struct AppMain: App {
                         print("✅ Sesión establecida desde fragmento.")
                         NotificationCenter.default.post(name: .showResetPassword, object: nil)
                     } catch {
-                        print("❌ Error al establecer sesión desde fragmento: \(error.localizedDescription)")
+                        print("❌ setSession: \(error.localizedDescription)")
                         NotificationCenter.default.post(name: .showResetPassword, object: nil)
                     }
                 }
@@ -199,14 +196,10 @@ struct AppMain: App {
         print("❌ Enlace no reconocido o no compatible.")
     }
 
-    // MARK: - Parser del fragmento (#access_token=...)
     func parseFragmentParams(_ url: URL) -> [String: String] {
         guard let fragment = url.fragment, !fragment.isEmpty else { return [:] }
-
         var params: [String: String] = [:]
-        let pairs = fragment.split(separator: "&")
-
-        for pair in pairs {
+        for pair in fragment.split(separator: "&") {
             let parts = pair.split(separator: "=", maxSplits: 1)
             if parts.count == 2 {
                 let key = String(parts[0])
@@ -218,7 +211,7 @@ struct AppMain: App {
     }
 }
 
-// MARK: - Location Manager
+// MARK: - Location Manager (tu clase existente sin cambios)
 class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
     private let locationManager = CLLocationManager()
     @Published var userLocation: CLLocationCoordinate2D?
@@ -271,6 +264,17 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
         default:
             userLocation = nil
             isLoading = false
+        }
+    }
+    func requestAlwaysPermission() {
+        switch locationManager.authorizationStatus {
+        case .authorizedWhenInUse:
+            locationManager.requestAlwaysAuthorization()
+        case .notDetermined:
+            locationManager.requestWhenInUseAuthorization()
+        default:
+            // para .denied/.restricted el camino es abrir Ajustes
+            break
         }
     }
 }

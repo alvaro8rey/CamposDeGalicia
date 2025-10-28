@@ -440,6 +440,7 @@
 				INFOPLIST_FILE = "Campos-de-Galicia-Info.plist";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.sports";
 				INFOPLIST_KEY_NSCameraUsageDescription = "La app necesita acceso a tu cámara para tomar fotos.";
+				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "Necesitamos la ubicación \"Siempre\" para poder activar el check-in automático.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Necesitamos tu ubicación para mostrar los campos cercanos a ti.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "La app necesita acceso a tu galería para seleccionar fotos.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -474,6 +475,7 @@
 				INFOPLIST_FILE = "Campos-de-Galicia-Info.plist";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.sports";
 				INFOPLIST_KEY_NSCameraUsageDescription = "La app necesita acceso a tu cámara para tomar fotos.";
+				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "Necesitamos la ubicación \"Siempre\" para poder activar el check-in automático.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Necesitamos tu ubicación para mostrar los campos cercanos a ti.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "La app necesita acceso a tu galería para seleccionar fotos.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;

@@ -592,8 +592,8 @@ struct LogrosView: View {
         dateComponents.minute = DAILY_MIN
 
         let content = UNMutableNotificationContent()
-        content.title = "¡Tu recompensa diaria está lista!"
-        content.body  = "Pásate por la sección de Logros para reclamarla."
+        content.title = "Campos de Galicia"
+        content.body  = "¡Tu recompensa diaria está lista! Pásate por la sección de Logros para reclamarla."
         content.sound = .default
 
         let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents, repeats: true)

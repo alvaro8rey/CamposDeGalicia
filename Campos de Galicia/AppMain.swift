@@ -9,8 +9,7 @@ extension Notification.Name {
 
 @main
 struct AppMain: App {
-    @State private var campos: [CampoModel] = []
-    @State private var isLoading: Bool = true
+    @StateObject private var camposViewModel: CamposViewModel
     @StateObject private var locationManager = LocationManager()
     @StateObject private var geofenceManager = GeofenceManager()   // ✅ nuevo
     @State private var distanciaPredeterminada: Double = 10.0
@@ -19,7 +18,11 @@ struct AppMain: App {
     @State private var verificationResult: String = ""
 
     init() {
-        fetchCampos()
+        let viewModel = CamposViewModel()
+        _camposViewModel = StateObject(wrappedValue: viewModel)
+        Task {
+            await viewModel.loadCampos()
+        }
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { ok, err in
             if let err = err { print("🔔 notif auth err: \(err.localizedDescription)") }
             print("🔔 notif auth granted: \(ok)")
@@ -32,10 +35,9 @@ struct AppMain: App {
             TabView {
                 NavigationView {
                     ContentView(
-                        campos: $campos,
-                        isLoading: $isLoading,
                         distanciaPredeterminada: $distanciaPredeterminada
                     )
+                    .environmentObject(camposViewModel)
                 }
                 .tabItem {
                     Image(systemName: "house.fill")
@@ -44,7 +46,8 @@ struct AppMain: App {
                 .tag(0)
 
                 NavigationView {
-                    MapaView(campos: campos)
+                    MapaView()
+                        .environmentObject(camposViewModel)
                 }
                 .tabItem {
                     Image(systemName: "map.fill")
@@ -54,7 +57,6 @@ struct AppMain: App {
 
                 NavigationView {
                     CamposCercanosView(
-                        campos: $campos,
                         userLocation: $locationManager.userLocation,
                         isLoadingLocation: $locationManager.isLoading,
                         distanciaPredeterminada: $distanciaPredeterminada,
@@ -62,6 +64,7 @@ struct AppMain: App {
                             locationManager.requestLocation()
                         }
                     )
+                    .environmentObject(camposViewModel)
                 }
                 .tabItem {
                     Image(systemName: "mappin.and.ellipse")
@@ -71,9 +74,9 @@ struct AppMain: App {
 
                 NavigationView {
                     UserView(
-                        campos: $campos,
                         distanciaPredeterminada: $distanciaPredeterminada
                     )
+                    .environmentObject(camposViewModel)
                 }
                 .environmentObject(locationManager)
                 .tabItem {
@@ -84,12 +87,15 @@ struct AppMain: App {
             }
             .accentColor(.blue)
             .environmentObject(geofenceManager) // ✅ inyectamos el manager
+            .environmentObject(camposViewModel)
             .onAppear {
-                fetchCampos()
+                Task {
+                    await camposViewModel.loadCampos()
+                }
                 locationManager.requestLocation()
 
                 if geofenceManager.autoCheckinEnabled {
-                    geofenceManager.refreshWith(campos: campos)
+                    geofenceManager.refreshWith(campos: camposViewModel.campos)
                 }
             }
             .onChange(of: locationManager.authorizationStatus) { status in
@@ -97,9 +103,9 @@ struct AppMain: App {
                     locationManager.requestLocation()
                 }
             }
-            .onChange(of: campos) { _ in
+            .onChange(of: camposViewModel.campos) { _ in
                 if geofenceManager.autoCheckinEnabled {
-                    geofenceManager.refreshWith(campos: campos)
+                    geofenceManager.refreshWith(campos: camposViewModel.campos)
                 }
             }
             .onOpenURL { url in
@@ -116,27 +122,6 @@ struct AppMain: App {
     }
 
     // MARK: - Cargar campos
-    func fetchCampos() {
-        print("Iniciando fetchCampos()")
-        Task {
-            DispatchQueue.main.async { isLoading = true }
-            do {
-                let response = try await supabase.from("campos").select("*").execute()
-                let decoder = JSONDecoder()
-                let camposResponse = try decoder.decode([CampoModel].self, from: response.data)
-
-                DispatchQueue.main.async {
-                    campos = camposResponse.sorted { $0.nombre.lowercased() < $1.nombre.lowercased() }
-                    isLoading = false
-                    print("Campos cargados: \(campos.count)")
-                }
-            } catch {
-                print("Error al cargar campos: \(error)")
-                DispatchQueue.main.async { isLoading = false }
-            }
-        }
-    }
-
     // MARK: - Deep Links de Supabase (igual que tenías)
     func handleDeepLink(url: URL) {
         print("🔗 Deep link recibido: \(url)")

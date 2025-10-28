@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct ContentView: View {
+    @EnvironmentObject var camposViewModel: CamposViewModel
+
     // Estados para los filtros
     @State private var searchNombre: String = ""
     @State private var searchLocalidad: String = ""
@@ -10,9 +12,7 @@ struct ContentView: View {
     // Lista de provincias disponibles
     let provincias = ["Todas", "A Coruña", "Ourense", "Lugo", "Pontevedra"]
     
-    // Lista de campos y estado de carga como parámetros
-    @Binding var campos: [CampoModel]
-    @Binding var isLoading: Bool
+    // Lista de campos y estado de carga gestionados por el view model
     @Binding var distanciaPredeterminada: Double // Añadimos el binding
     
     // Lista de campos filtrada
@@ -30,7 +30,7 @@ struct ContentView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            if isLoading {
+            if camposViewModel.isLoading && filteredCampos.isEmpty {
                 ProgressView("Cargando campos...")
                     .progressViewStyle(CircularProgressViewStyle(tint: .blue))
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -65,7 +65,10 @@ struct ContentView: View {
                 // Lista de campos filtrada
                 CampoListView(
                     filteredCampos: filteredCampos,
-                    isGridView: isGridView
+                    isGridView: isGridView,
+                    onRefresh: {
+                        await camposViewModel.refreshCampos()
+                    }
                 )
             }
             Spacer()
@@ -78,17 +81,35 @@ struct ContentView: View {
                     .font(.title3)
                     .foregroundColor(.primary)
             }
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button {
+                    Task {
+                        await camposViewModel.refreshCampos()
+                        filteredCampos = camposViewModel.campos
+                        camposMostrados = filteredCampos.count
+                    }
+                } label: {
+                    Image(systemName: "arrow.clockwise")
+                }
+                .disabled(camposViewModel.isLoading)
+            }
         }
         .background(
             LinearGradient(gradient: Gradient(colors: [Color.blue.opacity(0.15), Color(UIColor.systemBackground).opacity(0.9)]), startPoint: .topLeading, endPoint: .bottomTrailing)
         )
-        .onChange(of: campos) { newCampos in
+        .onChange(of: camposViewModel.campos) { newCampos in
             print("Campos cambió, actualizando filteredCampos: \(newCampos.count) campos")
             filteredCampos = newCampos
             camposMostrados = filteredCampos.count
         }
-        // Mostrar el onboarding al abrir si no se ha visto
+        .onChange(of: camposViewModel.errorMessage) { message in
+            if let message = message {
+                print("Error al cargar campos: \(message)")
+            }
+        }
         .onAppear {
+            filteredCampos = camposViewModel.campos
+            camposMostrados = filteredCampos.count
             showOnboarding = !hasSeenOnboarding
         }
         // Cerrar el cover cuando el onboarding marque la flag
@@ -101,7 +122,7 @@ struct ContentView: View {
     }
 
     func applyFilters() {
-        filteredCampos = campos.filter { campo in
+        filteredCampos = camposViewModel.campos.filter { campo in
             let matchesNombre = searchNombre.isEmpty || campo.nombre.lowercased().contains(searchNombre.lowercased())
             let matchesProvincia = selectedProvincia == "Todas" || campo.provincia == selectedProvincia
             let matchesLocalidad = searchLocalidad.isEmpty || campo.localidad.lowercased().contains(searchLocalidad.lowercased())
@@ -117,7 +138,7 @@ struct ContentView: View {
         searchNombre = ""
         searchLocalidad = ""
         selectedProvincia = "Todas"
-        filteredCampos = campos
+        filteredCampos = camposViewModel.campos
         camposMostrados = filteredCampos.count
     }
 }
@@ -291,6 +312,7 @@ struct FiltersView: View {
 struct CampoListView: View {
     let filteredCampos: [CampoModel]
     let isGridView: Bool
+    let onRefresh: () async -> Void
     
     // URL de la imagen predeterminada de Supabase
     private let defaultImageURL = "https://ooqdrhkzsexjnmnvpwqw.supabase.co/storage/v1/object/public/fotos-campos/sin-imagen.png"
@@ -301,7 +323,7 @@ struct CampoListView: View {
                 ForEach(filteredCampos, id: \.id) { campo in
                     if isGridView {
                         // Vista en cuadrados (tarjetas)
-                        NavigationLink(destination: CampoDetalleView(campo: campo)) {
+                        NavigationLink(destination: CampoDetalleView(campoID: campo.id)) {
                             VStack(alignment: .leading, spacing: 8) {
                                 let imageURL = campo.foto_url?.isEmpty == false ? campo.foto_url! : defaultImageURL
                                 if let url = URL(string: imageURL) {
@@ -333,7 +355,7 @@ struct CampoListView: View {
                         .buttonStyle(PlainButtonStyle())
                     } else {
                         // Vista en lista
-                        NavigationLink(destination: CampoDetalleView(campo: campo)) {
+                        NavigationLink(destination: CampoDetalleView(campoID: campo.id)) {
                             HStack(spacing: 12) {
                                 let imageURL = campo.foto_url?.isEmpty == false ? campo.foto_url! : defaultImageURL
                                 if let url = URL(string: imageURL) {
@@ -366,6 +388,9 @@ struct CampoListView: View {
                     }
                 }
             }
+        }
+        .refreshable {
+            await onRefresh()
         }
         .background(Color.clear)
     }

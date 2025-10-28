@@ -8,7 +8,6 @@ import UIKit
 
 struct UserView: View {
     // MARK: Bindings
-    @Binding var campos: [CampoModel]
     @Binding var distanciaPredeterminada: Double
 
     // MARK: Auth & Profile State
@@ -69,6 +68,7 @@ struct UserView: View {
     @EnvironmentObject var geofenceManager: GeofenceManager
     @State private var showInfoSheet = false
     @EnvironmentObject var locationManager: LocationManager
+    @EnvironmentObject var camposViewModel: CamposViewModel
     @AppStorage("auto_checkin_enabled") private var autoCheckinStored: Bool = false
 
 
@@ -585,9 +585,9 @@ extension UserView {
                             autoCheckinStored = newValue
                             if newValue {
                                 // Activa geovallas (solo geofences, sin GPS continuo)
-                                geofenceManager.setAutoCheckin(true, campos: campos)
+                                geofenceManager.setAutoCheckin(true, campos: camposViewModel.campos)
                             } else {
-                                geofenceManager.setAutoCheckin(false, campos: campos)
+                                geofenceManager.setAutoCheckin(false, campos: camposViewModel.campos)
                             }
                         }
                     )) {
@@ -643,9 +643,9 @@ extension UserView {
         // Al entrar en la vista, sincroniza el estado persistido con el manager
         .onAppear {
             if autoCheckinStored {
-                geofenceManager.setAutoCheckin(true, campos: campos)
+                geofenceManager.setAutoCheckin(true, campos: camposViewModel.campos)
             } else {
-                geofenceManager.setAutoCheckin(false, campos: campos)
+                geofenceManager.setAutoCheckin(false, campos: camposViewModel.campos)
             }
         }
     }
@@ -908,7 +908,7 @@ extension UserView {
                                 if campo.id != historialCampos.first?.id {
                                     Divider().padding(.leading, 62)
                                 }
-                                NavigationLink(destination: CampoDetalleView(campo: campo)) {
+                                NavigationLink(destination: CampoDetalleView(campoID: campo.id)) {
                                     historyCardView(campo: campo)
                                 }
                                 .buttonStyle(PlainButtonStyle())
@@ -938,7 +938,7 @@ extension UserView {
     }
 
     private func historyCardView(campo: CampoModel) -> some View {
-        NavigationLink(destination: CampoDetalleView(campo: campo)) {
+        NavigationLink(destination: CampoDetalleView(campoID: campo.id)) {
             HStack(spacing: 12) {
                 if let fotoURL = campo.foto_url, let url = URL(string: fotoURL), !fotoURL.isEmpty {
                     AsyncImage(url: url) { image in
@@ -1136,7 +1136,7 @@ extension UserView {
                     guard let idCampo = dict["id_campo"] as? String,
                           let dateString = dict["created_at"] as? String,
                           let date = df.date(from: dateString) else { return nil }
-                    guard let campo = campos.first(where: { $0.id.uuidString.lowercased() == idCampo.lowercased() }) else { return nil }
+                    guard let campo = camposViewModel.campos.first(where: { $0.id.uuidString.lowercased() == idCampo.lowercased() }) else { return nil }
                     return (campo, date)
                 }
                 .sorted { $0.date > $1.date }
@@ -1470,7 +1470,7 @@ struct VisitDetailView: View {
                 ScrollView {
                     LazyVStack(spacing: 10) {
                         ForEach(allVisits, id: \.campo.id) { visit in
-                            NavigationLink(destination: CampoDetalleView(campo: visit.campo)) {
+                            NavigationLink(destination: CampoDetalleView(campoID: visit.campo.id)) {
                                 VStack(alignment: .leading, spacing: 8) {
                                     HStack {
                                         if let fotoURL = visit.campo.foto_url, let url = URL(string: fotoURL), !fotoURL.isEmpty {

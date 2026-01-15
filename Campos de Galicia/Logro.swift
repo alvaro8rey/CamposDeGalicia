@@ -65,7 +65,7 @@ public struct AccesoDiario: Codable, Identifiable {
 public struct AccesoDiarioUpdate: Codable {
     let ultimo_acceso: String
     let dias_consecutivos: Int
-    let ultima_recompensa_reclamada: String!
+    let ultima_recompensa_reclamada: String?
 
     enum CodingKeys: String, CodingKey {
         case ultimo_acceso

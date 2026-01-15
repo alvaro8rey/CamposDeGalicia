@@ -140,7 +140,11 @@ struct UserView: View {
                 await loadVisitHistory()
                 await loadAchievementsCount()
                 if let userId = user?.id.uuidString {
-                    try? await LevelManager.shared.updateLevelAndXP(for: userId)
+                    do {
+                        try await LevelManager.shared.updateLevelAndXP(for: userId)
+                    } catch {
+                        print("⚠️ Error al actualizar nivel y XP: \(error.localizedDescription)")
+                    }
                 }
             }
         }
@@ -1061,7 +1065,6 @@ extension UserView {
             return
         }
         do {
-            try await Task.sleep(nanoseconds: 500_000_000)
             let response = try await supabase.from("niveles")
                 .select("level, current_xp, xp_to_next_level")
                 .eq("id_usuario", value: currentUser.id.uuidString)
@@ -1093,10 +1096,14 @@ extension UserView {
     }
 
     private func loadProfileData() async {
+        guard let user = user else {
+            errorMessageProfile = "Error: Usuario no autenticado"
+            return
+        }
         do {
             let perfilResponse = try await supabase.from("perfiles")
                 .select("nombre, apellidos")
-                .eq("id", value: user!.id.uuidString)
+                .eq("id", value: user.id.uuidString)
                 .single()
                 .execute()
 
@@ -1111,13 +1118,17 @@ extension UserView {
     }
 
     private func loadVisitHistory() async {
+        guard let user = user else {
+            errorMessageProfile = "Error: Usuario no autenticado"
+            return
+        }
         isLoadingHistorial = true
         defer { isLoadingHistorial = false }
 
         do {
             let visitasResponse = try await supabase.from("visitas")
                 .select("id_campo, created_at")
-                .eq("id_usuario", value: user!.id.uuidString)
+                .eq("id_usuario", value: user.id.uuidString)
                 .order("created_at", ascending: true)
                 .execute()
 
@@ -1240,10 +1251,13 @@ extension UserView {
             errorMessageProfile = "Todos los campos son obligatorios."
             return
         }
-        guard password.count >= 6 else {
-            errorMessageProfile = "La contraseña debe tener al menos 6 caracteres."
+
+        let passwordValidation = validatePassword(password)
+        guard passwordValidation.isValid else {
+            errorMessageProfile = passwordValidation.message
             return
         }
+
         guard email.contains("@"), email.contains(".") else {
             errorMessageProfile = "Introduce un correo electrónico válido."
             return
@@ -1310,6 +1324,10 @@ extension UserView {
     }
 
     private func saveProfileChanges() async {
+        guard let user = user else {
+            errorMessageProfile = "Error: Usuario no autenticado"
+            return
+        }
         do {
             guard !nombre.isEmpty, !apellidos.isEmpty else {
                 errorMessageProfile = "Nombre y apellidos no pueden estar vacíos."
@@ -1318,7 +1336,7 @@ extension UserView {
             let updatedPerfil: [String: String] = ["nombre": nombre, "apellidos": apellidos]
             _ = try await supabase.from("perfiles")
                 .update(updatedPerfil)
-                .eq("id", value: user!.id.uuidString)
+                .eq("id", value: user.id.uuidString)
                 .execute()
             isEditing = false
             errorMessageProfile = "Información actualizada con éxito."
@@ -1328,8 +1346,12 @@ extension UserView {
     }
 
     private func savePreferences() async {
+        guard let user = user else {
+            errorMessagePreferences = "Error: Usuario no autenticado"
+            return
+        }
         do {
-            let preferences = Preferences(id_usuario: user!.id.uuidString, distancia_predeterminada: distanciaPredeterminada)
+            let preferences = Preferences(id_usuario: user.id.uuidString, distancia_predeterminada: distanciaPredeterminada)
             let response = try await supabase.from("preferencias").upsert(preferences).execute()
             print("Preferencias guardadas: \(response)")
             errorMessagePreferences = "Preferencias guardadas con éxito."
@@ -1414,6 +1436,28 @@ extension UserView {
         formatter.dateStyle = .medium
         formatter.timeStyle = .short
         return formatter.string(from: date)
+    }
+
+    private func validatePassword(_ password: String) -> (isValid: Bool, message: String?) {
+        guard password.count >= 8 else {
+            return (false, "La contraseña debe tener al menos 8 caracteres.")
+        }
+
+        let hasUppercase = password.range(of: "[A-Z]", options: .regularExpression) != nil
+        let hasLowercase = password.range(of: "[a-z]", options: .regularExpression) != nil
+        let hasNumber = password.range(of: "[0-9]", options: .regularExpression) != nil
+
+        guard hasUppercase else {
+            return (false, "La contraseña debe contener al menos una letra mayúscula.")
+        }
+        guard hasLowercase else {
+            return (false, "La contraseña debe contener al menos una letra minúscula.")
+        }
+        guard hasNumber else {
+            return (false, "La contraseña debe contener al menos un número.")
+        }
+
+        return (true, nil)
     }
 
     private func mapAuthRegistrationError(_ error: Error) -> String {

@@ -75,7 +75,7 @@ struct CampoDetalleView: View {
                         // Imagen del campo con el botón "Visitado" superpuesto
                         ZStack(alignment: .topLeading) {
                             // Usamos la URL de la imagen del campo o la predeterminada
-                            let imageURL = campo.foto_url?.isEmpty == false ? campo.foto_url! : defaultImageURL
+                            let imageURL = (campo.foto_url?.isEmpty == false ? campo.foto_url : nil) ?? defaultImageURL
                             if let url = URL(string: imageURL) {
                                 AsyncImage(url: url) { image in
                                     image
@@ -843,10 +843,14 @@ struct ContribucionFormView: View {
     private func loadPhotoPreviews(from items: [PhotosPickerItem]) async {
         photoPreviews.removeAll()
         for item in items {
-            if let data = try? await item.loadTransferable(type: Data.self),
-               let uiImage = UIImage(data: data) {
-                let image = Image(uiImage: uiImage)
-                photoPreviews.append(image)
+            do {
+                if let data = try await item.loadTransferable(type: Data.self),
+                   let uiImage = UIImage(data: data) {
+                    let image = Image(uiImage: uiImage)
+                    photoPreviews.append(image)
+                }
+            } catch {
+                print("⚠️ Error al cargar previsualización de foto: \(error.localizedDescription)")
             }
         }
     }
@@ -861,7 +865,15 @@ struct ContribucionFormView: View {
 
         var uploadedURLs: [String] = []
         for (index, photoItem) in selectedPhotos.enumerated() {
-            guard let data = try? await photoItem.loadTransferable(type: Data.self) else {
+            let data: Data
+            do {
+                guard let loadedData = try await photoItem.loadTransferable(type: Data.self) else {
+                    print("⚠️ Error: No se pudo cargar la foto #\(index)")
+                    continue
+                }
+                data = loadedData
+            } catch {
+                print("⚠️ Error al cargar foto #\(index): \(error.localizedDescription)")
                 continue
             }
 

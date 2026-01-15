@@ -270,7 +270,11 @@ final class GeofenceManager: NSObject, ObservableObject, CLLocationManagerDelega
 
     /// Convierte fecha local a string ISO8601 en UTC (ej. "2025-01-08T00:00:00Z")
     private func iso8601UTCString(from date: Date) -> String {
-        let utc = TimeZone(secondsFromGMT: 0)!
+        guard let utc = TimeZone(secondsFromGMT: 0) else {
+            // Fallback: usar la fecha original si no se puede crear la timezone UTC
+            let formatter = ISO8601DateFormatter()
+            return formatter.string(from: date)
+        }
         var cal = Calendar(identifier: .gregorian)
         cal.timeZone = utc
         let comps = cal.dateComponents([.year, .month, .day, .hour, .minute, .second], from: date)
@@ -278,7 +282,12 @@ final class GeofenceManager: NSObject, ObservableObject, CLLocationManagerDelega
         let formatter = ISO8601DateFormatter()
         formatter.timeZone = utc
         formatter.formatOptions = [.withInternetDateTime, .withColonSeparatorInTime]
-        return formatter.string(from: cal.date(from: comps)!)
+
+        guard let reconstructedDate = cal.date(from: comps) else {
+            // Fallback: usar la fecha original si no se puede reconstruir
+            return formatter.string(from: date)
+        }
+        return formatter.string(from: reconstructedDate)
     }
 
     @MainActor

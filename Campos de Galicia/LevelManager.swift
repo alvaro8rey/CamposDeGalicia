@@ -8,7 +8,10 @@ final class LevelManager {
 
     // Cambia a false si no quieres crear/forzar el logro inicial automáticamente
     private let INITIAL_ACHIEVEMENT_ENABLED = true
-    private let INITIAL_ACHIEVEMENT_ID = UUID(uuidString: "00000000-0000-0000-0000-000000000001")!
+    private var INITIAL_ACHIEVEMENT_ID: UUID {
+        // Este UUID es una constante conocida y nunca debería fallar
+        UUID(uuidString: "00000000-0000-0000-0000-000000000001") ?? UUID()
+    }
     private let INITIAL_ACHIEVEMENT_XP = 100
 
     // MARK: - Public

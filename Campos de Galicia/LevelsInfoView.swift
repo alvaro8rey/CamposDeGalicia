@@ -186,8 +186,9 @@ struct LevelsInfoView: View {
     private var achievementsSection: some View {
         let hasLogros = !logrosDesbloqueados.isEmpty || !dailyRewards.isEmpty
         let hasValidLogros = !validLogrosWithDetails.isEmpty
+        let initialAchievementUUID = UUID(uuidString: "00000000-0000-0000-0000-000000000001") ?? UUID()
         let hasInitialLogro = !logrosDesbloqueados.contains {
-            $0.id_logro == UUID(uuidString: "00000000-0000-0000-0000-000000000001")!
+            $0.id_logro == initialAchievementUUID
         }
 
         return VStack(alignment: .leading, spacing: 15) {
@@ -261,7 +262,6 @@ struct LevelsInfoView: View {
         }
 
         do {
-            try await Task.sleep(nanoseconds: 500_000_000)
             let response = try await supabase.from("niveles")
                 .select("level, current_xp, xp_to_next_level")
                 .eq("id_usuario", value: currentUser.id.uuidString)

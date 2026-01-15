@@ -217,7 +217,7 @@ private struct CampoRowView_Classic: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            let imageURL = (campoWithDistance.campo.foto_url?.isEmpty == false ? campoWithDistance.campo.foto_url! : defaultImageURL)
+            let imageURL = (campoWithDistance.campo.foto_url?.isEmpty == false ? campoWithDistance.campo.foto_url : nil) ?? defaultImageURL
             if let url = URL(string: imageURL) {
                 AsyncImage(url: url) { image in
                     image

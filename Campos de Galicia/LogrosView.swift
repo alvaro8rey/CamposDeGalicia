@@ -403,9 +403,13 @@ struct LogrosView: View {
             let data = try dec.decode([AccesoDiario].self, from: response.data)
 
             if data.isEmpty {
+                guard let userUUID = UUID(uuidString: userId) else {
+                    print("⚠️ Error: userId inválido '\(userId)'")
+                    return
+                }
                 let newAccess = AccesoDiario(
                     id: UUID(),
-                    id_usuario: UUID(uuidString: userId)!,
+                    id_usuario: userUUID,
                     ultimo_acceso: Date(),
                     dias_consecutivos: 1,
                     ultima_recompensa_reclamada: nil
@@ -551,7 +555,11 @@ struct LogrosView: View {
 
     private func refreshAfterVisit() async {
         guard let uid = userId else { return }
-        try? await LevelManager.shared.updateLevelAndXP(for: uid)
+        do {
+            try await LevelManager.shared.updateLevelAndXP(for: uid)
+        } catch {
+            print("⚠️ Error al actualizar nivel y XP: \(error.localizedDescription)")
+        }
         await loadUserProgress()
         await loadLogrosDesbloqueados()
     }

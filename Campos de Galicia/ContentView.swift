@@ -325,7 +325,7 @@ struct CampoListView: View {
                         // Vista en cuadrados (tarjetas)
                         NavigationLink(destination: CampoDetalleView(campoID: campo.id)) {
                             VStack(alignment: .leading, spacing: 8) {
-                                let imageURL = campo.foto_url?.isEmpty == false ? campo.foto_url! : defaultImageURL
+                                let imageURL = (campo.foto_url?.isEmpty == false ? campo.foto_url : nil) ?? defaultImageURL
                                 if let url = URL(string: imageURL) {
                                     AsyncImage(url: url) { image in
                                         image
@@ -357,7 +357,7 @@ struct CampoListView: View {
                         // Vista en lista
                         NavigationLink(destination: CampoDetalleView(campoID: campo.id)) {
                             HStack(spacing: 12) {
-                                let imageURL = campo.foto_url?.isEmpty == false ? campo.foto_url! : defaultImageURL
+                                let imageURL = (campo.foto_url?.isEmpty == false ? campo.foto_url : nil) ?? defaultImageURL
                                 if let url = URL(string: imageURL) {
                                     AsyncImage(url: url) { image in
                                         image

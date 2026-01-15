@@ -20,12 +20,18 @@ struct AppMain: App {
     init() {
         let viewModel = CamposViewModel()
         _camposViewModel = StateObject(wrappedValue: viewModel)
+
+        // Iniciar monitoreo de red
+        Task { @MainActor in
+            NetworkMonitor.shared.startMonitoring()
+        }
+
         Task {
             await viewModel.loadCampos()
         }
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { ok, err in
-            if let err = err { print("🔔 notif auth err: \(err.localizedDescription)") }
-            print("🔔 notif auth granted: \(ok)")
+            if let err = err { Logger.error("🔔 notif auth err: \(err.localizedDescription)") }
+            Logger.info("🔔 notif auth granted: \(ok)")
         }
         UNUserNotificationCenter.current().delegate = NotificationDelegate.shared
     }

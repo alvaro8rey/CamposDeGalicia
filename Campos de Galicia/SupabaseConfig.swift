@@ -1,7 +1,30 @@
 import Supabase
 import Foundation
 
-let supabase = SupabaseClient(
-        supabaseURL: URL(string: "https://ooqdrhkzsexjnmnvpwqw.supabase.co")!,  // URL de tu Supabase
-        supabaseKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9vcWRyaGt6c2V4am5tbnZwd3F3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDYwMjk0MjEsImV4cCI6MjA2MTYwNTQyMX0.8jinhwjNaktc111FhV-_MEEiuCXynPiU88_7hMb6zcA" // Reemplaza con tu clave API pública
+/// Cliente global de Supabase configurado con EnvironmentConfig
+/// Las credenciales ahora se cargan de forma segura desde:
+/// 1. Variables de entorno (recomendado para producción)
+/// 2. Config.plist (para desarrollo local)
+/// 3. Valores por defecto (solo desarrollo, requiere rotación antes de producción)
+let supabase: SupabaseClient = {
+    let config = EnvironmentConfig.shared
+
+    // Validar credenciales
+    guard config.validate() else {
+        fatalError("❌ Credenciales de Supabase inválidas. Ver EnvironmentConfig.swift")
+    }
+
+    // Log de configuración en modo debug
+    if config.environment == .development {
+        Logger.debug("Inicializando Supabase con configuración:\n\(config.debugInfo)")
+    }
+
+    guard let url = URL(string: config.supabaseURL) else {
+        fatalError("❌ URL de Supabase inválida: \(config.supabaseURL)")
+    }
+
+    return SupabaseClient(
+        supabaseURL: url,
+        supabaseKey: config.supabaseKey
     )
+}()

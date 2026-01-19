@@ -75,69 +75,17 @@ struct LogrosView: View {
     // MARK: - Secciones
 
     private var dailyRewardSection: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Text("Recompensa diaria")
-                .font(.system(size: 20, weight: .bold, design: .rounded))
-
-            // Línea de días
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 10) {
-                    ForEach(1...6, id: \.self) { day in
-                        VStack(spacing: 6) {
-                            Text("Día \(day)")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                            ZStack {
-                                RoundedRectangle(cornerRadius: 10)
-                                    .fill(Color(UIColor.secondarySystemBackground))
-                                    .frame(width: 56, height: 42)
-                                Image(systemName: "circle.fill")
-                                    .foregroundColor(day <= currentDay ? .orange : .gray)
-                            }
-                            Text("+\(dailyXPValue(for: day)) XP")
-                                .font(.caption2)
-                                .foregroundColor(.secondary)
-                        }
-                        .frame(width: 64)
-                    }
-                }
-            }
-
-            if dailyXP > 0 && !hasClaimedToday {
-                Button {
-                    Task { await claimDailyReward() }
-                } label: {
-                    Text(isProcessingClaim ? "Procesando..." : "Reclamar")
-                        .fontWeight(.bold)
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 12)
-                        .background(isProcessingClaim || isButtonDisabled ? Color.gray : Color.pink)
-                        .cornerRadius(12)
-                }
-                .disabled(isProcessingClaim || isButtonDisabled)
-            } else if hasClaimedToday {
-                Text("Recompensa ya reclamada hoy")
-                    .foregroundColor(.gray)
-                    .font(.subheadline)
-            }
-
-            // Botón opcional para test rápido (20s). Puedes eliminarlo cuando acabes.
-            Button {
+        DailyRewardCardView(
+            currentDay: currentDay,
+            dailyXP: dailyXP,
+            hasClaimedToday: hasClaimedToday,
+            isProcessing: isProcessingClaim,
+            onClaim: {
+                Task { await claimDailyReward() }
+            },
+            onTestNotification: {
                 scheduleOneOffTest(after: 20)
-            } label: {
-                Text("Probar notificación en 20s (temporal)")
-                    .font(.footnote)
-                    .foregroundColor(.blue)
             }
-            .padding(.top, 4)
-
-        }
-        .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(Color(UIColor.secondarySystemBackground))
-                .shadow(color: Color.black.opacity(0.06), radius: 6, x: 0, y: 3)
         )
     }
 
@@ -169,56 +117,11 @@ struct LogrosView: View {
                                 let isUnlocked = logrosDesbloqueados.contains(logro.id)
                                 let (current, target) = progress(for: logro)
 
-                                VStack(alignment: .leading, spacing: 10) {
-                                    HStack(spacing: 8) {
-                                        Image(systemName: isUnlocked ? "checkmark.seal.fill" : "lock.fill")
-                                            .foregroundColor(isUnlocked ? .green : .gray)
-                                            .font(.title3)
-
-                                        Text(logro.nombre)
-                                            .font(.system(size: 18, weight: .semibold, design: .rounded))
-                                            .lineLimit(1)
-                                            .truncationMode(.tail)
-
-                                        Spacer()
-
-                                        Text("+\(logro.xp ?? 0) XP")
-                                            .font(.system(size: 14, weight: .bold, design: .rounded))
-                                            .foregroundColor(.green)
-                                    }
-
-                                    if let d = logro.descripcion, !d.isEmpty {
-                                        Text(d)
-                                            .font(.subheadline)
-                                            .foregroundColor(.secondary)
-                                            .fixedSize(horizontal: false, vertical: true)
-                                            .lineSpacing(3)
-                                    }
-
-                                    if !isUnlocked && target > 0 {
-                                        VStack(alignment: .leading, spacing: 6) {
-                                            HStack {
-                                                Text("\(current)/\(target)")
-                                                    .font(.caption)
-                                                    .foregroundColor(.gray)
-                                                Spacer()
-                                            }
-                                            ProgressView(value: Float(current), total: Float(target))
-                                                .progressViewStyle(LinearProgressViewStyle(tint: .blue))
-                                                .frame(height: 8)
-                                                .cornerRadius(4)
-                                        }
-                                    } else if isUnlocked {
-                                        Text("¡Desbloqueado!")
-                                            .foregroundColor(.green)
-                                            .font(.subheadline)
-                                    }
-                                }
-                                .padding(14)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 16)
-                                        .fill(Color(UIColor.secondarySystemBackground))
-                                        .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
+                                AchievementCardView(
+                                    achievement: logro,
+                                    isUnlocked: isUnlocked,
+                                    currentProgress: current,
+                                    targetProgress: target
                                 )
                             }
                         }

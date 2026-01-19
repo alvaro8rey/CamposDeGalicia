@@ -1,4 +1,5 @@
 import Foundation
+import UIKit
 
 /// Sistema de analytics básico para tracking de eventos
 /// Puede ser extendido para integrar con Firebase Analytics, Mixpanel, etc.

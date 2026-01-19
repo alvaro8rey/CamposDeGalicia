@@ -29,11 +29,11 @@ struct AchievementCardView: View {
 
                     Spacer()
 
-                    XPBadge(xp: achievement.xp, isUnlocked: isUnlocked)
+                    XPBadge(xp: achievement.xp ?? 0, isUnlocked: isUnlocked)
                 }
 
                 // Description
-                Text(achievement.descripcion)
+                Text(achievement.descripcion ?? "")
                     .font(.subheadline)
                     .foregroundColor(.secondary)
                     .lineLimit(2)
@@ -167,7 +167,9 @@ struct AchievementCardView: View {
 
     // MARK: - Achievement Icon Logic
     private var achievementIcon: String {
-        let condition = achievement.condicion.lowercased()
+        guard let condition = achievement.condicion?.lowercased() else {
+            return "star.fill"
+        }
 
         if condition.contains("campo") || condition.contains("visit") {
             return "map.fill"
@@ -217,8 +219,8 @@ struct AchievementCardView_Previews: PreviewProvider {
                     nombre: "Explorador",
                     descripcion: "Visita tu primer campo de fútbol",
                     condicion: "visitar_1_campo",
-                    xp: 50,
-                    orden: 1
+                    orden: 1,
+                    xp: 50
                 ),
                 isUnlocked: true,
                 currentProgress: 1,
@@ -232,8 +234,8 @@ struct AchievementCardView_Previews: PreviewProvider {
                     nombre: "Aficionado",
                     descripcion: "Visita 10 campos diferentes",
                     condicion: "visitar_10_campos",
-                    xp: 100,
-                    orden: 2
+                    orden: 2,
+                    xp: 100
                 ),
                 isUnlocked: false,
                 currentProgress: 5,
@@ -247,8 +249,8 @@ struct AchievementCardView_Previews: PreviewProvider {
                     nombre: "Maestro Fotógrafo",
                     descripcion: "Contribuye con 25 fotos",
                     condicion: "contribuir_25_fotos",
-                    xp: 200,
-                    orden: 3
+                    orden: 3,
+                    xp: 200
                 ),
                 isUnlocked: false,
                 currentProgress: 0,

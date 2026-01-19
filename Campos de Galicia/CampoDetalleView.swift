@@ -72,30 +72,27 @@ struct CampoDetalleView: View {
                 ZStack {
             GeometryReader { geometry in
                 ScrollView {
-                    VStack(alignment: .leading, spacing: 20) {
-                        // Imagen del campo con el botón "Visitado" superpuesto
-                        ZStack(alignment: .topLeading) {
-                            // Usamos la URL de la imagen del campo o la predeterminada
+                    VStack(alignment: .leading, spacing: 16) {
+                        // Hero Image
+                        ZStack(alignment: .bottomLeading) {
                             let imageURL = (campo.foto_url?.isEmpty == false ? campo.foto_url : nil) ?? defaultImageURL
                             if let url = URL(string: imageURL) {
                                 CachedAsyncImage(url: url) { image in
                                     image
                                         .resizable()
                                         .scaledToFill()
-                                        .frame(width: geometry.size.width - 32, height: 240)
+                                        .frame(height: 220)
                                         .clipped()
-                                        .cornerRadius(20)
-                                        .shadow(color: Color.black.opacity(0.2), radius: 12, x: 0, y: 6)
                                 } placeholder: {
                                     ZStack {
-                                        Color.gray.opacity(0.2)
+                                        Color.gray.opacity(0.1)
                                         ProgressView()
                                     }
-                                    .frame(width: geometry.size.width - 32, height: 240)
-                                    .cornerRadius(20)
+                                    .frame(height: 220)
                                 }
                             }
 
+                            // Visit Badge
                             if supabase.auth.currentUser != nil {
                                 Button(action: {
                                     Task {
@@ -106,46 +103,65 @@ struct CampoDetalleView: View {
                                         }
                                     }
                                 }) {
-                                    HStack(spacing: 6) {
+                                    HStack(spacing: 4) {
                                         Image(systemName: isVisited ? "checkmark.circle.fill" : "mappin.circle.fill")
-                                            .font(.system(size: 14))
-                                        Text(isVisited ? "Visitado" : "Marcar visita")
                                             .font(.caption)
-                                            .fontWeight(.bold)
+                                        Text(isVisited ? "Visitado" : "Marcar visita")
+                                            .font(.caption2)
+                                            .fontWeight(.semibold)
                                     }
                                     .foregroundColor(.white)
-                                    .padding(.vertical, 8)
-                                    .padding(.horizontal, 14)
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 6)
                                     .background(
-                                        isVisited
-                                            ? LinearGradient(colors: [.green, .green.opacity(0.8)], startPoint: .leading, endPoint: .trailing)
-                                            : LinearGradient(colors: [.blue, .blue.opacity(0.8)], startPoint: .leading, endPoint: .trailing)
+                                        (isVisited ? Color.green : Color.blue)
+                                            .opacity(0.9)
                                     )
                                     .cornerRadius(12)
-                                    .shadow(color: (isVisited ? Color.green : Color.blue).opacity(0.4), radius: 6, x: 0, y: 3)
+                                    .shadow(color: Color.black.opacity(0.2), radius: 4)
                                 }
-                                .padding(.top, 12)
-                                .padding(.leading, 16)
+                                .padding(12)
                             }
                         }
-                        .frame(maxWidth: .infinity, alignment: .center)
-                        .padding(.top, 16)
 
-                        // Campo Name with better styling
-                        Text(campo.nombre)
-                            .font(.system(size: 28, weight: .bold))
-                            .foregroundColor(.primary)
-                            .frame(maxWidth: .infinity, alignment: .center)
-                            .multilineTextAlignment(.center)
+                        // Header Section
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text(campo.nombre)
+                                .font(.system(size: 24, weight: .bold))
+                                .foregroundColor(.primary)
+
+                            HStack(spacing: 12) {
+                                // Visit button if authenticated
+                                if supabase.auth.currentUser != nil {
+                                    Button(action: {
+                                        showingContribucionForm = true
+                                    }) {
+                                        HStack(spacing: 4) {
+                                            Image(systemName: "plus.circle")
+                                                .font(.caption)
+                                            Text("Contribuir")
+                                                .font(.caption)
+                                                .fontWeight(.medium)
+                                        }
+                                        .foregroundColor(.blue)
+                                        .padding(.horizontal, 10)
+                                        .padding(.vertical, 6)
+                                        .background(Color.blue.opacity(0.1))
+                                        .cornerRadius(8)
+                                    }
+                                }
+                            }
+                        }
+                        .padding(.horizontal)
 
                         // UBICACIÓN
                         VStack(alignment: .leading, spacing: 12) {
                             HStack {
                                 Image(systemName: "mappin.circle.fill")
-                                    .font(.title3)
+                                    .font(.headline)
                                     .foregroundColor(.blue)
                                 Text("Ubicación")
-                                    .font(.system(size: 20, weight: .bold))
+                                    .font(.system(size: 18, weight: .semibold))
                                     .foregroundColor(.primary)
                             }
 
@@ -245,21 +261,18 @@ struct CampoDetalleView: View {
                             }
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(18)
-                        .background(
-                            RoundedRectangle(cornerRadius: 16)
-                                .fill(Color(UIColor.secondarySystemBackground))
-                                .shadow(color: Color.black.opacity(0.08), radius: 10, x: 0, y: 4)
-                        )
+                        .padding()
+                        .background(Color(UIColor.secondarySystemBackground))
+                        .cornerRadius(12)
 
                         // DETALLES DEL CAMPO
                         VStack(alignment: .leading, spacing: 12) {
                             HStack {
                                 Image(systemName: "info.circle.fill")
-                                    .font(.title3)
+                                    .font(.headline)
                                     .foregroundColor(.blue)
-                                Text("Detalles del Campo")
-                                    .font(.system(size: 20, weight: .bold))
+                                Text("Detalles")
+                                    .font(.system(size: 18, weight: .semibold))
                                     .foregroundColor(.primary)
                             }
 
@@ -370,12 +383,9 @@ struct CampoDetalleView: View {
                             }
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(18)
-                        .background(
-                            RoundedRectangle(cornerRadius: 16)
-                                .fill(Color(UIColor.secondarySystemBackground))
-                                .shadow(color: Color.black.opacity(0.08), radius: 10, x: 0, y: 4)
-                        )
+                        .padding()
+                        .background(Color(UIColor.secondarySystemBackground))
+                        .cornerRadius(12)
 
                         if !contribucionesAprobadas.isEmpty {
                             let todasLasFotos: [(url: String, userId: String)] = contribucionesAprobadas.flatMap { contribucion in
@@ -388,10 +398,10 @@ struct CampoDetalleView: View {
                                 VStack(alignment: .leading, spacing: 12) {
                                     HStack {
                                         Image(systemName: "photo.stack.fill")
-                                            .font(.title3)
+                                            .font(.headline)
                                             .foregroundColor(.blue)
-                                        Text("Fotos de la comunidad")
-                                            .font(.system(size: 20, weight: .bold))
+                                        Text("Fotos")
+                                            .font(.system(size: 18, weight: .semibold))
                                             .foregroundColor(.primary)
                                     }
                                     .padding(.horizontal)
@@ -457,47 +467,10 @@ struct CampoDetalleView: View {
 
                         Spacer()
                     }
-                    .padding(.horizontal, 16)
+                    .padding(.horizontal)
                     .frame(maxWidth: min(geometry.size.width, 600), alignment: .center)
                 }
-                .background(
-                    LinearGradient(
-                        gradient: Gradient(colors: [Color.blue.opacity(0.15), Color(UIColor.systemBackground).opacity(0.9)]),
-                        startPoint: .topLeading, endPoint: .bottomTrailing
-                    )
-                    .ignoresSafeArea()
-                )
-            }
-
-            if supabase.auth.currentUser != nil {
-                VStack {
-                    Spacer()
-                    Button(action: {
-                        showingContribucionForm = true
-                    }) {
-                        HStack(spacing: 8) {
-                            Image(systemName: "plus.circle.fill")
-                                .font(.system(size: 20))
-                            Text("Aportar información")
-                                .font(.system(size: 16, weight: .semibold))
-                        }
-                        .foregroundColor(.white)
-                        .padding(.vertical, 14)
-                        .padding(.horizontal, 24)
-                        .background(
-                            LinearGradient(
-                                colors: [.green, .green.opacity(0.8)],
-                                startPoint: .leading,
-                                endPoint: .trailing
-                            )
-                        )
-                        .cornerRadius(25)
-                        .shadow(color: Color.green.opacity(0.4), radius: 8, x: 0, y: 4)
-                    }
-                    .padding(.bottom, 20)
-                }
-                .frame(maxWidth: .infinity, alignment: .center)
-                .ignoresSafeArea(.keyboard, edges: .bottom)
+                .background(Color(UIColor.systemBackground))
             }
                 }
             } else {

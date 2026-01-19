@@ -9,6 +9,7 @@ struct Review: Identifiable, Codable, Equatable {
     let rating: Int
     let created_at: Date?
     let reviewer_name: String?
+    let fotos: [String]?
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -18,6 +19,7 @@ struct Review: Identifiable, Codable, Equatable {
         case rating
         case created_at
         case reviewer_name
+        case fotos
     }
 
     // Computed property for display
@@ -40,6 +42,7 @@ struct ReviewCreate: Codable {
     let reseña: String
     let rating: Int
     let reviewer_name: String
+    let fotos: [String]?
 
     enum CodingKeys: String, CodingKey {
         case campo_id
@@ -47,6 +50,7 @@ struct ReviewCreate: Codable {
         case reseña
         case rating
         case reviewer_name
+        case fotos
     }
 }
 
@@ -62,5 +66,24 @@ struct ReviewStats {
 
     var formattedAverage: String {
         String(format: "%.1f", averageRating)
+    }
+}
+
+/// Tipo de ordenación para reseñas
+enum ReviewSortType: String, CaseIterable, Identifiable {
+    case recent = "Más recientes"
+    case oldest = "Más antiguas"
+    case highest = "Mejor valoradas"
+    case lowest = "Peor valoradas"
+
+    var id: String { rawValue }
+
+    var iconName: String {
+        switch self {
+        case .recent: return "clock.arrow.circlepath"
+        case .oldest: return "clock"
+        case .highest: return "star.fill"
+        case .lowest: return "star"
+        }
     }
 }

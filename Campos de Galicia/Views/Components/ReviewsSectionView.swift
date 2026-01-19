@@ -9,14 +9,28 @@ struct ReviewsSectionView: View {
 
     @State private var showAddReview: Bool = false
     @State private var canUserReview: Bool = true
+    @State private var sortType: ReviewSortType = .recent
+
+    var sortedReviews: [Review] {
+        switch sortType {
+        case .recent:
+            return reviewsManager.reviews.sorted { ($0.created_at ?? Date.distantPast) > ($1.created_at ?? Date.distantPast) }
+        case .oldest:
+            return reviewsManager.reviews.sorted { ($0.created_at ?? Date.distantPast) < ($1.created_at ?? Date.distantPast) }
+        case .highest:
+            return reviewsManager.reviews.sorted { $0.rating > $1.rating }
+        case .lowest:
+            return reviewsManager.reviews.sorted { $0.rating < $1.rating }
+        }
+    }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 20) {
+        VStack(alignment: .leading, spacing: 16) {
             // Header
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Reseñas")
-                        .font(.system(size: 24, weight: .bold))
+                        .font(.system(size: 22, weight: .bold))
 
                     if reviewsManager.stats.hasReviews {
                         Text("\(reviewsManager.stats.totalReviews) opiniones")
@@ -30,28 +44,55 @@ struct ReviewsSectionView: View {
                 // Add Review Button (only if authenticated and can review)
                 if authViewModel.isAuthenticated && canUserReview {
                     Button(action: { showAddReview = true }) {
-                        HStack(spacing: 6) {
+                        HStack(spacing: 4) {
                             Image(systemName: "plus.circle.fill")
+                                .font(.system(size: 14))
                             Text("Opinar")
+                                .font(.caption)
                         }
-                        .font(.subheadline)
                         .fontWeight(.semibold)
                         .foregroundColor(.white)
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 10)
-                        .background(
-                            LinearGradient(
-                                colors: [.blue, .purple],
-                                startPoint: .leading,
-                                endPoint: .trailing
-                            )
-                        )
-                        .cornerRadius(20)
-                        .shadow(color: .blue.opacity(0.3), radius: 6, x: 0, y: 3)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        .background(Color.blue)
+                        .cornerRadius(16)
                     }
                 }
             }
             .padding(.horizontal)
+
+            // Sort Picker (only if has reviews)
+            if reviewsManager.stats.hasReviews && !reviewsManager.reviews.isEmpty {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        ForEach(ReviewSortType.allCases) { type in
+                            Button(action: {
+                                withAnimation(.easeInOut(duration: 0.2)) {
+                                    sortType = type
+                                }
+                            }) {
+                                HStack(spacing: 6) {
+                                    Image(systemName: type.iconName)
+                                        .font(.caption2)
+                                    Text(type.rawValue)
+                                        .font(.caption)
+                                }
+                                .fontWeight(.medium)
+                                .foregroundColor(sortType == type ? .white : .primary)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 8)
+                                .background(
+                                    sortType == type
+                                        ? Color.blue
+                                        : Color(UIColor.secondarySystemBackground)
+                                )
+                                .cornerRadius(12)
+                            }
+                        }
+                    }
+                    .padding(.horizontal)
+                }
+            }
 
             // Rating Summary
             if reviewsManager.stats.hasReviews {
@@ -77,7 +118,7 @@ struct ReviewsSectionView: View {
                     .padding(.horizontal)
             } else {
                 VStack(spacing: 12) {
-                    ForEach(reviewsManager.reviews) { review in
+                    ForEach(sortedReviews) { review in
                         ReviewCardView(review: review)
                             .contextMenu {
                                 if review.user_id == authViewModel.user?.id {

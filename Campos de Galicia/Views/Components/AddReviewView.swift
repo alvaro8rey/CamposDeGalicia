@@ -1,5 +1,6 @@
 import SwiftUI
 import Supabase
+import PhotosUI
 
 /// Vista modal para añadir una reseña a un campo
 struct AddReviewView: View {
@@ -15,8 +16,11 @@ struct AddReviewView: View {
     @State private var isSubmitting: Bool = false
     @State private var errorMessage: String?
     @State private var showSuccess: Bool = false
+    @State private var selectedPhotos: [PhotosPickerItem] = []
+    @State private var photoPreviews: [Image] = []
 
     private let maxCharacters = 500
+    private let maxPhotos = 5
 
     var body: some View {
         NavigationView {
@@ -94,6 +98,57 @@ struct AddReviewView: View {
                             .font(.caption)
                     }
 
+                    // Photos Section
+                    Section {
+                        VStack(alignment: .leading, spacing: 12) {
+                            PhotosPicker(
+                                selection: $selectedPhotos,
+                                maxSelectionCount: maxPhotos,
+                                selectionBehavior: .ordered,
+                                matching: .images
+                            ) {
+                                Label("Añadir fotos (\(selectedPhotos.count)/\(maxPhotos))", systemImage: "photo.on.rectangle.angled")
+                                    .font(.subheadline)
+                            }
+                            .onChange(of: selectedPhotos) { newSelection in
+                                Task {
+                                    await loadPhotoPreviews(from: newSelection)
+                                }
+                            }
+
+                            if !photoPreviews.isEmpty {
+                                ScrollView(.horizontal, showsIndicators: false) {
+                                    HStack(spacing: 8) {
+                                        ForEach(photoPreviews.indices, id: \.self) { index in
+                                            ZStack(alignment: .topTrailing) {
+                                                photoPreviews[index]
+                                                    .resizable()
+                                                    .scaledToFill()
+                                                    .frame(width: 80, height: 80)
+                                                    .clipShape(RoundedRectangle(cornerRadius: 8))
+
+                                                Button(action: {
+                                                    removePhoto(at: index)
+                                                }) {
+                                                    Image(systemName: "xmark.circle.fill")
+                                                        .foregroundColor(.white)
+                                                        .background(Color.red.opacity(0.8))
+                                                        .clipShape(Circle())
+                                                }
+                                                .offset(x: 6, y: -6)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    } header: {
+                        Label("Fotos (opcional)", systemImage: "photo")
+                    } footer: {
+                        Text("Añade hasta \(maxPhotos) fotos para compartir tu experiencia.")
+                            .font(.caption)
+                    }
+
                     // Error Message
                     if let errorMessage = errorMessage {
                         Section {
@@ -163,6 +218,54 @@ struct AddReviewView: View {
         }
     }
 
+    // MARK: - Photo Methods
+    private func loadPhotoPreviews(from items: [PhotosPickerItem]) async {
+        photoPreviews.removeAll()
+        for item in items {
+            do {
+                if let data = try await item.loadTransferable(type: Data.self),
+                   let uiImage = UIImage(data: data) {
+                    let image = Image(uiImage: uiImage)
+                    photoPreviews.append(image)
+                }
+            } catch {
+                Logger.error("Error al cargar previsualización: \(error.localizedDescription)")
+            }
+        }
+    }
+
+    private func removePhoto(at index: Int) {
+        selectedPhotos.remove(at: index)
+        photoPreviews.remove(at: index)
+    }
+
+    private func uploadPhotos() async throws -> [String]? {
+        guard !selectedPhotos.isEmpty else { return nil }
+
+        var uploadedURLs: [String] = []
+        for (index, photoItem) in selectedPhotos.enumerated() {
+            guard let data = try await photoItem.loadTransferable(type: Data.self) else {
+                Logger.warning("No se pudo cargar foto #\(index)")
+                continue
+            }
+
+            let fileName = "\(campoId.uuidString)-review-\(UUID().uuidString)-\(index).jpg"
+
+            _ = try await supabase.storage
+                .from("fotos-campos")
+                .upload(path: fileName, file: data)
+
+            let publicURL = try supabase.storage
+                .from("fotos-campos")
+                .getPublicURL(path: fileName)
+                .absoluteString
+
+            uploadedURLs.append(publicURL)
+        }
+
+        return uploadedURLs.isEmpty ? nil : uploadedURLs
+    }
+
     // MARK: - Submit Review
     private func submitReview() async {
         errorMessage = nil
@@ -178,12 +281,16 @@ struct AddReviewView: View {
         let reviewerName = "\(authViewModel.nombre) \(authViewModel.apellidos)".trimmingCharacters(in: .whitespaces)
 
         do {
+            // Upload photos first
+            let photoURLs = try await uploadPhotos()
+
             let reviewCreate = ReviewCreate(
                 campo_id: campoId.uuidString,
                 user_id: userId.uuidString,
                 reseña: reviewText.trimmingCharacters(in: .whitespacesAndNewlines),
                 rating: rating,
-                reviewer_name: reviewerName.isEmpty ? "Usuario" : reviewerName
+                reviewer_name: reviewerName.isEmpty ? "Usuario" : reviewerName,
+                fotos: photoURLs
             )
 
             _ = try await supabase.from("reseñas")

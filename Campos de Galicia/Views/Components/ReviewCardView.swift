@@ -3,6 +3,8 @@ import SwiftUI
 /// Card moderna para mostrar reseñas de campos
 struct ReviewCardView: View {
     let review: Review
+    @State private var selectedPhotoIndex: Int = 0
+    @State private var showingImageViewer: Bool = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -18,10 +20,10 @@ struct ReviewCardView: View {
                                 endPoint: .bottomTrailing
                             )
                         )
-                        .frame(width: 44, height: 44)
+                        .frame(width: 40, height: 40)
 
                     Text(review.displayName.prefix(1).uppercased())
-                        .font(.title3)
+                        .font(.headline)
                         .fontWeight(.semibold)
                         .foregroundColor(.blue)
                 }
@@ -35,7 +37,7 @@ struct ReviewCardView: View {
                         Spacer()
 
                         // Star Rating
-                        StarRatingView(rating: review.rating, size: 14, color: .orange)
+                        StarRatingView(rating: review.rating, size: 13, color: .orange)
                     }
 
                     Text(review.formattedDate)
@@ -46,15 +48,120 @@ struct ReviewCardView: View {
 
             // Review Text
             Text(review.reseña)
-                .font(.body)
+                .font(.subheadline)
                 .foregroundColor(.primary)
-                .lineSpacing(4)
+                .lineSpacing(3)
                 .fixedSize(horizontal: false, vertical: true)
+
+            // Photos (if any)
+            if let fotos = review.fotos, !fotos.isEmpty {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        ForEach(fotos.indices, id: \.self) { index in
+                            if let url = URL(string: fotos[index]) {
+                                CachedAsyncImage(url: url) { image in
+                                    image
+                                        .resizable()
+                                        .scaledToFill()
+                                        .frame(width: 80, height: 80)
+                                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                                } placeholder: {
+                                    ZStack {
+                                        Color.gray.opacity(0.2)
+                                        ProgressView()
+                                    }
+                                    .frame(width: 80, height: 80)
+                                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                                }
+                                .onTapGesture {
+                                    selectedPhotoIndex = index
+                                    showingImageViewer = true
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
-        .padding(16)
+        .padding(14)
         .background(Color(UIColor.secondarySystemBackground))
-        .cornerRadius(16)
-        .shadow(color: Color.black.opacity(0.04), radius: 4, x: 0, y: 2)
+        .cornerRadius(12)
+        .shadow(color: Color.black.opacity(0.03), radius: 3, x: 0, y: 1)
+        .sheet(isPresented: $showingImageViewer) {
+            if let fotos = review.fotos, !fotos.isEmpty {
+                ReviewImageViewer(photos: fotos, initialIndex: selectedPhotoIndex)
+            }
+        }
+    }
+}
+
+/// Visor de imágenes para reseñas
+struct ReviewImageViewer: View {
+    let photos: [String]
+    let initialIndex: Int
+    @Environment(\.dismiss) var dismiss
+    @State private var currentIndex: Int
+
+    init(photos: [String], initialIndex: Int) {
+        self.photos = photos
+        self.initialIndex = initialIndex
+        self._currentIndex = State(initialValue: initialIndex)
+    }
+
+    var body: some View {
+        NavigationView {
+            ZStack {
+                Color.black.ignoresSafeArea()
+
+                TabView(selection: $currentIndex) {
+                    ForEach(photos.indices, id: \.self) { index in
+                        if let url = URL(string: photos[index]) {
+                            AsyncImage(url: url) { phase in
+                                switch phase {
+                                case .empty:
+                                    ProgressView()
+                                case .success(let image):
+                                    image
+                                        .resizable()
+                                        .scaledToFit()
+                                case .failure:
+                                    VStack {
+                                        Image(systemName: "exclamationmark.triangle")
+                                            .font(.largeTitle)
+                                            .foregroundColor(.gray)
+                                        Text("Error al cargar")
+                                            .foregroundColor(.gray)
+                                    }
+                                @unknown default:
+                                    EmptyView()
+                                }
+                            }
+                            .tag(index)
+                        }
+                    }
+                }
+                .tabViewStyle(.page(indexDisplayMode: .always))
+
+                VStack {
+                    HStack {
+                        Spacer()
+                        Button(action: { dismiss() }) {
+                            Image(systemName: "xmark.circle.fill")
+                                .font(.title2)
+                                .foregroundColor(.white)
+                                .padding()
+                        }
+                    }
+                    Spacer()
+                    Text("\(currentIndex + 1) de \(photos.count)")
+                        .foregroundColor(.white)
+                        .padding(8)
+                        .background(Color.black.opacity(0.5))
+                        .cornerRadius(8)
+                        .padding(.bottom, 30)
+                }
+            }
+        }
     }
 }
 

@@ -689,7 +689,7 @@ struct CampoDetalleView: View {
             errorMessage = "Contribución enviada con éxito. ¡Gracias por tu ayuda!"
             print("Contribución enviada para campo: \(campo.nombre), respuesta: \(response)")
             showingContribucionForm = false
-            await camposViewModel.invalidateExtras(for: campoID)
+            camposViewModel.invalidateExtras(for: campoID)
             await fetchContribucionesAprobadas(forceRefresh: true)
         } catch {
             errorMessage = "Error al enviar la contribución: \(error.localizedDescription)"

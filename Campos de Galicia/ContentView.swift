@@ -71,6 +71,7 @@ struct ContentView: View {
                         await camposViewModel.refreshCampos()
                     }
                 )
+                .environmentObject(authViewModel)
             }
             Spacer()
         }

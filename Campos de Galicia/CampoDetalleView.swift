@@ -38,6 +38,7 @@ struct UserProfile: Decodable {
 struct CampoDetalleView: View {
     let campoID: UUID
     @EnvironmentObject var camposViewModel: CamposViewModel
+    @EnvironmentObject var authViewModel: AuthViewModel
     @State private var campo: CampoModel?
     @Environment(\.colorScheme) var colorScheme
     @State private var errorMessage: String? = nil
@@ -71,7 +72,7 @@ struct CampoDetalleView: View {
                 ZStack {
             GeometryReader { geometry in
                 ScrollView {
-                    VStack(alignment: .leading, spacing: 16) {
+                    VStack(alignment: .leading, spacing: 20) {
                         // Imagen del campo con el botón "Visitado" superpuesto
                         ZStack(alignment: .topLeading) {
                             // Usamos la URL de la imagen del campo o la predeterminada
@@ -81,14 +82,17 @@ struct CampoDetalleView: View {
                                     image
                                         .resizable()
                                         .scaledToFill()
-                                        .frame(width: geometry.size.width - 32, height: 200)
+                                        .frame(width: geometry.size.width - 32, height: 240)
                                         .clipped()
-                                        .cornerRadius(12)
-                                        .shadow(color: Color.black.opacity(0.15), radius: 6, x: 0, y: 3)
+                                        .cornerRadius(20)
+                                        .shadow(color: Color.black.opacity(0.2), radius: 12, x: 0, y: 6)
                                 } placeholder: {
-                                    Color.gray.opacity(0.3)
-                                        .frame(width: geometry.size.width - 32, height: 200)
-                                        .cornerRadius(12)
+                                    ZStack {
+                                        Color.gray.opacity(0.2)
+                                        ProgressView()
+                                    }
+                                    .frame(width: geometry.size.width - 32, height: 240)
+                                    .cornerRadius(20)
                                 }
                             }
 
@@ -102,36 +106,48 @@ struct CampoDetalleView: View {
                                         }
                                     }
                                 }) {
-                                    Text(isVisited ? "Desmarcar visita" : "Marcar como visitado")
-                                        .font(.caption)
-                                        .fontWeight(.semibold)
-                                        .foregroundColor(.white)
-                                        .padding(.vertical, 6)
-                                        .padding(.horizontal, 12)
-                                        .background(isVisited ? Color.red.opacity(0.9) : Color.blue.opacity(0.9))
-                                        .cornerRadius(10)
-                                        .shadow(color: Color.black.opacity(0.2), radius: 3)
+                                    HStack(spacing: 6) {
+                                        Image(systemName: isVisited ? "checkmark.circle.fill" : "mappin.circle.fill")
+                                            .font(.system(size: 14))
+                                        Text(isVisited ? "Visitado" : "Marcar visita")
+                                            .font(.caption)
+                                            .fontWeight(.bold)
+                                    }
+                                    .foregroundColor(.white)
+                                    .padding(.vertical, 8)
+                                    .padding(.horizontal, 14)
+                                    .background(
+                                        isVisited
+                                            ? LinearGradient(colors: [.green, .green.opacity(0.8)], startPoint: .leading, endPoint: .trailing)
+                                            : LinearGradient(colors: [.blue, .blue.opacity(0.8)], startPoint: .leading, endPoint: .trailing)
+                                    )
+                                    .cornerRadius(12)
+                                    .shadow(color: (isVisited ? Color.green : Color.blue).opacity(0.4), radius: 6, x: 0, y: 3)
                                 }
-                                .padding(.top, 8)
-                                .padding(.leading, 12)
+                                .padding(.top, 12)
+                                .padding(.leading, 16)
                             }
                         }
                         .frame(maxWidth: .infinity, alignment: .center)
-                        .padding(.top, 20)
+                        .padding(.top, 16)
 
+                        // Campo Name with better styling
                         Text(campo.nombre)
-                            .font(.title2)
-                            .fontWeight(.bold)
+                            .font(.system(size: 28, weight: .bold))
                             .foregroundColor(.primary)
                             .frame(maxWidth: .infinity, alignment: .center)
-                            .padding(.top, 4)
+                            .multilineTextAlignment(.center)
 
                         // UBICACIÓN
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text("Ubicación")
-                                .font(.headline)
-                                .fontWeight(.semibold)
-                                .foregroundColor(.primary)
+                        VStack(alignment: .leading, spacing: 12) {
+                            HStack {
+                                Image(systemName: "mappin.circle.fill")
+                                    .font(.title3)
+                                    .foregroundColor(.blue)
+                                Text("Ubicación")
+                                    .font(.system(size: 20, weight: .bold))
+                                    .foregroundColor(.primary)
+                            }
 
                             HStack(spacing: 10) {
                                 VStack(alignment: .leading, spacing: 6) {
@@ -192,42 +208,60 @@ struct CampoDetalleView: View {
                                             }
                                         }
                                     }) {
-                                        Image(systemName: "map.fill")
-                                            .foregroundColor(.blue)
-                                            .padding(10)
-                                            .background(Color.blue.opacity(0.1))
-                                            .clipShape(Circle())
-                                            .frame(width: 40, height: 40)
-                                            .shadow(color: Color.black.opacity(0.1), radius: 2)
+                                        VStack(spacing: 4) {
+                                            Image(systemName: "map.fill")
+                                                .font(.system(size: 20))
+                                                .foregroundColor(.white)
+                                            Text("Ruta")
+                                                .font(.caption2)
+                                                .fontWeight(.semibold)
+                                                .foregroundColor(.white)
+                                        }
+                                        .frame(width: 60, height: 60)
+                                        .background(
+                                            LinearGradient(
+                                                colors: [.blue, .blue.opacity(0.8)],
+                                                startPoint: .topLeading,
+                                                endPoint: .bottomTrailing
+                                            )
+                                        )
+                                        .cornerRadius(16)
+                                        .shadow(color: Color.blue.opacity(0.3), radius: 6, x: 0, y: 3)
                                     }
                                 } else {
-                                    Image(systemName: "map.fill")
-                                        .foregroundColor(.gray)
-                                        .padding(10)
-                                        .background(Color.gray.opacity(0.1))
-                                        .clipShape(Circle())
-                                        .frame(width: 40, height: 40)
+                                    VStack(spacing: 4) {
+                                        Image(systemName: "map.fill")
+                                            .font(.system(size: 20))
+                                            .foregroundColor(.gray)
+                                        Text("Ruta")
+                                            .font(.caption2)
+                                            .fontWeight(.semibold)
+                                            .foregroundColor(.gray)
+                                    }
+                                    .frame(width: 60, height: 60)
+                                    .background(Color.gray.opacity(0.1))
+                                    .cornerRadius(16)
                                 }
                             }
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(12)
+                        .padding(18)
                         .background(
-                            LinearGradient(
-                                gradient: Gradient(colors: [Color.blue.opacity(0.1), Color(UIColor.secondarySystemBackground).opacity(0.8)]),
-                                startPoint: .topLeading, endPoint: .bottomTrailing
-                            )
+                            RoundedRectangle(cornerRadius: 16)
+                                .fill(Color(UIColor.secondarySystemBackground))
+                                .shadow(color: Color.black.opacity(0.08), radius: 10, x: 0, y: 4)
                         )
-                        .cornerRadius(10)
-                        .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.gray.opacity(0.3), lineWidth: 1))
-                        .shadow(color: Color.black.opacity(0.1), radius: 8, x: 0, y: 4)
 
                         // DETALLES DEL CAMPO
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("Detalles del Campo")
-                                .font(.headline)
-                                .fontWeight(.semibold)
-                                .foregroundColor(.primary)
+                        VStack(alignment: .leading, spacing: 12) {
+                            HStack {
+                                Image(systemName: "info.circle.fill")
+                                    .font(.title3)
+                                    .foregroundColor(.blue)
+                                Text("Detalles del Campo")
+                                    .font(.system(size: 20, weight: .bold))
+                                    .foregroundColor(.primary)
+                            }
 
                             HStack(alignment: .top) {
                                 Text("Superficie:")
@@ -336,16 +370,12 @@ struct CampoDetalleView: View {
                             }
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(14)
+                        .padding(18)
                         .background(
-                            LinearGradient(
-                                gradient: Gradient(colors: [Color.blue.opacity(0.1), Color(UIColor.secondarySystemBackground).opacity(0.8)]),
-                                startPoint: .topLeading, endPoint: .bottomTrailing
-                            )
+                            RoundedRectangle(cornerRadius: 16)
+                                .fill(Color(UIColor.secondarySystemBackground))
+                                .shadow(color: Color.black.opacity(0.08), radius: 10, x: 0, y: 4)
                         )
-                        .cornerRadius(10)
-                        .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.gray.opacity(0.3), lineWidth: 1))
-                        .shadow(color: Color.black.opacity(0.1), radius: 8, x: 0, y: 4)
 
                         if !contribucionesAprobadas.isEmpty {
                             let todasLasFotos: [(url: String, userId: String)] = contribucionesAprobadas.flatMap { contribucion in
@@ -355,11 +385,16 @@ struct CampoDetalleView: View {
                             }
 
                             if !todasLasFotos.isEmpty {
-                                VStack(alignment: .leading, spacing: 8) {
-                                    Text("Fotos de la comunidad")
-                                        .font(.headline)
-                                        .fontWeight(.semibold)
-                                        .foregroundColor(.primary)
+                                VStack(alignment: .leading, spacing: 12) {
+                                    HStack {
+                                        Image(systemName: "photo.stack.fill")
+                                            .font(.title3)
+                                            .foregroundColor(.blue)
+                                        Text("Fotos de la comunidad")
+                                            .font(.system(size: 20, weight: .bold))
+                                            .foregroundColor(.primary)
+                                    }
+                                    .padding(.horizontal)
 
                                     ScrollView(.horizontal, showsIndicators: false) {
                                         HStack(spacing: 12) {
@@ -367,23 +402,22 @@ struct CampoDetalleView: View {
                                                 let foto = todasLasFotos[index]
                                                 let nombre = userNames[foto.userId] ?? "Usuario desconocido"
 
-                                                VStack {
+                                                VStack(spacing: 8) {
                                                     if let url = URL(string: foto.url) {
                                                         CachedAsyncImage(url: url) { image in
                                                             image
                                                                 .resizable()
                                                                 .scaledToFill()
-                                                                .frame(width: 100, height: 100)
-                                                                .clipShape(RoundedRectangle(cornerRadius: 8))
-                                                                .overlay(
-                                                                    RoundedRectangle(cornerRadius: 8)
-                                                                        .stroke(Color.gray.opacity(0.1), lineWidth: 1)
-                                                                )
-                                                                .shadow(color: Color.black.opacity(0.1), radius: 2)
+                                                                .frame(width: 120, height: 120)
+                                                                .clipShape(RoundedRectangle(cornerRadius: 12))
+                                                                .shadow(color: Color.black.opacity(0.15), radius: 6, x: 0, y: 3)
                                                         } placeholder: {
-                                                            Color.gray.opacity(0.3)
-                                                                .frame(width: 100, height: 100)
-                                                                .clipShape(RoundedRectangle(cornerRadius: 8))
+                                                            ZStack {
+                                                                Color.gray.opacity(0.2)
+                                                                ProgressView()
+                                                            }
+                                                            .frame(width: 120, height: 120)
+                                                            .clipShape(RoundedRectangle(cornerRadius: 12))
                                                         }
                                                         .onTapGesture {
                                                             selectedPhotoIndex = index
@@ -392,10 +426,9 @@ struct CampoDetalleView: View {
                                                     }
 
                                                     Text("Por \(nombre)")
-                                                        .font(.caption2)
+                                                        .font(.caption)
                                                         .foregroundColor(.secondary)
                                                         .lineLimit(1)
-                                                        .padding(.top, 2)
                                                 }
                                             }
                                         }
@@ -413,6 +446,14 @@ struct CampoDetalleView: View {
                                 .padding(.vertical, 6)
                                 .frame(maxWidth: .infinity, alignment: .center)
                         }
+
+                        // RESEÑAS SECTION
+                        ReviewsSectionView(
+                            campoId: campoID,
+                            campoNombre: campo.nombre
+                        )
+                        .environmentObject(authViewModel)
+                        .padding(.top, 8)
 
                         Spacer()
                     }
@@ -434,24 +475,26 @@ struct CampoDetalleView: View {
                     Button(action: {
                         showingContribucionForm = true
                     }) {
-                        HStack {
+                        HStack(spacing: 8) {
                             Image(systemName: "plus.circle.fill")
-                                .foregroundColor(.white)
-                                .font(.system(size: 18))
+                                .font(.system(size: 20))
                             Text("Aportar información")
-                                .font(.subheadline)
-                                .fontWeight(.medium)
-                                .foregroundColor(.white)
+                                .font(.system(size: 16, weight: .semibold))
                         }
-                        .padding(.vertical, 10)
-                        .padding(.horizontal, 16)
+                        .foregroundColor(.white)
+                        .padding(.vertical, 14)
+                        .padding(.horizontal, 24)
                         .background(
-                            LinearGradient(gradient: Gradient(colors: [Color.green, Color.green.opacity(0.7)]), startPoint: .leading, endPoint: .trailing)
+                            LinearGradient(
+                                colors: [.green, .green.opacity(0.8)],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
                         )
-                        .cornerRadius(20)
-                        .shadow(color: Color.black.opacity(0.15), radius: 4, x: 0, y: 2)
+                        .cornerRadius(25)
+                        .shadow(color: Color.green.opacity(0.4), radius: 8, x: 0, y: 4)
                     }
-                    .padding(.bottom, 16)
+                    .padding(.bottom, 20)
                 }
                 .frame(maxWidth: .infinity, alignment: .center)
                 .ignoresSafeArea(.keyboard, edges: .bottom)

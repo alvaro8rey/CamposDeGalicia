@@ -77,7 +77,7 @@ struct CampoDetalleView: View {
                             // Usamos la URL de la imagen del campo o la predeterminada
                             let imageURL = (campo.foto_url?.isEmpty == false ? campo.foto_url : nil) ?? defaultImageURL
                             if let url = URL(string: imageURL) {
-                                AsyncImage(url: url) { image in
+                                CachedAsyncImage(url: url) { image in
                                     image
                                         .resizable()
                                         .scaledToFill()
@@ -369,7 +369,7 @@ struct CampoDetalleView: View {
 
                                                 VStack {
                                                     if let url = URL(string: foto.url) {
-                                                        AsyncImage(url: url) { image in
+                                                        CachedAsyncImage(url: url) { image in
                                                             image
                                                                 .resizable()
                                                                 .scaledToFill()
@@ -654,26 +654,44 @@ struct CampoDetalleView: View {
     }
 
     private func preloadUserNames(for contribuciones: [ContribucionAprobada]) async {
-        for contribucion in contribuciones {
-            await fetchUsername(for: contribucion.id_usuario)
-        }
-    }
+        // Optimización: Obtener IDs únicos de usuarios
+        let uniqueUserIds = Array(Set(contribuciones.map { $0.id_usuario }))
 
-    private func fetchUsername(for userId: String) async {
+        guard !uniqueUserIds.isEmpty else { return }
+
+        Logger.debug("🔍 Cargando \(uniqueUserIds.count) nombres de usuario en batch")
+
         do {
+            // ✅ BATCH QUERY: Una sola petición para todos los usuarios
             let response = try await supabase.from("perfiles")
                 .select("id, nombre")
-                .eq("id", value: userId)
-                .single()
+                .in("id", values: uniqueUserIds)
                 .execute()
 
-            let data = response.data
             let decoder = JSONDecoder()
-            let profile = try decoder.decode(UserProfile.self, from: data)
-            userNames[userId] = profile.nombre
+            let profiles = try decoder.decode([UserProfile].self, from: response.data)
+
+            // Mapear resultados al diccionario
+            for profile in profiles {
+                if let id = profile.id {
+                    userNames[id] = profile.nombre
+                }
+            }
+
+            // Marcar usuarios no encontrados
+            for userId in uniqueUserIds {
+                if userNames[userId] == nil {
+                    userNames[userId] = "Usuario desconocido"
+                }
+            }
+
+            Logger.success("✅ Nombres cargados: \(profiles.count)/\(uniqueUserIds.count)")
         } catch {
-            print("Error al obtener nombre de usuario para \(userId): \(error)")
-            userNames[userId] = "Usuario desconocido"
+            Logger.error("❌ Error cargando nombres de usuario: \(error.localizedDescription)")
+            // Fallback: marcar todos como desconocidos
+            for userId in uniqueUserIds {
+                userNames[userId] = "Usuario desconocido"
+            }
         }
     }
 

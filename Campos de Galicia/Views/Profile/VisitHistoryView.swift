@@ -70,7 +70,7 @@ struct HistoryCardView: View {
                 // Image
                 let imageURL = (campo.foto_url?.isEmpty == false ? campo.foto_url : nil) ?? defaultImageURL
                 if let url = URL(string: imageURL) {
-                    AsyncImage(url: url) { image in
+                    CachedAsyncImage(url: url) { image in
                         image
                             .resizable()
                             .scaledToFill()
@@ -142,7 +142,7 @@ struct VisitDetailView: View {
                                         let imageURL = (visit.campo.foto_url?.isEmpty == false ? visit.campo.foto_url : nil) ?? "https://ooqdrhkzsexjnmnvpwqw.supabase.co/storage/v1/object/public/fotos-campos/sin-imagen.png"
 
                                         if let url = URL(string: imageURL) {
-                                            AsyncImage(url: url) { image in
+                                            CachedAsyncImage(url: url) { image in
                                                 image.resizable().scaledToFill().frame(width: 60, height: 60).cornerRadius(10).clipped()
                                             } placeholder: {
                                                 Color.gray.opacity(0.3).frame(width: 60, height: 60).cornerRadius(10)

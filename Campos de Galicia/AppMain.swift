@@ -21,6 +21,14 @@ struct AppMain: App {
         let viewModel = CamposViewModel()
         _camposViewModel = StateObject(wrappedValue: viewModel)
 
+        // Configurar caché de imágenes
+        let imageCache = URLCache(
+            memoryCapacity: 50_000_000,    // 50 MB en RAM
+            diskCapacity: 100_000_000      // 100 MB en disco
+        )
+        URLCache.shared = imageCache
+        Logger.info("✅ Caché de imágenes configurado: 50MB RAM / 100MB disco")
+
         // Iniciar monitoreo de red
         Task { @MainActor in
             NetworkMonitor.shared.startMonitoring()

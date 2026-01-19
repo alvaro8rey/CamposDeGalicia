@@ -945,13 +945,13 @@ extension UserView {
         NavigationLink(destination: CampoDetalleView(campoID: campo.id)) {
             HStack(spacing: 12) {
                 if let fotoURL = campo.foto_url, let url = URL(string: fotoURL), !fotoURL.isEmpty {
-                    AsyncImage(url: url) { image in
+                    CachedAsyncImage(url: url) { image in
                         image.resizable().scaledToFill().frame(width: 50, height: 50).cornerRadius(8).clipped()
                     } placeholder: {
                         Color.gray.opacity(0.3).frame(width: 50, height: 50).cornerRadius(8)
                     }
                 } else {
-                    AsyncImage(url: URL(string: "https://ooqdrhkzsexjnmnvpwqw.supabase.co/storage/v1/object/public/fotos-campos/sin-imagen.png")) { image in
+                    CachedAsyncImage(url: URL(string: "https://ooqdrhkzsexjnmnvpwqw.supabase.co/storage/v1/object/public/fotos-campos/sin-imagen.png")) { image in
                         image.resizable().scaledToFill().frame(width: 50, height: 50).cornerRadius(8).clipped()
                     } placeholder: {
                         Color.gray.opacity(0.3).frame(width: 50, height: 50).cornerRadius(8)
@@ -1518,13 +1518,13 @@ struct VisitDetailView: View {
                                 VStack(alignment: .leading, spacing: 8) {
                                     HStack {
                                         if let fotoURL = visit.campo.foto_url, let url = URL(string: fotoURL), !fotoURL.isEmpty {
-                                            AsyncImage(url: url) { image in
+                                            CachedAsyncImage(url: url) { image in
                                                 image.resizable().scaledToFill().frame(width: 60, height: 60).cornerRadius(10).clipped()
                                             } placeholder: {
                                                 Color.gray.opacity(0.3).frame(width: 60, height: 60).cornerRadius(10)
                                             }
                                         } else {
-                                            AsyncImage(url: URL(string: "https://ooqdrhkzsexjnmnvpwqw.supabase.co/storage/v1/object/public/fotos-campos/sin-imagen.png")) { image in
+                                            CachedAsyncImage(url: URL(string: "https://ooqdrhkzsexjnmnvpwqw.supabase.co/storage/v1/object/public/fotos-campos/sin-imagen.png")) { image in
                                                 image.resizable().scaledToFill().frame(width: 60, height: 60).cornerRadius(10).clipped()
                                             } placeholder: {
                                                 Color.gray.opacity(0.3).frame(width: 60, height: 60).cornerRadius(10)

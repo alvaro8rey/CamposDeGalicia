@@ -78,9 +78,9 @@ final class SupabaseManager {
     func fetchContribucionesAprobadas(for campoID: UUID) async throws -> [ContribucionAprobada] {
         let response = try await client.from("campo_contribuciones")
             .select("*")
-            .eq(column: "id_campo", value: campoID.uuidString)
-            .eq(column: "aprobada", value: true)
-            .order(column: "fecha", ascending: false)
+            .eq("id_campo", value: campoID.uuidString)
+            .eq("aprobada", value: true)
+            .order("fecha", ascending: false)
             .execute()
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601

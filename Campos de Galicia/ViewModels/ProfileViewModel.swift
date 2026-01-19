@@ -2,6 +2,12 @@ import Foundation
 import SwiftUI
 import Supabase
 
+/// Modelo de preferencias del usuario
+struct Preferences: Codable {
+    let id_usuario: String
+    let distancia_predeterminada: Double
+}
+
 /// ViewModel para manejar la lógica del perfil del usuario
 @MainActor
 class ProfileViewModel: ObservableObject {

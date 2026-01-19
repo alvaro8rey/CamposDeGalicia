@@ -10,6 +10,7 @@ extension Notification.Name {
 @main
 struct AppMain: App {
     @StateObject private var camposViewModel: CamposViewModel
+    @StateObject private var authViewModel = AuthViewModel.shared
     @StateObject private var locationManager = LocationManager()
     @StateObject private var geofenceManager = GeofenceManager()   // ✅ nuevo
     @State private var distanciaPredeterminada: Double = 10.0
@@ -52,6 +53,7 @@ struct AppMain: App {
                         distanciaPredeterminada: $distanciaPredeterminada
                     )
                     .environmentObject(camposViewModel)
+                    .environmentObject(authViewModel)
                 }
                 .tabItem {
                     Image(systemName: "house.fill")
@@ -62,6 +64,7 @@ struct AppMain: App {
                 NavigationView {
                     MapaView()
                         .environmentObject(camposViewModel)
+                        .environmentObject(authViewModel)
                 }
                 .tabItem {
                     Image(systemName: "map.fill")
@@ -79,6 +82,7 @@ struct AppMain: App {
                         }
                     )
                     .environmentObject(camposViewModel)
+                    .environmentObject(authViewModel)
                 }
                 .tabItem {
                     Image(systemName: "mappin.and.ellipse")
@@ -91,6 +95,7 @@ struct AppMain: App {
                         distanciaPredeterminada: $distanciaPredeterminada
                     )
                     .environmentObject(camposViewModel)
+                    .environmentObject(authViewModel)
                 }
                 .environmentObject(locationManager)
                 .tabItem {

@@ -5,7 +5,7 @@ import SwiftUI
 struct UserView: View {
 
     // MARK: - Environment
-    @StateObject private var authViewModel = AuthViewModel.shared
+    @EnvironmentObject var authViewModel: AuthViewModel
     @EnvironmentObject var geofenceManager: GeofenceManager
     @EnvironmentObject var locationManager: LocationManager
     @EnvironmentObject var camposViewModel: CamposViewModel

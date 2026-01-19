@@ -13,9 +13,7 @@ struct ProfileView: View {
 
     // MARK: - State
     @StateObject private var profileVM = ProfileViewModel()
-    @State private var isEditing: Bool = false
-    @State private var editedNombre: String = ""
-    @State private var editedApellidos: String = ""
+    @State private var showEditProfile: Bool = false
     @State private var showVisitDetails: Bool = false
     @State private var showInfoSheet: Bool = false
     @AppStorage("auto_checkin_enabled") private var autoCheckinStored: Bool = false
@@ -220,74 +218,45 @@ struct ProfileView: View {
 
     // MARK: - Personal Data Section
     private var personalDataSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Información Personal")
-                .font(.title3)
-                .fontWeight(.bold)
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                Text("Información Personal")
+                    .font(.title3)
+                    .fontWeight(.bold)
 
-            if isEditing {
-                // Edit Mode
-                VStack(spacing: 12) {
-                    TextField("Nombre", text: $editedNombre)
-                        .textFieldStyle(RoundedBorderTextFieldStyle())
-                    TextField("Apellidos", text: $editedApellidos)
-                        .textFieldStyle(RoundedBorderTextFieldStyle())
+                Spacer()
 
-                    HStack {
-                        Button("Cancelar") {
-                            isEditing = false
-                        }
-                        .foregroundColor(.red)
-
-                        Spacer()
-
-                        Button("Guardar") {
-                            Task { await saveChanges() }
-                        }
-                        .foregroundColor(.blue)
+                Button(action: { showEditProfile = true }) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "pencil")
+                        Text("Editar")
                     }
-                }
-            } else {
-                // View Mode
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack {
-                        Text("Nombre:")
-                            .foregroundColor(.secondary)
-                        Spacer()
-                        Text(authViewModel.nombre)
-                    }
-                    Divider()
-                    HStack {
-                        Text("Apellidos:")
-                            .foregroundColor(.secondary)
-                        Spacer()
-                        Text(authViewModel.apellidos)
-                    }
-
-                    Button("Editar") {
-                        editedNombre = authViewModel.nombre
-                        editedApellidos = authViewModel.apellidos
-                        isEditing = true
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(Color.blue)
-                    .foregroundColor(.white)
-                    .cornerRadius(12)
-                    .padding(.top, 8)
+                    .font(.subheadline)
+                    .foregroundColor(.blue)
                 }
             }
 
-            if let errorMessage = profileVM.errorMessage {
-                Text(errorMessage)
-                    .font(.caption)
-                    .foregroundColor(.red)
+            // Display Info
+            VStack(alignment: .leading, spacing: 12) {
+                InfoRow(icon: "person.fill", label: "Nombre", value: authViewModel.nombre)
+                Divider()
+                InfoRow(icon: "person.fill", label: "Apellidos", value: authViewModel.apellidos)
+                Divider()
+                InfoRow(icon: "envelope.fill", label: "Email", value: authViewModel.user?.email ?? "No disponible")
             }
         }
         .padding()
         .background(Color(UIColor.secondarySystemBackground))
         .cornerRadius(12)
         .padding(.horizontal)
+        .sheet(isPresented: $showEditProfile) {
+            EditProfileView(
+                nombre: authViewModel.nombre,
+                apellidos: authViewModel.apellidos,
+                email: authViewModel.user?.email ?? ""
+            )
+            .environmentObject(authViewModel)
+        }
     }
 
     // MARK: - Action Buttons Section
@@ -309,15 +278,6 @@ struct ProfileView: View {
     }
 
     // MARK: - Methods
-    private func saveChanges() async {
-        do {
-            try await authViewModel.saveProfileChanges(nombre: editedNombre, apellidos: editedApellidos)
-            isEditing = false
-        } catch {
-            profileVM.errorMessage = error.localizedDescription
-        }
-    }
-
     private func logout() async {
         do {
             try await authViewModel.logout()
@@ -330,6 +290,32 @@ struct ProfileView: View {
             profileVM.totalAchievementsCount = 0
         } catch {
             profileVM.errorMessage = "Error al cerrar sesión: \(error.localizedDescription)"
+        }
+    }
+}
+
+// MARK: - Info Row Helper
+struct InfoRow: View {
+    let icon: String
+    let label: String
+    let value: String
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: icon)
+                .foregroundColor(.blue)
+                .frame(width: 24)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(label)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                Text(value)
+                    .font(.body)
+                    .fontWeight(.medium)
+            }
+
+            Spacer()
         }
     }
 }

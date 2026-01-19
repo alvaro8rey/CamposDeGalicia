@@ -10,6 +10,9 @@ struct ReviewsSectionView: View {
     @State private var showAddReview: Bool = false
     @State private var canUserReview: Bool = true
     @State private var sortType: ReviewSortType = .recent
+    @State private var displayedReviewsCount: Int = 10
+
+    private let reviewsPerPage = 10
 
     var sortedReviews: [Review] {
         switch sortType {
@@ -22,6 +25,14 @@ struct ReviewsSectionView: View {
         case .lowest:
             return reviewsManager.reviews.sorted { $0.rating < $1.rating }
         }
+    }
+
+    var paginatedReviews: [Review] {
+        Array(sortedReviews.prefix(displayedReviewsCount))
+    }
+
+    var hasMoreReviews: Bool {
+        sortedReviews.count > displayedReviewsCount
     }
 
     var body: some View {
@@ -118,7 +129,7 @@ struct ReviewsSectionView: View {
                     .padding(.horizontal)
             } else {
                 VStack(spacing: 12) {
-                    ForEach(sortedReviews) { review in
+                    ForEach(paginatedReviews) { review in
                         ReviewCardView(review: review)
                             .contextMenu {
                                 if review.user_id == authViewModel.user?.id {
@@ -129,6 +140,28 @@ struct ReviewsSectionView: View {
                                     }
                                 }
                             }
+                    }
+
+                    // Load More Button
+                    if hasMoreReviews {
+                        Button(action: {
+                            withAnimation {
+                                displayedReviewsCount += reviewsPerPage
+                            }
+                        }) {
+                            HStack(spacing: 6) {
+                                Image(systemName: "arrow.down.circle")
+                                Text("Cargar más reseñas")
+                            }
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                            .foregroundColor(.blue)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                            .background(Color.blue.opacity(0.1))
+                            .cornerRadius(12)
+                        }
+                        .padding(.top, 8)
                     }
                 }
                 .padding(.horizontal)

@@ -10,6 +10,7 @@ struct Review: Identifiable, Codable, Equatable {
     let created_at: Date?
     let reviewer_name: String?
     let fotos: [String]?
+    let is_anonymous: Bool?
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -20,11 +21,15 @@ struct Review: Identifiable, Codable, Equatable {
         case created_at
         case reviewer_name
         case fotos
+        case is_anonymous
     }
 
     // Computed property for display
     var displayName: String {
-        reviewer_name ?? "Usuario"
+        if is_anonymous == true {
+            return "Anónimo"
+        }
+        return reviewer_name ?? "Usuario"
     }
 
     var formattedDate: String {
@@ -43,6 +48,7 @@ struct ReviewCreate: Codable {
     let rating: Int
     let reviewer_name: String
     let fotos: [String]?
+    let is_anonymous: Bool
 
     enum CodingKeys: String, CodingKey {
         case campo_id
@@ -51,6 +57,7 @@ struct ReviewCreate: Codable {
         case rating
         case reviewer_name
         case fotos
+        case is_anonymous
     }
 }
 

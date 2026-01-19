@@ -18,6 +18,7 @@ struct AddReviewView: View {
     @State private var showSuccess: Bool = false
     @State private var selectedPhotos: [PhotosPickerItem] = []
     @State private var photoPreviews: [Image] = []
+    @State private var isAnonymous: Bool = false
 
     private let maxCharacters = 500
     private let maxPhotos = 5
@@ -46,20 +47,19 @@ struct AddReviewView: View {
                             HStack(spacing: 12) {
                                 ForEach(1...5, id: \.self) { index in
                                     Button {
-                                        withAnimation(.spring(response: 0.3)) {
-                                            rating = index
-                                        }
+                                        rating = index
                                     } label: {
                                         Image(systemName: index <= rating ? "star.fill" : "star")
                                             .font(.system(size: 32))
                                             .foregroundColor(index <= rating ? .orange : .gray.opacity(0.3))
+                                            .scaleEffect(rating == index ? 1.2 : 1.0)
                                     }
-                                    .scaleEffect(rating == index ? 1.2 : 1.0)
-                                    .animation(.spring(response: 0.3, dampingFraction: 0.6), value: rating)
+                                    .buttonStyle(.plain)
                                 }
                             }
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 8)
+                            .animation(.spring(response: 0.3, dampingFraction: 0.6), value: rating)
 
                             if rating > 0 {
                                 Text(ratingDescription)
@@ -146,6 +146,20 @@ struct AddReviewView: View {
                         Label("Fotos (opcional)", systemImage: "photo")
                     } footer: {
                         Text("Añade hasta \(maxPhotos) fotos para compartir tu experiencia.")
+                            .font(.caption)
+                    }
+
+                    // Anonymous Section
+                    Section {
+                        Toggle(isOn: $isAnonymous) {
+                            HStack {
+                                Image(systemName: "eye.slash.fill")
+                                    .foregroundColor(.blue)
+                                Text("Reseña anónima")
+                            }
+                        }
+                    } footer: {
+                        Text("Si activas esta opción, tu nombre no será visible en la reseña.")
                             .font(.caption)
                     }
 
@@ -290,7 +304,8 @@ struct AddReviewView: View {
                 reseña: reviewText.trimmingCharacters(in: .whitespacesAndNewlines),
                 rating: rating,
                 reviewer_name: reviewerName.isEmpty ? "Usuario" : reviewerName,
-                fotos: photoURLs
+                fotos: photoURLs,
+                is_anonymous: isAnonymous
             )
 
             _ = try await supabase.from("reseñas")

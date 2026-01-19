@@ -81,6 +81,7 @@ struct CampoDetalleView: View {
                                     image
                                         .resizable()
                                         .scaledToFill()
+                                        .frame(maxWidth: .infinity)
                                         .frame(height: 220)
                                         .clipped()
                                 } placeholder: {
@@ -88,6 +89,7 @@ struct CampoDetalleView: View {
                                         Color.gray.opacity(0.1)
                                         ProgressView()
                                     }
+                                    .frame(maxWidth: .infinity)
                                     .frame(height: 220)
                                 }
                             }

@@ -10,6 +10,7 @@ extension CLLocationCoordinate2D: Equatable {
 
 struct CamposCercanosView: View {
     @EnvironmentObject var camposViewModel: CamposViewModel
+    @EnvironmentObject var authViewModel: AuthViewModel
     @Binding var userLocation: CLLocationCoordinate2D?
     @Binding var isLoadingLocation: Bool
     @Binding var distanciaPredeterminada: Double
@@ -65,7 +66,8 @@ struct CamposCercanosView: View {
                                 // ✅ Misma estructura que en ContentView
                                 LazyVStack(spacing: 0) {
                                     ForEach(nearbyCampos, id: \.campo.id) { item in
-                                        NavigationLink(destination: CampoDetalleView(campoID: item.campo.id)) {
+                                        NavigationLink(destination: CampoDetalleView(campoID: item.campo.id)
+                                            .environmentObject(authViewModel)) {
                                             CampoRowView_Classic(campoWithDistance: item)
                                         }
                                         .buttonStyle(PlainButtonStyle())

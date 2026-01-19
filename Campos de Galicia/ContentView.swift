@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ContentView: View {
     @EnvironmentObject var camposViewModel: CamposViewModel
+    @EnvironmentObject var authViewModel: AuthViewModel
 
     // Estados para los filtros
     @State private var searchNombre: String = ""
@@ -323,7 +324,8 @@ struct CampoListView: View {
                 ForEach(filteredCampos, id: \.id) { campo in
                     if isGridView {
                         // Vista en cuadrados (tarjetas)
-                        NavigationLink(destination: CampoDetalleView(campoID: campo.id)) {
+                        NavigationLink(destination: CampoDetalleView(campoID: campo.id)
+                            .environmentObject(authViewModel)) {
                             VStack(alignment: .leading, spacing: 8) {
                                 let imageURL = (campo.foto_url?.isEmpty == false ? campo.foto_url : nil) ?? defaultImageURL
                                 if let url = URL(string: imageURL) {
@@ -355,7 +357,8 @@ struct CampoListView: View {
                         .buttonStyle(PlainButtonStyle())
                     } else {
                         // Vista en lista
-                        NavigationLink(destination: CampoDetalleView(campoID: campo.id)) {
+                        NavigationLink(destination: CampoDetalleView(campoID: campo.id)
+                            .environmentObject(authViewModel)) {
                             HStack(spacing: 12) {
                                 let imageURL = (campo.foto_url?.isEmpty == false ? campo.foto_url : nil) ?? defaultImageURL
                                 if let url = URL(string: imageURL) {

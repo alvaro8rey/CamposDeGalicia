@@ -4,6 +4,7 @@ import SwiftUI
 struct VisitHistoryView: View {
 
     // MARK: - Properties
+    @EnvironmentObject var authViewModel: AuthViewModel
     @ObservedObject var profileVM: ProfileViewModel
     var onShowDetails: () -> Void
 
@@ -61,11 +62,13 @@ struct VisitHistoryView: View {
 
 // MARK: - History Card View
 struct HistoryCardView: View {
+    @EnvironmentObject var authViewModel: AuthViewModel
     let campo: CampoModel
     private let defaultImageURL = "https://ooqdrhkzsexjnmnvpwqw.supabase.co/storage/v1/object/public/fotos-campos/sin-imagen.png"
 
     var body: some View {
-        NavigationLink(destination: CampoDetalleView(campoID: campo.id)) {
+        NavigationLink(destination: CampoDetalleView(campoID: campo.id)
+            .environmentObject(authViewModel)) {
             HStack(spacing: 12) {
                 // Image
                 let imageURL = (campo.foto_url?.isEmpty == false ? campo.foto_url : nil) ?? defaultImageURL
@@ -111,6 +114,7 @@ struct HistoryCardView: View {
 
 // MARK: - Visit Detail View (Full History Sheet)
 struct VisitDetailView: View {
+    @EnvironmentObject var authViewModel: AuthViewModel
     let allVisits: [(campo: CampoModel, date: Date)]
     let formatDate: (Date) -> String
     @Environment(\.dismiss) var dismiss
@@ -136,7 +140,8 @@ struct VisitDetailView: View {
                 ScrollView {
                     LazyVStack(spacing: 10) {
                         ForEach(allVisits, id: \.campo.id) { visit in
-                            NavigationLink(destination: CampoDetalleView(campoID: visit.campo.id)) {
+                            NavigationLink(destination: CampoDetalleView(campoID: visit.campo.id)
+                                .environmentObject(authViewModel)) {
                                 VStack(alignment: .leading, spacing: 8) {
                                     HStack {
                                         let imageURL = (visit.campo.foto_url?.isEmpty == false ? visit.campo.foto_url : nil) ?? "https://ooqdrhkzsexjnmnvpwqw.supabase.co/storage/v1/object/public/fotos-campos/sin-imagen.png"

@@ -34,12 +34,13 @@ final class SupabaseManager {
     }
 
     func fetchCampos(forceRefresh: Bool = false) async throws -> CamposFetchResult {
-        let cachedPayload = await cacheStore.load()
+        let cachedData = await cacheStore.loadCampos()
 
-        if !forceRefresh, let cachedPayload = cachedPayload, isCacheValid(cachedPayload.lastUpdated) {
+        if !forceRefresh, let cached = cachedData, isCacheValid(cached.lastUpdated) {
+            Logger.debug("✅ Usando caché válido: \(cached.campos.count) campos")
             return CamposFetchResult(
-                campos: cachedPayload.campos,
-                lastUpdated: cachedPayload.lastUpdated,
+                campos: cached.campos,
+                lastUpdated: cached.lastUpdated,
                 source: .cache,
                 cacheValid: true,
                 error: nil
@@ -47,6 +48,7 @@ final class SupabaseManager {
         }
 
         do {
+            Logger.debug("📡 Fetching campos desde servidor")
             let campos = try await requestCampos()
             let sorted = campos.sorted { $0.nombre.lowercased() < $1.nombre.lowercased() }
             let timestamp = Date()
@@ -59,10 +61,11 @@ final class SupabaseManager {
                 error: nil
             )
         } catch {
-            if let cachedPayload = cachedPayload {
+            if let cached = cachedData {
+                Logger.warning("⚠️ Error al obtener campos, usando caché expirado: \(error.localizedDescription)")
                 return CamposFetchResult(
-                    campos: cachedPayload.campos,
-                    lastUpdated: cachedPayload.lastUpdated,
+                    campos: cached.campos,
+                    lastUpdated: cached.lastUpdated,
                     source: .cache,
                     cacheValid: false,
                     error: error

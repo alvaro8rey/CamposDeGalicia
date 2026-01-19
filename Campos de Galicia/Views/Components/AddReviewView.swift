@@ -355,14 +355,3 @@ struct SuccessCheckmarkView: View {
     }
 }
 
-// MARK: - Preview
-struct AddReviewView_Previews: PreviewProvider {
-    static var previews: some View {
-        AddReviewView(
-            campoId: UUID(),
-            campoNombre: "Campo Municipal de Fútbol",
-            onReviewAdded: {}
-        )
-        .environmentObject(AuthViewModel.shared)
-    }
-}

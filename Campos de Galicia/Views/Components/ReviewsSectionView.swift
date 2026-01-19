@@ -279,15 +279,3 @@ struct ErrorView: View {
     }
 }
 
-// MARK: - Preview
-struct ReviewsSectionView_Previews: PreviewProvider {
-    static var previews: some View {
-        ScrollView {
-            ReviewsSectionView(
-                campoId: UUID(),
-                campoNombre: "Campo Municipal"
-            )
-            .environmentObject(AuthViewModel.shared)
-        }
-    }
-}

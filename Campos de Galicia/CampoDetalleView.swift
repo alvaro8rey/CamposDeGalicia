@@ -18,7 +18,7 @@ struct CampoContribucion: Encodable {
     let aprobada: Bool
 }
 
-struct ContribucionAprobada: Codable {
+struct ContribucionAprobada: Codable, Equatable {
     let id_usuario: String
     let fotos_adicionales: [String]?
     let tiene_cantina: Bool?

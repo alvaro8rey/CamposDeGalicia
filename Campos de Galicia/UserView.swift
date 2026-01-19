@@ -2,7 +2,7 @@ import SwiftUI
 
 /// Vista de usuario refactorizada - Usa componentes modulares
 /// Esta es la versión refactorizada de UserView.swift
-struct UserViewRefactored: View {
+struct UserView: View {
 
     // MARK: - Environment
     @StateObject private var authViewModel = AuthViewModel.shared
@@ -49,9 +49,9 @@ struct UserViewRefactored: View {
 }
 
 // MARK: - Preview
-struct UserViewRefactored_Previews: PreviewProvider {
+struct UserView_Previews: PreviewProvider {
     static var previews: some View {
-        UserViewRefactored(distanciaPredeterminada: .constant(10.0))
+        UserView(distanciaPredeterminada: .constant(10.0))
             .environmentObject(GeofenceManager())
             .environmentObject(LocationManager())
             .environmentObject(CamposViewModel())

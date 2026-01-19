@@ -198,11 +198,10 @@ struct ProfileView: View {
                 }
             }
             .onChange(of: autoCheckinStored) { newValue in
+                geofenceManager.setAutoCheckin(newValue, campos: camposViewModel.campos)
                 if newValue {
-                    geofenceManager.startMonitoring(campos: camposViewModel.campos)
                     Logger.info("✅ Auto check-in activado")
                 } else {
-                    geofenceManager.stopMonitoring()
                     Logger.info("⏹ Auto check-in desactivado")
                 }
             }

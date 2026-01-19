@@ -311,10 +311,11 @@ struct FiltersView: View {
 
 // Subcomponente para la lista de campos
 struct CampoListView: View {
+    @EnvironmentObject var authViewModel: AuthViewModel
     let filteredCampos: [CampoModel]
     let isGridView: Bool
     let onRefresh: () async -> Void
-    
+
     // URL de la imagen predeterminada de Supabase
     private let defaultImageURL = "https://ooqdrhkzsexjnmnvpwqw.supabase.co/storage/v1/object/public/fotos-campos/sin-imagen.png"
 

@@ -3,8 +3,17 @@ import SwiftUI
 /// Card moderna para mostrar reseñas de campos
 struct ReviewCardView: View {
     let review: Review
+    let currentUserId: UUID?
+    let onEdit: ((Review) -> Void)?
+    let onDelete: ((Review) -> Void)?
+
     @State private var selectedPhotoIndex: Int = 0
     @State private var showingImageViewer: Bool = false
+
+    var isOwnReview: Bool {
+        guard let userId = currentUserId else { return false }
+        return review.user_id == userId
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -44,6 +53,18 @@ struct ReviewCardView: View {
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
+
+                // Edit button for own reviews
+                if isOwnReview, let onEdit = onEdit {
+                    Button(action: {
+                        onEdit(review)
+                    }) {
+                        Image(systemName: "pencil.circle.fill")
+                            .font(.system(size: 20))
+                            .foregroundColor(.blue.opacity(0.7))
+                    }
+                    .buttonStyle(.plain)
+                }
             }
 
             // Review Text
@@ -52,6 +73,17 @@ struct ReviewCardView: View {
                 .foregroundColor(.primary)
                 .lineSpacing(3)
                 .fixedSize(horizontal: false, vertical: true)
+
+            // Edited indicator (like Google Reviews)
+            if review.isEdited, let updatedDate = review.updated_at {
+                HStack(spacing: 4) {
+                    Image(systemName: "pencil")
+                        .font(.caption2)
+                    Text("Editada · \(formatEditDate(updatedDate))")
+                        .font(.caption)
+                }
+                .foregroundColor(.secondary.opacity(0.8))
+            }
 
             // Photos (if any)
             if let fotos = review.fotos, !fotos.isEmpty {
@@ -87,11 +119,37 @@ struct ReviewCardView: View {
         .background(Color(UIColor.secondarySystemBackground))
         .cornerRadius(12)
         .shadow(color: Color.black.opacity(0.03), radius: 3, x: 0, y: 1)
+        .contextMenu {
+            if isOwnReview {
+                if let onEdit = onEdit {
+                    Button {
+                        onEdit(review)
+                    } label: {
+                        Label("Editar", systemImage: "pencil")
+                    }
+                }
+
+                if let onDelete = onDelete {
+                    Button(role: .destructive) {
+                        onDelete(review)
+                    } label: {
+                        Label("Eliminar", systemImage: "trash")
+                    }
+                }
+            }
+        }
         .sheet(isPresented: $showingImageViewer) {
             if let fotos = review.fotos, !fotos.isEmpty {
                 ReviewImageViewer(photos: fotos, initialIndex: selectedPhotoIndex)
             }
         }
+    }
+
+    // MARK: - Formatting
+    private func formatEditDate(_ date: Date) -> String {
+        let formatter = RelativeDateTimeFormatter()
+        formatter.unitsStyle = .abbreviated
+        return formatter.localizedString(for: date, relativeTo: Date())
     }
 }
 

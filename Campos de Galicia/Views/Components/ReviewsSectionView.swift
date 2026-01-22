@@ -8,6 +8,8 @@ struct ReviewsSectionView: View {
     @StateObject private var reviewsManager = ReviewsManager()
 
     @State private var showAddReview: Bool = false
+    @State private var showEditReview: Bool = false
+    @State private var reviewToEdit: Review?
     @State private var canUserReview: Bool = true
     @State private var sortType: ReviewSortType = .recent
     @State private var displayedReviewsCount: Int = 10
@@ -130,16 +132,17 @@ struct ReviewsSectionView: View {
             } else {
                 VStack(spacing: 12) {
                     ForEach(paginatedReviews) { review in
-                        ReviewCardView(review: review)
-                            .contextMenu {
-                                if review.user_id == authViewModel.user?.id {
-                                    Button(role: .destructive) {
-                                        Task { await deleteReview(review) }
-                                    } label: {
-                                        Label("Eliminar", systemImage: "trash")
-                                    }
-                                }
+                        ReviewCardView(
+                            review: review,
+                            currentUserId: authViewModel.user?.id,
+                            onEdit: { reviewToEdit in
+                                self.reviewToEdit = reviewToEdit
+                                self.showEditReview = true
+                            },
+                            onDelete: { reviewToDelete in
+                                Task { await deleteReview(reviewToDelete) }
                             }
+                        )
                     }
 
                     // Load More Button
@@ -191,6 +194,21 @@ struct ReviewsSectionView: View {
                 }
             )
             .environmentObject(authViewModel)
+        }
+        .sheet(isPresented: $showEditReview) {
+            if let review = reviewToEdit {
+                AddReviewView(
+                    campoId: campoId,
+                    campoNombre: campoNombre,
+                    existingReview: review,
+                    onReviewAdded: {
+                        Task {
+                            await loadReviews()
+                        }
+                    }
+                )
+                .environmentObject(authViewModel)
+            }
         }
     }
 

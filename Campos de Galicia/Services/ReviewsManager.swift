@@ -82,6 +82,40 @@ class ReviewsManager: ObservableObject {
         }
     }
 
+    // MARK: - Update Review
+    func updateReview(_ reviewId: Int, userId: UUID, text: String, rating: Int, fotos: [String]?, isAnonymous: Bool) async -> Bool {
+        do {
+            struct ReviewUpdate: Codable {
+                let reseña: String
+                let rating: Int
+                let fotos: [String]?
+                let is_anonymous: Bool
+                let updated_at: String
+            }
+
+            let update = ReviewUpdate(
+                reseña: text,
+                rating: rating,
+                fotos: fotos,
+                is_anonymous: isAnonymous,
+                updated_at: ISO8601DateFormatter().string(from: Date())
+            )
+
+            _ = try await supabase.from("reseñas")
+                .update(update)
+                .eq("id", value: reviewId)
+                .eq("user_id", value: userId.uuidString)
+                .execute()
+
+            Logger.success("✅ Reseña actualizada")
+            return true
+        } catch {
+            errorMessage = "Error al actualizar reseña: \(error.localizedDescription)"
+            Logger.error("Error updating review: \(error.localizedDescription)")
+            return false
+        }
+    }
+
     // MARK: - Delete Review (Admin or Owner)
     func deleteReview(_ reviewId: Int, userId: UUID) async -> Bool {
         do {

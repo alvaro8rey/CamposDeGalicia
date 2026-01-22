@@ -50,6 +50,8 @@ struct CampoDetalleView: View {
     @State private var selectedPhotoIndex: Int = 0
     @State private var showLocationAlert = false
     @State private var locationAlertMessage = ""
+    @State private var showVisitSuccessAlert = false
+    @State private var visitSuccessMessage = ""
 
     // Parámetros de validación de visita por proximidad
     private let visitRadiusMeters: CLLocationDistance = 500 // radio permitido
@@ -78,16 +80,14 @@ struct CampoDetalleView: View {
                                     image
                                         .resizable()
                                         .scaledToFill()
-                                        .frame(maxWidth: .infinity)
-                                        .frame(height: 220)
+                                        .frame(width: geometry.size.width, height: 220)
                                         .clipped()
                                 } placeholder: {
                                     ZStack {
                                         Color.gray.opacity(0.1)
                                         ProgressView()
                                     }
-                                    .frame(maxWidth: .infinity)
-                                    .frame(height: 220)
+                                    .frame(width: geometry.size.width, height: 220)
                                 }
                             }
 
@@ -344,6 +344,16 @@ struct CampoDetalleView: View {
                 dismissButton: .default(Text("OK"))
             )
         }
+        .alert(isPresented: $showVisitSuccessAlert) {
+            Alert(
+                title: Text("✅ ¡Éxito!"),
+                message: Text(visitSuccessMessage),
+                dismissButton: .default(Text("OK")) {
+                    // Clear error message if any
+                    errorMessage = nil
+                }
+            )
+        }
     }
 
     // MARK: - Helpers de UI reutilizables
@@ -459,6 +469,8 @@ struct CampoDetalleView: View {
             ]
             _ = try await supabase.from("visitas").insert(visita).execute()
             isVisited = true
+            visitSuccessMessage = "¡Has visitado \(campo.nombre)!"
+            showVisitSuccessAlert = true
             NotificationCenter.default.post(name: .didUpdateVisits, object: nil)
         } catch {
             errorMessage = "Error al registrar visita"
@@ -477,6 +489,8 @@ struct CampoDetalleView: View {
                 .eq("id_campo", value: campo.id.uuidString)
                 .execute()
             isVisited = false
+            visitSuccessMessage = "Visita desmarcada"
+            showVisitSuccessAlert = true
             NotificationCenter.default.post(name: .didUpdateVisits, object: nil)
         } catch {
             errorMessage = "Error al desmarcar visita"

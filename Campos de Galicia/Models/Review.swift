@@ -8,6 +8,7 @@ struct Review: Identifiable, Codable, Equatable {
     let reseña: String
     let rating: Int
     let created_at: Date?
+    let updated_at: Date?
     let reviewer_name: String?
     let fotos: [String]?
     let is_anonymous: Bool?
@@ -19,9 +20,17 @@ struct Review: Identifiable, Codable, Equatable {
         case reseña
         case rating
         case created_at
+        case updated_at
         case reviewer_name
         case fotos
         case is_anonymous
+    }
+
+    var isEdited: Bool {
+        guard let created = created_at, let updated = updated_at else {
+            return false
+        }
+        return updated.timeIntervalSince(created) > 60 // Más de 1 minuto de diferencia
     }
 
     // Computed property for display

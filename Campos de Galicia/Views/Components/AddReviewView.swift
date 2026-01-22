@@ -2,26 +2,45 @@ import SwiftUI
 import Supabase
 import PhotosUI
 
-/// Vista modal para añadir una reseña a un campo
+/// Vista modal para añadir o editar una reseña a un campo
 struct AddReviewView: View {
     @Environment(\.dismiss) var dismiss
     @EnvironmentObject var authViewModel: AuthViewModel
 
     let campoId: UUID
     let campoNombre: String
+    let existingReview: Review? // Para editar
     let onReviewAdded: () -> Void
 
-    @State private var rating: Int = 0
-    @State private var reviewText: String = ""
+    @State private var rating: Int
+    @State private var reviewText: String
     @State private var isSubmitting: Bool = false
     @State private var errorMessage: String?
     @State private var showSuccess: Bool = false
     @State private var selectedPhotos: [PhotosPickerItem] = []
     @State private var photoPreviews: [Image] = []
-    @State private var isAnonymous: Bool = false
+    @State private var isAnonymous: Bool
+    @State private var existingPhotoURLs: [String]
 
     private let maxCharacters = 500
     private let maxPhotos = 5
+
+    init(campoId: UUID, campoNombre: String, existingReview: Review? = nil, onReviewAdded: @escaping () -> Void) {
+        self.campoId = campoId
+        self.campoNombre = campoNombre
+        self.existingReview = existingReview
+        self.onReviewAdded = onReviewAdded
+
+        // Initialize states with existing review data if editing
+        _rating = State(initialValue: existingReview?.rating ?? 0)
+        _reviewText = State(initialValue: existingReview?.reseña ?? "")
+        _isAnonymous = State(initialValue: existingReview?.is_anonymous ?? false)
+        _existingPhotoURLs = State(initialValue: existingReview?.fotos ?? [])
+    }
+
+    var isEditMode: Bool {
+        existingReview != nil
+    }
 
     var body: some View {
         NavigationView {
@@ -103,11 +122,11 @@ struct AddReviewView: View {
                         VStack(alignment: .leading, spacing: 12) {
                             PhotosPicker(
                                 selection: $selectedPhotos,
-                                maxSelectionCount: maxPhotos,
+                                maxSelectionCount: maxPhotos - existingPhotoURLs.count,
                                 selectionBehavior: .ordered,
                                 matching: .images
                             ) {
-                                Label("Añadir fotos (\(selectedPhotos.count)/\(maxPhotos))", systemImage: "photo.on.rectangle.angled")
+                                Label("Añadir fotos (\(existingPhotoURLs.count + selectedPhotos.count)/\(maxPhotos))", systemImage: "photo.on.rectangle.angled")
                                     .font(.subheadline)
                             }
                             .onChange(of: selectedPhotos) { newSelection in
@@ -116,9 +135,40 @@ struct AddReviewView: View {
                                 }
                             }
 
-                            if !photoPreviews.isEmpty {
+                            // Show existing photos + new photo previews
+                            if !existingPhotoURLs.isEmpty || !photoPreviews.isEmpty {
                                 ScrollView(.horizontal, showsIndicators: false) {
                                     HStack(spacing: 8) {
+                                        // Existing photos from server
+                                        ForEach(existingPhotoURLs.indices, id: \.self) { index in
+                                            if let url = URL(string: existingPhotoURLs[index]) {
+                                                ZStack(alignment: .topTrailing) {
+                                                    CachedAsyncImage(url: url) { image in
+                                                        image
+                                                            .resizable()
+                                                            .scaledToFill()
+                                                            .frame(width: 80, height: 80)
+                                                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                                                    } placeholder: {
+                                                        Color.gray.opacity(0.2)
+                                                            .frame(width: 80, height: 80)
+                                                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                                                    }
+
+                                                    Button(action: {
+                                                        existingPhotoURLs.remove(at: index)
+                                                    }) {
+                                                        Image(systemName: "xmark.circle.fill")
+                                                            .foregroundColor(.white)
+                                                            .background(Color.red.opacity(0.8))
+                                                            .clipShape(Circle())
+                                                    }
+                                                    .offset(x: 6, y: -6)
+                                                }
+                                            }
+                                        }
+
+                                        // New photo previews
                                         ForEach(photoPreviews.indices, id: \.self) { index in
                                             ZStack(alignment: .topTrailing) {
                                                 photoPreviews[index]
@@ -171,7 +221,7 @@ struct AddReviewView: View {
                         }
                     }
                 }
-                .navigationTitle("Nueva Reseña")
+                .navigationTitle(isEditMode ? "Editar Reseña" : "Nueva Reseña")
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) {
@@ -181,7 +231,7 @@ struct AddReviewView: View {
                     }
 
                     ToolbarItem(placement: .confirmationAction) {
-                        Button("Publicar") {
+                        Button(isEditMode ? "Guardar" : "Publicar") {
                             Task { await submitReview() }
                         }
                         .disabled(!isValid || isSubmitting)
@@ -189,6 +239,7 @@ struct AddReviewView: View {
                     }
                 }
                 .disabled(isSubmitting)
+                .scrollDismissesKeyboard(.interactively)
 
                 // Loading Overlay
                 if isSubmitting {
@@ -198,7 +249,7 @@ struct AddReviewView: View {
                     VStack(spacing: 16) {
                         ProgressView()
                             .scaleEffect(1.5)
-                        Text("Publicando reseña...")
+                        Text(isEditMode ? "Actualizando reseña..." : "Publicando reseña...")
                             .foregroundColor(.white)
                     }
                     .padding(24)
@@ -208,7 +259,7 @@ struct AddReviewView: View {
 
                 // Success Animation
                 if showSuccess {
-                    SuccessCheckmarkView()
+                    SuccessCheckmarkView(message: isEditMode ? "¡Reseña actualizada!" : "¡Reseña publicada!")
                 }
             }
         }
@@ -292,27 +343,55 @@ struct AddReviewView: View {
             return
         }
 
-        let reviewerName = "\(authViewModel.nombre) \(authViewModel.apellidos)".trimmingCharacters(in: .whitespaces)
-
         do {
-            // Upload photos first
-            let photoURLs = try await uploadPhotos()
+            // Upload new photos
+            let newPhotoURLs = try await uploadPhotos()
 
-            let reviewCreate = ReviewCreate(
-                campo_id: campoId.uuidString,
-                user_id: userId.uuidString,
-                reseña: reviewText.trimmingCharacters(in: .whitespacesAndNewlines),
-                rating: rating,
-                reviewer_name: reviewerName.isEmpty ? "Usuario" : reviewerName,
-                fotos: photoURLs,
-                is_anonymous: isAnonymous
-            )
+            // Combine existing and new photo URLs
+            var allPhotoURLs = existingPhotoURLs
+            if let newURLs = newPhotoURLs {
+                allPhotoURLs.append(contentsOf: newURLs)
+            }
+            let finalPhotoURLs: [String]? = allPhotoURLs.isEmpty ? nil : allPhotoURLs
 
-            _ = try await supabase.from("reseñas")
-                .insert(reviewCreate)
-                .execute()
+            if let reviewId = existingReview?.id {
+                // UPDATE existing review
+                let reviewsManager = ReviewsManager()
+                let success = await reviewsManager.updateReview(
+                    reviewId,
+                    userId: userId,
+                    text: reviewText.trimmingCharacters(in: .whitespacesAndNewlines),
+                    rating: rating,
+                    fotos: finalPhotoURLs,
+                    isAnonymous: isAnonymous
+                )
 
-            Logger.success("✅ Reseña publicada correctamente")
+                if !success {
+                    errorMessage = "Error al actualizar la reseña"
+                    return
+                }
+
+                Logger.success("✅ Reseña actualizada correctamente")
+            } else {
+                // CREATE new review
+                let reviewerName = "\(authViewModel.nombre) \(authViewModel.apellidos)".trimmingCharacters(in: .whitespaces)
+
+                let reviewCreate = ReviewCreate(
+                    campo_id: campoId.uuidString,
+                    user_id: userId.uuidString,
+                    reseña: reviewText.trimmingCharacters(in: .whitespacesAndNewlines),
+                    rating: rating,
+                    reviewer_name: reviewerName.isEmpty ? "Usuario" : reviewerName,
+                    fotos: finalPhotoURLs,
+                    is_anonymous: isAnonymous
+                )
+
+                _ = try await supabase.from("reseñas")
+                    .insert(reviewCreate)
+                    .execute()
+
+                Logger.success("✅ Reseña publicada correctamente")
+            }
 
             // Show success animation
             withAnimation {
@@ -326,8 +405,8 @@ struct AddReviewView: View {
             dismiss()
 
         } catch {
-            errorMessage = "Error al publicar la reseña: \(error.localizedDescription)"
-            Logger.error("Error publicando reseña: \(error.localizedDescription)")
+            errorMessage = "Error al \(isEditMode ? "actualizar" : "publicar") la reseña: \(error.localizedDescription)"
+            Logger.error("Error: \(error.localizedDescription)")
         }
     }
 }

@@ -469,40 +469,45 @@ struct MapaView: View {
     }
 
     private func prepareRouteSummary(for destination: MapAnnotationItem) {
-        let sourceLocation = mapView?.userLocation.location?.coordinate ?? mapView?.centerCoordinate
-        guard let sourceCoord = sourceLocation else { return }
-        
+        guard let userLocation = mapView?.userLocation.location?.coordinate else {
+            print("⚠️ No se pudo obtener la ubicación del usuario")
+            return
+        }
+
         mapView?.removeOverlays(mapView?.overlays ?? [])
-        
+
         let request = MKDirections.Request()
-        request.source = MKMapItem(placemark: MKPlacemark(coordinate: sourceCoord))
+        request.source = MKMapItem(placemark: MKPlacemark(coordinate: userLocation))
         request.destination = MKMapItem(placemark: MKPlacemark(coordinate: destination.coordinate))
         request.transportType = .automobile
-        
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-            let directions = MKDirections(request: request)
-            directions.calculate { response, error in
-                if let _ = error { return }
-                guard let route = response?.routes.first else { return }
-                
-                DispatchQueue.main.async {
-                    withAnimation(.spring()) {
-                        self.route = route
-                        self.pendingDestination = destination
-                        if !self.externalIsNavigating {
-                            self.showRouteSummary = true
-                        }
-                    }
-                    
-                    if let mapView = self.mapView {
-                        mapView.addOverlay(route.polyline)
-                        if !self.externalIsNavigating {
-                            mapView.setVisibleMapRect(route.polyline.boundingMapRect,
-                                                     edgePadding: UIEdgeInsets(top: 80, left: 40, bottom: 320, right: 40),
-                                                     animated: true)
-                        }
+
+        let directions = MKDirections(request: request)
+        directions.calculate { response, error in
+            if let error = error {
+                print("❌ Error calculando ruta: \(error.localizedDescription)")
+                return
+            }
+            guard let route = response?.routes.first else { return }
+
+            DispatchQueue.main.async {
+                withAnimation(.spring()) {
+                    self.route = route
+                    self.pendingDestination = destination
+                    if !self.externalIsNavigating {
+                        self.showRouteSummary = true
                     }
                 }
+
+                if let mapView = self.mapView {
+                    mapView.addOverlay(route.polyline)
+                    if !self.externalIsNavigating {
+                        mapView.setVisibleMapRect(route.polyline.boundingMapRect,
+                                                 edgePadding: UIEdgeInsets(top: 80, left: 40, bottom: 320, right: 40),
+                                                 animated: true)
+                    }
+                }
+
+                print("✅ Ruta \(self.externalIsNavigating ? "recalculada" : "calculada") - Distancia: \(String(format: "%.1f", route.distance / 1000)) km, Pasos: \(route.steps.count)")
             }
         }
     }
@@ -514,6 +519,11 @@ struct MapaView: View {
             self.currentStepIndex = 0
             self.distanceToNextStep = 0
             self.userTrackingMode = .followWithHeading
+        }
+
+        // Pasar el destino al Coordinator para que pueda recalcular rutas
+        if let mapView = self.mapView, let destination = pendingDestination {
+            (mapView.delegate as? CustomMapView.Coordinator)?.setCurrentDestination(destination)
         }
     }
     
@@ -588,26 +598,29 @@ struct CustomMapView: UIViewRepresentable {
         let mapView = MKMapView()
         mapView.delegate = context.coordinator
         mapView.showsUserLocation = true
+        mapView.showsTraffic = false
+        mapView.showsBuildings = true
+        mapView.showsScale = true
         mapView.register(MKMarkerAnnotationView.self, forAnnotationViewWithReuseIdentifier: "CampoAnnotation")
         mapView.setRegion(region, animated: false)
-        
+
         // Configuración de la brújula manual para reposicionarla
         mapView.showsCompass = false // Ocultamos la nativa que suele quedar arriba a la derecha
         let compass = MKCompassButton(mapView: mapView)
         compass.compassVisibility = .adaptive
         compass.translatesAutoresizingMaskIntoConstraints = false
         mapView.addSubview(compass)
-        
+
         NSLayoutConstraint.activate([
             // La posicionamos en el margen derecho, pero bajando 90 puntos para evitar el buscador
             compass.trailingAnchor.constraint(equalTo: mapView.trailingAnchor, constant: -12),
             compass.topAnchor.constraint(equalTo: mapView.safeAreaLayoutGuide.topAnchor, constant: 90)
         ])
-        
+
         DispatchQueue.main.async {
             self.mapView = mapView
         }
-        
+
         return mapView
     }
 
@@ -638,18 +651,25 @@ struct CustomMapView: UIViewRepresentable {
             self.parent = parent
         }
 
+        func setCurrentDestination(_ destination: MapAnnotationItem) {
+            self.currentDestination = destination
+        }
+
         func mapView(_ mapView: MKMapView, didUpdate userLocation: MKUserLocation) {
+            guard let location = userLocation.location else { return }
+
             if parent.isNavigating {
-                let region = MKCoordinateRegion(center: userLocation.coordinate,
+                // Centrar el mapa en la ubicación del usuario
+                let region = MKCoordinateRegion(center: location.coordinate,
                                                latitudinalMeters: 300,
                                                longitudinalMeters: 300)
                 mapView.setRegion(region, animated: true)
 
                 // Actualizar paso actual y distancia en tiempo real
-                updateCurrentStep(userLocation: userLocation.coordinate)
+                updateCurrentStep(userLocation: location.coordinate)
 
                 // Verificar si necesitamos recalcular la ruta
-                checkIfRecalculationNeeded(userLocation: userLocation.coordinate)
+                checkIfRecalculationNeeded(userLocation: location.coordinate)
             }
         }
         
@@ -715,7 +735,8 @@ struct CustomMapView: UIViewRepresentable {
 
         private func checkIfRecalculationNeeded(userLocation: CLLocationCoordinate2D) {
             guard parent.isNavigating, let currentRoute = parent.route, let destination = currentDestination else { return }
-            if Date().timeIntervalSince(lastRecalculationDate) < 15 { return }
+            // Reducir tiempo entre recalculaciones de 15 a 5 segundos
+            if Date().timeIntervalSince(lastRecalculationDate) < 5 { return }
 
             let userPoint = MKMapPoint(userLocation)
             var minDistance = Double.greatestFiniteMagnitude
@@ -725,10 +746,13 @@ struct CustomMapView: UIViewRepresentable {
                 if distance < minDistance { minDistance = distance }
             }
 
-            // Recalcular si te desvías más de 50 metros de la ruta
-            if minDistance > 50 {
+            // Recalcular si te desvías más de 30 metros de la ruta (antes 50m)
+            if minDistance > 30 {
                 lastRecalculationDate = Date()
                 DispatchQueue.main.async {
+                    // Resetear el índice del paso actual al recalcular
+                    self.parent.currentStepIndex = 0
+                    self.parent.distanceToNextStep = 0
                     self.parent.onShowSummary(destination)
                 }
             }
@@ -847,8 +871,9 @@ struct CustomMapView: UIViewRepresentable {
                 parent.onSelectCampo(annotation.annotationItem.campo)
             } else if sender.tag == 2 {
                 mapView.deselectAnnotation(annotation, animated: true)
+                // Guardar el destino antes de calcular la ruta
+                self.currentDestination = annotation.annotationItem
                 DispatchQueue.main.async {
-                    self.currentDestination = annotation.annotationItem
                     self.parent.onShowSummary(annotation.annotationItem)
                 }
             }

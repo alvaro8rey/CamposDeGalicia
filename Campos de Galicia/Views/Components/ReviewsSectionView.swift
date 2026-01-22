@@ -9,111 +9,149 @@ struct ReviewsSectionView: View {
 
     @State private var showAddReview: Bool = false
     @State private var showEditReview: Bool = false
+    @State private var showAllReviews: Bool = false
     @State private var reviewToEdit: Review?
     @State private var canUserReview: Bool = true
-    @State private var sortType: ReviewSortType = .recent
-    @State private var displayedReviewsCount: Int = 10
 
-    private let reviewsPerPage = 10
+    private let maxFeaturedReviews = 5
 
-    var sortedReviews: [Review] {
-        switch sortType {
-        case .recent:
-            return reviewsManager.reviews.sorted { ($0.created_at ?? Date.distantPast) > ($1.created_at ?? Date.distantPast) }
-        case .oldest:
-            return reviewsManager.reviews.sorted { ($0.created_at ?? Date.distantPast) < ($1.created_at ?? Date.distantPast) }
-        case .highest:
-            return reviewsManager.reviews.sorted { $0.rating > $1.rating }
-        case .lowest:
-            return reviewsManager.reviews.sorted { $0.rating < $1.rating }
-        }
-    }
-
-    var paginatedReviews: [Review] {
-        Array(sortedReviews.prefix(displayedReviewsCount))
-    }
-
-    var hasMoreReviews: Bool {
-        sortedReviews.count > displayedReviewsCount
+    var featuredReviews: [Review] {
+        // Mostrar las 5 mejores reseñas (rating más alto y más recientes)
+        return reviewsManager.reviews
+            .sorted { review1, review2 in
+                if review1.rating != review2.rating {
+                    return review1.rating > review2.rating
+                }
+                return (review1.created_at ?? Date.distantPast) > (review2.created_at ?? Date.distantPast)
+            }
+            .prefix(maxFeaturedReviews)
+            .map { $0 }
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            // Header
-            HStack {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Reseñas")
-                        .font(.system(size: 22, weight: .bold))
+            // HEADER - Clickeable para abrir modal (estilo App Store)
+            Button(action: {
+                if reviewsManager.stats.hasReviews {
+                    showAllReviews = true
+                }
+            }) {
+                HStack {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Valoraciones y reseñas")
+                            .font(.system(size: 20, weight: .bold))
+                            .foregroundColor(.primary)
+
+                        if reviewsManager.stats.hasReviews {
+                            HStack(spacing: 6) {
+                                HStack(spacing: 2) {
+                                    ForEach(1...5, id: \.self) { index in
+                                        Image(systemName: "star.fill")
+                                            .font(.system(size: 12))
+                                            .foregroundColor(.orange)
+                                    }
+                                }
+
+                                Text(reviewsManager.stats.formattedAverage)
+                                    .font(.subheadline)
+                                    .fontWeight(.semibold)
+                                    .foregroundColor(.primary)
+
+                                Text("· \(reviewsManager.stats.totalReviews) \(reviewsManager.stats.totalReviews == 1 ? "valoración" : "valoraciones")")
+                                    .font(.subheadline)
+                                    .foregroundColor(.secondary)
+                            }
+                        } else {
+                            Text("Sin valoraciones todavía")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+
+                    Spacer()
 
                     if reviewsManager.stats.hasReviews {
-                        Text("\(reviewsManager.stats.totalReviews) opiniones")
+                        Image(systemName: "chevron.right")
                             .font(.subheadline)
                             .foregroundColor(.secondary)
                     }
                 }
-
-                Spacer()
-
-                // Add Review Button (only if authenticated and can review)
-                if authViewModel.isAuthenticated && canUserReview {
-                    Button(action: { showAddReview = true }) {
-                        HStack(spacing: 4) {
-                            Image(systemName: "plus.circle.fill")
-                                .font(.system(size: 14))
-                            Text("Opinar")
-                                .font(.caption)
-                        }
-                        .fontWeight(.semibold)
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 8)
-                        .background(Color.blue)
-                        .cornerRadius(16)
-                    }
-                }
             }
+            .buttonStyle(.plain)
             .padding(.horizontal)
 
-            // Sort Picker (only if has reviews)
-            if reviewsManager.stats.hasReviews && !reviewsManager.reviews.isEmpty {
+            // SLIDER DE RESEÑAS DESTACADAS
+            if !reviewsManager.reviews.isEmpty && !featuredReviews.isEmpty {
                 ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 8) {
-                        ForEach(ReviewSortType.allCases) { type in
-                            Button(action: {
-                                withAnimation(.easeInOut(duration: 0.2)) {
-                                    sortType = type
-                                }
-                            }) {
-                                HStack(spacing: 6) {
-                                    Image(systemName: type.iconName)
-                                        .font(.caption2)
-                                    Text(type.rawValue)
-                                        .font(.caption)
-                                }
-                                .fontWeight(.medium)
-                                .foregroundColor(sortType == type ? .white : .primary)
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 8)
-                                .background(
-                                    sortType == type
-                                        ? Color.blue
-                                        : Color(UIColor.secondarySystemBackground)
-                                )
-                                .cornerRadius(12)
-                            }
+                    HStack(spacing: 12) {
+                        ForEach(featuredReviews) { review in
+                            CompactReviewCardView(review: review)
                         }
                     }
                     .padding(.horizontal)
                 }
             }
 
-            // Rating Summary
-            if reviewsManager.stats.hasReviews {
-                RatingSummaryView(stats: reviewsManager.stats)
+            // BOTÓN GRANDE PARA VALORAR
+            if authViewModel.isAuthenticated {
+                if canUserReview {
+                    Button(action: {
+                        showAddReview = true
+                    }) {
+                        HStack {
+                            Image(systemName: "square.and.pencil")
+                                .font(.system(size: 16))
+
+                            Text("Escribir una reseña")
+                                .font(.callout)
+                                .fontWeight(.medium)
+
+                            Spacer()
+
+                            Image(systemName: "chevron.right")
+                                .font(.caption)
+                        }
+                        .foregroundColor(.blue)
+                        .padding()
+                        .background(Color(UIColor.secondarySystemBackground))
+                        .cornerRadius(12)
+                    }
+                    .padding(.horizontal)
+                } else {
+                    // Ya dejó una reseña - mostrar botón para editar
+                    if let userReview = reviewsManager.reviews.first(where: { $0.user_id == authViewModel.user?.id }) {
+                        Button(action: {
+                            reviewToEdit = userReview
+                            showEditReview = true
+                        }) {
+                            HStack {
+                                Image(systemName: "pencil")
+                                    .font(.system(size: 16))
+
+                                Text("Editar mi reseña")
+                                    .font(.callout)
+                                    .fontWeight(.medium)
+
+                                Spacer()
+
+                                Image(systemName: "chevron.right")
+                                    .font(.caption)
+                            }
+                            .foregroundColor(.blue)
+                            .padding()
+                            .background(Color(UIColor.secondarySystemBackground))
+                            .cornerRadius(12)
+                        }
+                        .padding(.horizontal)
+                    }
+                }
+            } else {
+                // Not authenticated
+                NotAuthenticatedReviewView()
                     .padding(.horizontal)
             }
 
-            // Reviews List or Empty State
+            // Loading / Error / Empty States
             if reviewsManager.isLoading {
                 HStack {
                     Spacer()
@@ -128,54 +166,6 @@ struct ReviewsSectionView: View {
                 .padding(.horizontal)
             } else if reviewsManager.reviews.isEmpty {
                 EmptyReviewsView()
-                    .padding(.horizontal)
-            } else {
-                VStack(spacing: 12) {
-                    ForEach(paginatedReviews) { review in
-                        ReviewCardView(
-                            review: review,
-                            currentUserId: authViewModel.user?.id,
-                            onEdit: { reviewToEdit in
-                                self.reviewToEdit = reviewToEdit
-                                self.showEditReview = true
-                            },
-                            onDelete: { reviewToDelete in
-                                Task { await deleteReview(reviewToDelete) }
-                            }
-                        )
-                    }
-
-                    // Load More Button
-                    if hasMoreReviews {
-                        Button(action: {
-                            withAnimation {
-                                displayedReviewsCount += reviewsPerPage
-                            }
-                        }) {
-                            HStack(spacing: 6) {
-                                Image(systemName: "arrow.down.circle")
-                                Text("Cargar más reseñas")
-                            }
-                            .font(.subheadline)
-                            .fontWeight(.medium)
-                            .foregroundColor(.blue)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 12)
-                            .background(Color.blue.opacity(0.1))
-                            .cornerRadius(12)
-                        }
-                        .padding(.top, 8)
-                    }
-                }
-                .padding(.horizontal)
-            }
-
-            // Not Authenticated Message
-            if !authViewModel.isAuthenticated {
-                NotAuthenticatedReviewView()
-                    .padding(.horizontal)
-            } else if !canUserReview {
-                AlreadyReviewedView()
                     .padding(.horizontal)
             }
         }
@@ -209,6 +199,26 @@ struct ReviewsSectionView: View {
                 )
                 .environmentObject(authViewModel)
             }
+        }
+        .sheet(isPresented: $showAllReviews) {
+            AllReviewsModalView(
+                reviews: reviewsManager.reviews,
+                stats: reviewsManager.stats,
+                currentUserId: authViewModel.user?.id,
+                onEdit: { review in
+                    showAllReviews = false
+                    reviewToEdit = review
+                    // Pequeño delay para que se cierre el modal antes de abrir el edit
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                        showEditReview = true
+                    }
+                },
+                onDelete: { review in
+                    Task {
+                        await deleteReview(review)
+                    }
+                }
+            )
         }
     }
 

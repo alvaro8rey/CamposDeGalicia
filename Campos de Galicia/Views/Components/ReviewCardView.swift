@@ -364,3 +364,135 @@ struct EmptyReviewsView: View {
     }
 }
 
+/// Card compacta estilo App Store para slider horizontal
+struct CompactReviewCardView: View {
+    let review: Review
+    @State private var isExpanded: Bool = false
+
+    private let maxPreviewLength = 150
+
+    var truncatedText: String {
+        if review.reseña.count > maxPreviewLength && !isExpanded {
+            return String(review.reseña.prefix(maxPreviewLength)) + "..."
+        }
+        return review.reseña
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            // Header
+            HStack(alignment: .top, spacing: 10) {
+                // Star Rating
+                HStack(spacing: 2) {
+                    ForEach(1...5, id: \.self) { index in
+                        Image(systemName: index <= review.rating ? "star.fill" : "star")
+                            .font(.system(size: 12))
+                            .foregroundColor(index <= review.rating ? .orange : Color.gray.opacity(0.3))
+                    }
+                }
+
+                Spacer()
+
+                // Date
+                Text(review.formattedDate)
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+            }
+
+            // Review text
+            Text(truncatedText)
+                .font(.subheadline)
+                .foregroundColor(.primary)
+                .lineSpacing(2)
+                .lineLimit(isExpanded ? nil : 4)
+                .onTapGesture {
+                    if review.reseña.count > maxPreviewLength {
+                        withAnimation {
+                            isExpanded.toggle()
+                        }
+                    }
+                }
+
+            // More button if text is long
+            if review.reseña.count > maxPreviewLength {
+                Button(action: {
+                    withAnimation {
+                        isExpanded.toggle()
+                    }
+                }) {
+                    Text(isExpanded ? "Menos" : "Más")
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                        .foregroundColor(.blue)
+                }
+            }
+
+            // Photos preview (small)
+            if let fotos = review.fotos, !fotos.isEmpty {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 6) {
+                        ForEach(fotos.prefix(3).indices, id: \.self) { index in
+                            if let url = URL(string: fotos[index]) {
+                                CachedAsyncImage(url: url) { image in
+                                    image
+                                        .resizable()
+                                        .scaledToFill()
+                                        .frame(width: 50, height: 50)
+                                        .clipShape(RoundedRectangle(cornerRadius: 6))
+                                } placeholder: {
+                                    Color.gray.opacity(0.2)
+                                        .frame(width: 50, height: 50)
+                                        .clipShape(RoundedRectangle(cornerRadius: 6))
+                                }
+                            }
+                        }
+
+                        if fotos.count > 3 {
+                            ZStack {
+                                Color.gray.opacity(0.2)
+                                    .frame(width: 50, height: 50)
+                                    .clipShape(RoundedRectangle(cornerRadius: 6))
+
+                                Text("+\(fotos.count - 3)")
+                                    .font(.caption)
+                                    .fontWeight(.semibold)
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+                    }
+                }
+            }
+
+            Divider()
+
+            // User info
+            HStack(spacing: 8) {
+                ZStack {
+                    Circle()
+                        .fill(Color.blue.opacity(0.2))
+                        .frame(width: 24, height: 24)
+
+                    Text(review.displayName.prefix(1).uppercased())
+                        .font(.caption)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.blue)
+                }
+
+                Text(review.displayName)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+
+                if review.isEdited {
+                    Text("· Editada")
+                        .font(.caption2)
+                        .foregroundColor(.secondary.opacity(0.7))
+                }
+            }
+        }
+        .padding(14)
+        .frame(width: 300)
+        .background(Color(UIColor.secondarySystemBackground))
+        .cornerRadius(12)
+    }
+}
+

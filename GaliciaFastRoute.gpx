@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1"
+     creator="Campos de Galicia"
+     xmlns="http://www.topografix.com/GPX/1/1"
+     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+     xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd">
+  <metadata>
+    <name>Ruta Rápida por Galicia</name>
+    <desc>Simulación rápida de conducción en Galicia (avanza cada 3 segundos)</desc>
+  </metadata>
+  <trk>
+    <name>Galicia Fast Drive</name>
+    <trkseg>
+      <!-- Inicio: Santiago de Compostela -->
+      <trkpt lat="42.8782" lon="-8.5448"><time>2024-01-01T10:00:00Z</time></trkpt>
+      <trkpt lat="42.8800" lon="-8.5430"><time>2024-01-01T10:00:03Z</time></trkpt>
+      <trkpt lat="42.8820" lon="-8.5410"><time>2024-01-01T10:00:06Z</time></trkpt>
+      <trkpt lat="42.8840" lon="-8.5390"><time>2024-01-01T10:00:09Z</time></trkpt>
+      <trkpt lat="42.8860" lon="-8.5370"><time>2024-01-01T10:00:12Z</time></trkpt>
+      <trkpt lat="42.8880" lon="-8.5350"><time>2024-01-01T10:00:15Z</time></trkpt>
+      <trkpt lat="42.8900" lon="-8.5330"><time>2024-01-01T10:00:18Z</time></trkpt>
+      <trkpt lat="42.8920" lon="-8.5310"><time>2024-01-01T10:00:21Z</time></trkpt>
+      <trkpt lat="42.8940" lon="-8.5290"><time>2024-01-01T10:00:24Z</time></trkpt>
+      <trkpt lat="42.8960" lon="-8.5270"><time>2024-01-01T10:00:27Z</time></trkpt>
+
+      <!-- Giro hacia el este -->
+      <trkpt lat="42.8980" lon="-8.5250"><time>2024-01-01T10:00:30Z</time></trkpt>
+      <trkpt lat="42.9000" lon="-8.5220"><time>2024-01-01T10:00:33Z</time></trkpt>
+      <trkpt lat="42.9020" lon="-8.5190"><time>2024-01-01T10:00:36Z</time></trkpt>
+      <trkpt lat="42.9040" lon="-8.5160"><time>2024-01-01T10:00:39Z</time></trkpt>
+      <trkpt lat="42.9060" lon="-8.5130"><time>2024-01-01T10:00:42Z</time></trkpt>
+      <trkpt lat="42.9080" lon="-8.5100"><time>2024-01-01T10:00:45Z</time></trkpt>
+      <trkpt lat="42.9100" lon="-8.5070"><time>2024-01-01T10:00:48Z</time></trkpt>
+      <trkpt lat="42.9120" lon="-8.5040"><time>2024-01-01T10:00:51Z</time></trkpt>
+
+      <!-- Zona de desviación simulada (para probar recalculación) -->
+      <trkpt lat="42.9130" lon="-8.5010"><time>2024-01-01T10:00:54Z</time></trkpt>
+      <trkpt lat="42.9135" lon="-8.4980"><time>2024-01-01T10:00:57Z</time></trkpt>
+      <!-- Desviación lateral -->
+      <trkpt lat="42.9140" lon="-8.4950"><time>2024-01-01T10:01:00Z</time></trkpt>
+      <trkpt lat="42.9150" lon="-8.4920"><time>2024-01-01T10:01:03Z</time></trkpt>
+
+      <!-- Volver a la ruta principal -->
+      <trkpt lat="42.9160" lon="-8.4890"><time>2024-01-01T10:01:06Z</time></trkpt>
+      <trkpt lat="42.9170" lon="-8.4860"><time>2024-01-01T10:01:09Z</time></trkpt>
+      <trkpt lat="42.9180" lon="-8.4830"><time>2024-01-01T10:01:12Z</time></trkpt>
+      <trkpt lat="42.9190" lon="-8.4800"><time>2024-01-01T10:01:15Z</time></trkpt>
+      <trkpt lat="42.9200" lon="-8.4770"><time>2024-01-01T10:01:18Z</time></trkpt>
+      <trkpt lat="42.9210" lon="-8.4740"><time>2024-01-01T10:01:21Z</time></trkpt>
+      <trkpt lat="42.9220" lon="-8.4710"><time>2024-01-01T10:01:24Z</time></trkpt>
+      <trkpt lat="42.9230" lon="-8.4680"><time>2024-01-01T10:01:27Z</time></trkpt>
+      <trkpt lat="42.9240" lon="-8.4650"><time>2024-01-01T10:01:30Z</time></trkpt>
+    </trkseg>
+  </trk>
+</gpx>

@@ -2,10 +2,13 @@
 
 ## 📍 Archivos GPX Creados
 
-He creado dos archivos GPX en la raíz del proyecto:
+He creado tres archivos GPX en la raíz del proyecto:
 
-1. **GaliciaRoute.gpx** - Simula un recorrido en movimiento desde Santiago de Compostela
-2. **GaliciaStatic.gpx** - Ubicación estática en Santiago de Compostela
+1. **GaliciaRoute.gpx** - Simula un recorrido en movimiento desde Santiago (avanza cada 15s)
+2. **GaliciaFastRoute.gpx** - Ruta rápida desde Santiago (avanza cada 3s) ⚡
+3. **GaliciaStatic.gpx** - Ubicación estática en Santiago de Compostela
+
+⚠️ **IMPORTANTE**: NO uses "Freeway Drive" ni otras opciones predefinidas de Apple - empiezan en USA. Usa SOLO estos archivos GPX personalizados.
 
 ## 🔧 Cómo Agregar los Archivos GPX a Xcode
 
@@ -23,8 +26,21 @@ He creado dos archivos GPX en la raíz del proyecto:
 1. Ejecuta la app en el simulador (⌘R)
 2. En Xcode, ve al menú: **Debug → Simulate Location**
 3. Verás tus archivos GPX al final de la lista:
-   - **GaliciaRoute** - Para simular movimiento
-   - **GaliciaStatic** - Para ubicación fija
+
+```
+Debug → Simulate Location
+├── None
+├── Apple
+├── City Bicycle Ride
+├── City Run
+├── Freeway Drive        ❌ NO USES ESTO (empieza en USA)
+├── ...
+├── GaliciaFastRoute     ✅ USA ESTO (3s por punto) ⚡
+├── GaliciaRoute         ✅ USA ESTO (15s por punto)
+└── GaliciaStatic        ✅ USA ESTO (ubicación fija)
+```
+
+**⚠️ CRÍTICO**: NO selecciones "Freeway Drive" ni ninguna opción predefinida de Apple. Todas empiezan en Estados Unidos. USA SOLO los archivos GPX personalizados (GaliciaRoute, GaliciaFastRoute, GaliciaStatic).
 
 #### Opción B: Configurar en el Esquema (Ubicación Inicial)
 1. En Xcode, ve a **Product → Scheme → Edit Scheme...** (⌘<)
@@ -38,16 +54,23 @@ Ahora cada vez que ejecutes la app, comenzará en Santiago de Compostela.
 
 ## 🧪 Cómo Probar la Navegación
 
-### Test 1: Navegación Básica
-1. Ejecuta la app en el simulador
-2. Usa **GaliciaStatic** como ubicación inicial
-3. En el mapa, busca un campo cercano a Santiago
+### Test 1: Navegación Básica (Recomendado usar GaliciaFastRoute ⚡)
+1. Ejecuta la app en el simulador (⌘R)
+2. **Debug → Simulate Location → GaliciaStatic** (establece ubicación inicial)
+3. En el mapa, busca un campo cercano a Santiago de Compostela
 4. Pulsa "Cómo llegar" → "Ir"
-5. Cambia a **GaliciaRoute** desde Debug → Simulate Location
-6. **Observa**:
-   - Las indicaciones deben actualizarse cada 15 segundos
-   - La distancia debe disminuir
+5. **Debug → Simulate Location → GaliciaFastRoute** (simula movimiento rápido)
+6. **Observa en consola**:
+   ```
+   ✅ Ruta calculada - Distancia: X km, Pasos: Y
+   ```
+7. **Observa en la app**:
+   - Las indicaciones deben actualizarse cada 3-5 segundos
+   - La distancia debe disminuir en tiempo real
    - El paso actual debe cambiar automáticamente
+   - El mapa debe seguir tu ubicación
+
+💡 **Tip**: Si quieres una simulación más lenta y realista, usa **GaliciaRoute** (15s por punto) en lugar de GaliciaFastRoute.
 
 ### Test 2: Recalculación de Ruta
 1. Inicia navegación hacia un campo
@@ -88,13 +111,23 @@ Si quieres crear ubicaciones personalizadas:
 
 ## 💡 Consejos
 
-1. **Velocidad de simulación**: GaliciaRoute avanza cada 15 segundos por punto. Es lento pero preciso para testing.
+1. **Velocidad de simulación**:
+   - **GaliciaFastRoute** ⚡: Avanza cada 3 segundos - ideal para testing rápido
+   - **GaliciaRoute**: Avanza cada 15 segundos - más realista para debugging
+   - **GaliciaStatic**: Sin movimiento - solo para establecer ubicación inicial
 
-2. **Crear tu propia ruta**: Puedes editar `GaliciaRoute.gpx` y agregar más puntos `<trkpt>` con tus coordenadas.
+2. **NO uses opciones de Apple**: Las opciones como "Freeway Drive", "City Run", etc. SIEMPRE empiezan en USA (Apple Park, San Francisco). Solo funcionan los archivos GPX personalizados.
 
-3. **Debugging**: Usa `print()` en `didUpdate userLocation` para ver cada actualización de ubicación.
+3. **Crear tu propia ruta**: Puedes editar los archivos `.gpx` y agregar más puntos `<trkpt>` con tus coordenadas. Cambia el `<time>` para controlar la velocidad.
 
-4. **Resetear ubicación**: Debug → Simulate Location → None, luego selecciona tu GPX de nuevo.
+4. **Debugging**: Observa la consola para ver mensajes de:
+   - Rutas calculadas/recalculadas
+   - Actualizaciones de ubicación
+   - Errores de GPS o rutas
+
+5. **Resetear ubicación**: Debug → Simulate Location → None, luego selecciona tu GPX de nuevo.
+
+6. **Ver tu ubicación en el mapa**: Asegúrate de activar el botón de ubicación (icono de ubicación) en la app para centrar el mapa en ti.
 
 ## 🚨 Solución de Problemas
 

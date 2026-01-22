@@ -65,6 +65,10 @@ class ReviewsManager: ObservableObject {
     // MARK: - Check if User Can Review
     func canUserReview(userId: UUID, campoId: UUID) async -> Bool {
         do {
+            struct ReviewIdCheck: Codable {
+                let id: Int
+            }
+
             let response = try await supabase.from("reseñas")
                 .select("id")
                 .eq("user_id", value: userId.uuidString)
@@ -72,7 +76,7 @@ class ReviewsManager: ObservableObject {
                 .execute()
 
             let decoder = JSONDecoder()
-            let existingReviews = try decoder.decode([Review].self, from: response.data)
+            let existingReviews = try decoder.decode([ReviewIdCheck].self, from: response.data)
 
             // User can only review once per campo
             return existingReviews.isEmpty

@@ -121,8 +121,12 @@ struct ReviewsSectionView: View {
                     // Ya dejó una reseña - mostrar botón para editar
                     if let userReview = reviewsManager.reviews.first(where: { $0.user_id == authViewModel.user?.id }) {
                         Button(action: {
+                            print("🔵 [ReviewsSectionView] Botón editar presionado")
+                            print("🔵 [ReviewsSectionView] userReview: \(userReview)")
                             reviewToEdit = userReview
+                            print("🔵 [ReviewsSectionView] reviewToEdit asignado: \(String(describing: reviewToEdit))")
                             showEditReview = true
+                            print("🔵 [ReviewsSectionView] showEditReview = true")
                         }) {
                             HStack {
                                 Image(systemName: "pencil")
@@ -186,24 +190,33 @@ struct ReviewsSectionView: View {
             .environmentObject(authViewModel)
         }
         .sheet(isPresented: $showEditReview) {
-            if let review = reviewToEdit {
-                AddReviewView(
-                    campoId: campoId,
-                    campoNombre: campoNombre,
-                    existingReview: review,
-                    onReviewAdded: {
-                        Task {
-                            await loadReviews()
+            Group {
+                if let review = reviewToEdit {
+                    AddReviewView(
+                        campoId: campoId,
+                        campoNombre: campoNombre,
+                        existingReview: review,
+                        onReviewAdded: {
+                            Task {
+                                await loadReviews()
+                            }
                         }
-                    }
-                )
-                .environmentObject(authViewModel)
-            } else {
-                // Fallback: si reviewToEdit es nil, cerrar el sheet
-                Text("Error: No se pudo cargar la reseña")
+                    )
+                    .environmentObject(authViewModel)
                     .onAppear {
-                        showEditReview = false
+                        print("✅ [Sheet] AddReviewView apareciendo con review ID: \(review.id ?? -1)")
                     }
+                } else {
+                    // Fallback: si reviewToEdit es nil, cerrar el sheet
+                    Text("Error: No se pudo cargar la reseña")
+                        .onAppear {
+                            print("❌ [Sheet] reviewToEdit es NIL - cerrando sheet")
+                            showEditReview = false
+                        }
+                }
+            }
+            .onAppear {
+                print("🟡 [Sheet] Sheet apareciendo. reviewToEdit: \(String(describing: reviewToEdit?.id))")
             }
         }
         .sheet(isPresented: $showAllReviews) {

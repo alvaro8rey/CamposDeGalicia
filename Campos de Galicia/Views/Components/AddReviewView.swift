@@ -413,6 +413,7 @@ struct AddReviewView: View {
 
 /// Animación de checkmark de éxito
 struct SuccessCheckmarkView: View {
+    let message: String
     @State private var scale: CGFloat = 0.5
     @State private var opacity: Double = 0
 
@@ -434,7 +435,7 @@ struct SuccessCheckmarkView: View {
                 .scaleEffect(scale)
                 .opacity(opacity)
 
-                Text("¡Reseña publicada!")
+                Text(message)
                     .font(.headline)
                     .foregroundColor(.white)
                     .opacity(opacity)

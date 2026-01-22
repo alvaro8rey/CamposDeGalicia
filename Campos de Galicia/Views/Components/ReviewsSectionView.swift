@@ -198,6 +198,12 @@ struct ReviewsSectionView: View {
                     }
                 )
                 .environmentObject(authViewModel)
+            } else {
+                // Fallback: si reviewToEdit es nil, cerrar el sheet
+                Text("Error: No se pudo cargar la reseña")
+                    .onAppear {
+                        showEditReview = false
+                    }
             }
         }
         .sheet(isPresented: $showAllReviews) {

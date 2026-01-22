@@ -73,23 +73,24 @@ struct CampoDetalleView: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 20) {
                         // Hero Image
-                        ZStack(alignment: .bottomLeading) {
-                            let imageURL = (campo.foto_url?.isEmpty == false ? campo.foto_url : nil) ?? defaultImageURL
-                            if let url = URL(string: imageURL) {
-                                CachedAsyncImage(url: url) { image in
-                                    image
-                                        .resizable()
-                                        .scaledToFill()
+                        GeometryReader { geometry in
+                            ZStack(alignment: .bottomLeading) {
+                                let imageURL = (campo.foto_url?.isEmpty == false ? campo.foto_url : nil) ?? defaultImageURL
+                                if let url = URL(string: imageURL) {
+                                    CachedAsyncImage(url: url) { image in
+                                        image
+                                            .resizable()
+                                            .scaledToFill()
+                                            .frame(width: geometry.size.width, height: 220)
+                                            .clipped()
+                                    } placeholder: {
+                                        ZStack {
+                                            Color.gray.opacity(0.1)
+                                            ProgressView()
+                                        }
                                         .frame(width: geometry.size.width, height: 220)
-                                        .clipped()
-                                } placeholder: {
-                                    ZStack {
-                                        Color.gray.opacity(0.1)
-                                        ProgressView()
                                     }
-                                    .frame(width: geometry.size.width, height: 220)
                                 }
-                            }
 
                             // Visit Badge
                             if supabase.auth.currentUser != nil {
@@ -120,6 +121,8 @@ struct CampoDetalleView: View {
                             }
                         }
                         .frame(maxWidth: .infinity)
+                        }
+                        .frame(height: 220)
 
                         // Header Section (nombre + contribuir)
                         VStack(alignment: .leading, spacing: 12) {

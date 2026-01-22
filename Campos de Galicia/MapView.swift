@@ -82,9 +82,10 @@ struct MapaView: View {
     // Propiedades para Rutas e Indicaciones
     @State private var route: MKRoute?
     @State private var currentStepIndex: Int = 0
+    @State private var distanceToNextStep: Double = 0
     @State private var showRouteSummary: Bool = false
     @State private var pendingDestination: MapAnnotationItem?
-    
+
     @State private var userTrackingMode: MKUserTrackingMode = .none
     @State private var mapView: MKMapView?
 
@@ -123,6 +124,8 @@ struct MapaView: View {
                 selectedCampo: $selectedCampo,
                 userTrackingMode: $userTrackingMode,
                 route: $route,
+                currentStepIndex: $currentStepIndex,
+                distanceToNextStep: $distanceToNextStep,
                 isNavigating: externalIsNavigating,
                 onSelectCampo: { campo in
                     selectedCampo = campo
@@ -337,14 +340,16 @@ struct MapaView: View {
         if let mapView = self.mapView {
             mapView.removeOverlays(mapView.overlays)
         }
-        
+
         withAnimation(.spring()) {
             self.route = nil
             self.showRouteSummary = false
             self.pendingDestination = nil
             self.userTrackingMode = .none
+            self.currentStepIndex = 0
+            self.distanceToNextStep = 0
         }
-        
+
         applyFiltros()
     }
 
@@ -354,24 +359,40 @@ struct MapaView: View {
                 Image(systemName: "arrow.up.right.circle.fill")
                     .font(.title)
                     .foregroundColor(.blue)
-                
+
                 VStack(alignment: .leading) {
                     let step = route.steps[currentStepIndex]
-                    Text(step.instructions)
+                    Text(step.instructions.isEmpty ? "Continúa recto" : step.instructions)
                         .font(.headline)
                         .lineLimit(2)
-                    Text("En \(Int(step.distance)) metros")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
+
+                    // Mostrar distancia en tiempo real
+                    let displayDistance = distanceToNextStep > 0 ? distanceToNextStep : step.distance
+                    if displayDistance >= 1000 {
+                        Text("En \(String(format: "%.1f", displayDistance / 1000)) km")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                    } else {
+                        Text("En \(Int(displayDistance)) metros")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                    }
                 }
                 Spacer()
-                
-                Button {
-                    if currentStepIndex < route.steps.count - 1 {
-                        currentStepIndex += 1
+
+                // Mostrar paso actual / total
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text("\(currentStepIndex + 1)/\(route.steps.count)")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+
+                    Button {
+                        if currentStepIndex < route.steps.count - 1 {
+                            currentStepIndex += 1
+                        }
+                    } label: {
+                        Image(systemName: "chevron.right")
                     }
-                } label: {
-                    Image(systemName: "chevron.right")
                 }
             }
         }
@@ -491,6 +512,7 @@ struct MapaView: View {
             self.showRouteSummary = false
             self.externalIsNavigating = true
             self.currentStepIndex = 0
+            self.distanceToNextStep = 0
             self.userTrackingMode = .followWithHeading
         }
     }
@@ -499,6 +521,8 @@ struct MapaView: View {
         self.externalIsNavigating = false
         self.showRouteSummary = false
         self.route = nil
+        self.currentStepIndex = 0
+        self.distanceToNextStep = 0
         resetMapToInitialState()
     }
 
@@ -553,6 +577,8 @@ struct CustomMapView: UIViewRepresentable {
     @Binding var selectedCampo: CampoModel?
     @Binding var userTrackingMode: MKUserTrackingMode
     @Binding var route: MKRoute?
+    @Binding var currentStepIndex: Int
+    @Binding var distanceToNextStep: Double
     var isNavigating: Bool
     let onSelectCampo: (CampoModel) -> Void
     let onShowSummary: (MapAnnotationItem) -> Void
@@ -618,14 +644,79 @@ struct CustomMapView: UIViewRepresentable {
                                                latitudinalMeters: 300,
                                                longitudinalMeters: 300)
                 mapView.setRegion(region, animated: true)
+
+                // Actualizar paso actual y distancia en tiempo real
+                updateCurrentStep(userLocation: userLocation.coordinate)
+
+                // Verificar si necesitamos recalcular la ruta
                 checkIfRecalculationNeeded(userLocation: userLocation.coordinate)
             }
         }
         
+        private func updateCurrentStep(userLocation: CLLocationCoordinate2D) {
+            guard let currentRoute = parent.route, parent.currentStepIndex < currentRoute.steps.count else { return }
+
+            let userCLLocation = CLLocation(latitude: userLocation.latitude, longitude: userLocation.longitude)
+
+            // Calcular la distancia total recorrida hasta el paso actual
+            var distanceToStepStart: CLLocationDistance = 0
+            for i in 0..<parent.currentStepIndex {
+                distanceToStepStart += currentRoute.steps[i].distance
+            }
+
+            // Encontrar el punto más cercano en la polyline de la ruta
+            let userPoint = MKMapPoint(userLocation)
+            let polyline = currentRoute.polyline
+            let points = polyline.points()
+            var closestDistance = Double.greatestFiniteMagnitude
+            var closestIndex = 0
+
+            for i in 0..<polyline.pointCount {
+                let distance = points[i].distance(to: userPoint)
+                if distance < closestDistance {
+                    closestDistance = distance
+                    closestIndex = i
+                }
+            }
+
+            // Calcular la distancia desde el usuario hasta el final del paso actual
+            let currentStep = currentRoute.steps[parent.currentStepIndex]
+            var remainingDistanceInStep = currentStep.distance
+
+            // Calcular qué fracción del paso hemos completado
+            if closestIndex < polyline.pointCount - 1 {
+                var distanceAlongPolyline: CLLocationDistance = 0
+                for i in 0..<closestIndex {
+                    if i + 1 < polyline.pointCount {
+                        let point1 = points[i]
+                        let point2 = points[i + 1]
+                        distanceAlongPolyline += point1.distance(to: point2)
+                    }
+                }
+
+                let distanceCoveredInStep = max(0, distanceAlongPolyline - distanceToStepStart)
+                remainingDistanceInStep = max(0, currentStep.distance - distanceCoveredInStep)
+            }
+
+            // Actualizar la distancia en el UI
+            DispatchQueue.main.async {
+                self.parent.distanceToNextStep = remainingDistanceInStep
+            }
+
+            // Avanzar al siguiente paso si hemos completado el 90% del paso actual
+            if remainingDistanceInStep < currentStep.distance * 0.1 && parent.currentStepIndex < currentRoute.steps.count - 1 {
+                DispatchQueue.main.async {
+                    withAnimation {
+                        self.parent.currentStepIndex += 1
+                    }
+                }
+            }
+        }
+
         private func checkIfRecalculationNeeded(userLocation: CLLocationCoordinate2D) {
             guard parent.isNavigating, let currentRoute = parent.route, let destination = currentDestination else { return }
             if Date().timeIntervalSince(lastRecalculationDate) < 15 { return }
-            
+
             let userPoint = MKMapPoint(userLocation)
             var minDistance = Double.greatestFiniteMagnitude
             let points = currentRoute.polyline.points()
@@ -633,8 +724,9 @@ struct CustomMapView: UIViewRepresentable {
                 let distance = points[i].distance(to: userPoint)
                 if distance < minDistance { minDistance = distance }
             }
-            
-            if minDistance > 80 {
+
+            // Recalcular si te desvías más de 50 metros de la ruta
+            if minDistance > 50 {
                 lastRecalculationDate = Date()
                 DispatchQueue.main.async {
                     self.parent.onShowSummary(destination)

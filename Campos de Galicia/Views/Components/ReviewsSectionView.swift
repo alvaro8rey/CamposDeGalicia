@@ -8,7 +8,6 @@ struct ReviewsSectionView: View {
     @StateObject private var reviewsManager = ReviewsManager()
 
     @State private var showAddReview: Bool = false
-    @State private var showEditReview: Bool = false
     @State private var showAllReviews: Bool = false
     @State private var reviewToEdit: Review?
     @State private var canUserReview: Bool = true
@@ -121,12 +120,7 @@ struct ReviewsSectionView: View {
                     // Ya dejó una reseña - mostrar botón para editar
                     if let userReview = reviewsManager.reviews.first(where: { $0.user_id == authViewModel.user?.id }) {
                         Button(action: {
-                            print("🔵 [ReviewsSectionView] Botón editar presionado")
-                            print("🔵 [ReviewsSectionView] userReview: \(userReview)")
                             reviewToEdit = userReview
-                            print("🔵 [ReviewsSectionView] reviewToEdit asignado: \(String(describing: reviewToEdit))")
-                            showEditReview = true
-                            print("🔵 [ReviewsSectionView] showEditReview = true")
                         }) {
                             HStack {
                                 Image(systemName: "pencil")
@@ -189,35 +183,19 @@ struct ReviewsSectionView: View {
             )
             .environmentObject(authViewModel)
         }
-        .sheet(isPresented: $showEditReview) {
-            Group {
-                if let review = reviewToEdit {
-                    AddReviewView(
-                        campoId: campoId,
-                        campoNombre: campoNombre,
-                        existingReview: review,
-                        onReviewAdded: {
-                            Task {
-                                await loadReviews()
-                            }
-                        }
-                    )
-                    .environmentObject(authViewModel)
-                    .onAppear {
-                        print("✅ [Sheet] AddReviewView apareciendo con review ID: \(review.id ?? -1)")
+        .sheet(item: $reviewToEdit) { review in
+            AddReviewView(
+                campoId: campoId,
+                campoNombre: campoNombre,
+                existingReview: review,
+                onReviewAdded: {
+                    Task {
+                        await loadReviews()
                     }
-                } else {
-                    // Fallback: si reviewToEdit es nil, cerrar el sheet
-                    Text("Error: No se pudo cargar la reseña")
-                        .onAppear {
-                            print("❌ [Sheet] reviewToEdit es NIL - cerrando sheet")
-                            showEditReview = false
-                        }
+                    reviewToEdit = nil
                 }
-            }
-            .onAppear {
-                print("🟡 [Sheet] Sheet apareciendo. reviewToEdit: \(String(describing: reviewToEdit?.id))")
-            }
+            )
+            .environmentObject(authViewModel)
         }
         .sheet(isPresented: $showAllReviews) {
             AllReviewsModalView(
@@ -226,10 +204,8 @@ struct ReviewsSectionView: View {
                 currentUserId: authViewModel.user?.id,
                 onEdit: { review in
                     showAllReviews = false
-                    reviewToEdit = review
-                    // Pequeño delay para que se cierre el modal antes de abrir el edit
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                        showEditReview = true
+                        reviewToEdit = review
                     }
                 },
                 onDelete: { review in

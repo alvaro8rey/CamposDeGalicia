@@ -106,6 +106,7 @@ struct ReviewsSectionView: View {
 
             // BOTÓN GRANDE PARA VALORAR
             if authViewModel.isAuthenticated {
+                // Verificar si el usuario ha visitado el campo
                 if canUserReview {
                     Button(action: {
                         showAddReview = true
@@ -129,32 +130,34 @@ struct ReviewsSectionView: View {
                         .cornerRadius(12)
                     }
                     .padding(.horizontal)
-                } else {
+                } else if let userReview = reviewsManager.reviews.first(where: { $0.user_id == authViewModel.user?.id }) {
                     // Ya dejó una reseña - mostrar botón para editar
-                    if let userReview = reviewsManager.reviews.first(where: { $0.user_id == authViewModel.user?.id }) {
-                        Button(action: {
-                            reviewToEdit = userReview
-                        }) {
-                            HStack {
-                                Image(systemName: "pencil")
-                                    .font(.system(size: 16))
+                    Button(action: {
+                        reviewToEdit = userReview
+                    }) {
+                        HStack {
+                            Image(systemName: "pencil")
+                                .font(.system(size: 16))
 
-                                Text("Editar mi reseña")
-                                    .font(.callout)
-                                    .fontWeight(.medium)
+                            Text("Editar mi reseña")
+                                .font(.callout)
+                                .fontWeight(.medium)
 
-                                Spacer()
+                            Spacer()
 
-                                Image(systemName: "chevron.right")
-                                    .font(.caption)
-                            }
-                            .foregroundColor(.blue)
-                            .padding()
-                            .background(Color(UIColor.secondarySystemBackground))
-                            .cornerRadius(12)
+                            Image(systemName: "chevron.right")
+                                .font(.caption)
                         }
-                        .padding(.horizontal)
+                        .foregroundColor(.blue)
+                        .padding()
+                        .background(Color(UIColor.secondarySystemBackground))
+                        .cornerRadius(12)
                     }
+                    .padding(.horizontal)
+                } else {
+                    // No ha visitado el campo todavía
+                    NotVisitedYetView()
+                        .padding(.horizontal)
                 }
             } else {
                 // Not authenticated
@@ -292,6 +295,32 @@ struct NotAuthenticatedReviewView: View {
         }
         .padding()
         .background(Color.blue.opacity(0.1))
+        .cornerRadius(12)
+    }
+}
+
+/// Vista cuando el usuario no ha visitado el campo todavía
+struct NotVisitedYetView: View {
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "mappin.slash.circle")
+                .font(.title2)
+                .foregroundColor(.orange)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Visita el campo primero")
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+
+                Text("Solo puedes reseñar campos que hayas visitado")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+
+            Spacer()
+        }
+        .padding()
+        .background(Color.orange.opacity(0.1))
         .cornerRadius(12)
     }
 }

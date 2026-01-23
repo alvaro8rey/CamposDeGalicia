@@ -99,17 +99,44 @@ class ReviewsManager: ObservableObject {
                 let id: Int
             }
 
-            let response = try await supabase.from("reseñas")
+            // 1. Verificar que el usuario no haya dejado ya una reseña
+            let reviewResponse = try await supabase.from("reseñas")
                 .select("id")
                 .eq("user_id", value: userId.uuidString)
                 .eq("campo_id", value: campoId.uuidString)
                 .execute()
 
             let decoder = JSONDecoder()
-            let existingReviews = try decoder.decode([ReviewIdCheck].self, from: response.data)
+            let existingReviews = try decoder.decode([ReviewIdCheck].self, from: reviewResponse.data)
 
-            // User can only review once per campo
-            return existingReviews.isEmpty
+            // Si ya hay una reseña, no puede dejar otra
+            if !existingReviews.isEmpty {
+                Logger.debug("❌ Usuario ya dejó una reseña en este campo")
+                return false
+            }
+
+            // 2. Verificar que el usuario haya visitado el campo
+            struct VisitCheck: Codable {
+                let id: UUID
+            }
+
+            let visitResponse = try await supabase.from("visitas")
+                .select("id")
+                .eq("id_usuario", value: userId.uuidString)
+                .eq("id_campo", value: campoId.uuidString)
+                .execute()
+
+            let visits = try decoder.decode([VisitCheck].self, from: visitResponse.data)
+
+            // Solo puede reseñar si ha visitado el campo
+            if visits.isEmpty {
+                Logger.debug("❌ Usuario no ha visitado este campo")
+                return false
+            }
+
+            Logger.debug("✅ Usuario puede dejar reseña (ha visitado y no ha reseñado)")
+            return true
+
         } catch {
             Logger.error("Error checking if user can review: \(error.localizedDescription)")
             return false

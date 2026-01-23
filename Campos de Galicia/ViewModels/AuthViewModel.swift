@@ -193,9 +193,13 @@ class AuthViewModel: ObservableObject {
         }
 
         // Actualizar perfil para remover la URL
-        let updatedPerfil: [String: Any?] = ["avatar_url": nil]
+        struct AvatarUpdate: Encodable {
+            let avatar_url: String?
+        }
+
+        let update = AvatarUpdate(avatar_url: nil)
         _ = try await supabase.from("perfiles")
-            .update(updatedPerfil)
+            .update(update)
             .eq("id", value: user.id.uuidString)
             .execute()
 

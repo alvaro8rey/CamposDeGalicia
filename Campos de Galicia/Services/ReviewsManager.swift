@@ -139,7 +139,7 @@ class ReviewsManager: ObservableObject {
 
             // 2. Verificar que el usuario haya visitado el campo
             struct VisitCheck: Codable {
-                let id: UUID
+                let id: Int // El id de visitas es Int, no UUID
             }
 
             Logger.debug("🔍 Consultando tabla visitas...")

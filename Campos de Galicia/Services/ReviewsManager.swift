@@ -89,32 +89,49 @@ class ReviewsManager: ObservableObject {
     // MARK: - Update Review
     func updateReview(_ reviewId: Int, userId: UUID, text: String, rating: Int, fotos: [String]?, isAnonymous: Bool) async -> Bool {
         do {
-            struct ReviewUpdate: Codable {
-                let reseña: String
-                let rating: Int
-                let fotos: [String]?
-                let is_anonymous: Bool
-            }
-
-            let update = ReviewUpdate(
-                reseña: text,
-                rating: rating,
-                fotos: fotos,
-                is_anonymous: isAnonymous
-            )
-
             Logger.debug("🔄 Actualizando reseña ID: \(reviewId) para usuario: \(userId.uuidString)")
             Logger.debug("📝 Nuevo contenido: \(text.prefix(50))...")
             Logger.debug("⭐ Nuevo rating: \(rating)")
 
+            // Construir el JSON manualmente para asegurar los tipos correctos
+            let updateDict: [String: Any] = [
+                "reseña": text,
+                "rating": rating,
+                "fotos": fotos as Any,
+                "is_anonymous": isAnonymous
+            ]
+
+            let updateData = try JSONSerialization.data(withJSONObject: updateDict)
+
+            // Realizar UPDATE con select para obtener la fila actualizada
             let response = try await supabase.from("reseñas")
-                .update(update)
+                .update(updateData)
                 .eq("id", value: reviewId)
-                .eq("user_id", value: userId.uuidString)
+                .select()
                 .execute()
 
-            Logger.debug("✅ Respuesta de Supabase: \(String(data: response.data, encoding: .utf8) ?? "N/A")")
+            let responseString = String(data: response.data, encoding: .utf8) ?? "N/A"
+            Logger.debug("📦 Respuesta de Supabase: \(responseString)")
+
+            // Intentar decodificar la respuesta
+            let decoder = JSONDecoder()
+            decoder.dateDecodingStrategy = .iso8601
+            let updatedReviews = try decoder.decode([Review].self, from: response.data)
+
+            if updatedReviews.isEmpty {
+                Logger.error("❌ No se encontró ninguna reseña con ID: \(reviewId)")
+                errorMessage = "No se pudo actualizar la reseña"
+                return false
+            }
+
             Logger.success("✅ Reseña actualizada en la base de datos")
+            Logger.debug("✅ Nueva reseña: \(updatedReviews[0].reseña.prefix(30))...")
+
+            // Actualizar el array local para reflejar cambios inmediatamente
+            if let index = reviews.firstIndex(where: { $0.id == reviewId }) {
+                await fetchReviews(for: reviews[index].campo_id)
+            }
+
             return true
         } catch {
             errorMessage = "Error al actualizar reseña: \(error.localizedDescription)"

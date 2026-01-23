@@ -119,24 +119,27 @@ struct EditProfileView: View {
                             .textContentType(.emailAddress)
                             .keyboardType(.emailAddress)
                             .autocapitalization(.none)
-                            .disabled(true) // Por defecto deshabilitado
-                            .opacity(0.7)
+                            .disabled(true) // Deshabilitado hasta implementar verificación
 
-                        if email != authViewModel.user?.email ?? "" {
-                            Image(systemName: "exclamationmark.triangle.fill")
-                                .foregroundColor(.orange)
-                        }
+                        Image(systemName: "lock.fill")
+                            .foregroundColor(.gray)
+                            .font(.caption)
                     }
 
-                    if email != authViewModel.user?.email ?? "" {
-                        Text("⚠️ Recibirás un email de confirmación al nuevo correo")
-                            .font(.caption)
-                            .foregroundColor(.orange)
+                    Button(action: {
+                        errorMessage = "⚠️ El cambio de email con verificación estará disponible próximamente"
+                    }) {
+                        HStack {
+                            Image(systemName: "envelope.badge.shield.half.filled")
+                                .foregroundColor(.blue)
+                            Text("Solicitar cambio de email")
+                                .foregroundColor(.blue)
+                        }
                     }
                 } header: {
                     Label("Email", systemImage: "envelope.fill")
                 } footer: {
-                    Text("El cambio de email requiere verificación. Por seguridad, está deshabilitado temporalmente.")
+                    Text("El cambio de email requiere verificación mediante código enviado a tu nuevo correo. Esta funcionalidad estará disponible próximamente.")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
@@ -170,15 +173,33 @@ struct EditProfileView: View {
                 // MARK: - Messages
                 if let errorMessage = errorMessage {
                     Section {
-                        Label(errorMessage, systemImage: "xmark.circle.fill")
-                            .foregroundColor(.red)
+                        HStack(spacing: 12) {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .foregroundColor(.red)
+                                .font(.title3)
+
+                            Text(errorMessage)
+                                .foregroundColor(.red)
+                                .font(.subheadline)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        .padding(.vertical, 4)
                     }
                 }
 
                 if let successMessage = successMessage {
                     Section {
-                        Label(successMessage, systemImage: "checkmark.circle.fill")
-                            .foregroundColor(.green)
+                        HStack(spacing: 12) {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundColor(.green)
+                                .font(.title3)
+
+                            Text(successMessage)
+                                .foregroundColor(.green)
+                                .font(.subheadline)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        .padding(.vertical, 4)
                     }
                 }
             }
@@ -359,43 +380,78 @@ struct EditProfileView: View {
         defer { isLoading = false }
 
         do {
+            var updatedItems: [String] = []
+
             // 1. Subir foto de perfil si hay una nueva
             if let photoData = selectedPhotoData {
                 try await uploadPhoto(photoData)
+                updatedItems.append("foto")
             }
 
             // 2. Actualizar nombre y apellidos en perfiles
             if nombre != authViewModel.nombre || apellidos != authViewModel.apellidos {
                 try await updateProfile()
+                updatedItems.append("datos personales")
             }
 
             // 3. Actualizar contraseña si se cambió
             if showPasswordFields && !newPassword.isEmpty {
                 try await updatePassword()
+                updatedItems.append("contraseña")
             }
 
-            // Success
-            successMessage = "✅ Perfil actualizado correctamente"
-            Logger.success("✅ Perfil actualizado correctamente")
+            // Success - mostrar qué se actualizó
+            if !updatedItems.isEmpty {
+                let items = updatedItems.joined(separator: ", ")
+                successMessage = "✅ Se actualizó correctamente: \(items)"
+                Logger.success("✅ Perfil actualizado: \(items)")
 
-            // Actualizar ViewModel
-            authViewModel.nombre = nombre
-            authViewModel.apellidos = apellidos
+                // Actualizar ViewModel
+                authViewModel.nombre = nombre
+                authViewModel.apellidos = apellidos
 
-            // Cerrar después de 1.5 segundos
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-                dismiss()
+                // Cerrar después de 2 segundos
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                    dismiss()
+                }
+            } else {
+                errorMessage = "No se realizaron cambios"
             }
 
         } catch {
-            errorMessage = "Error: \(error.localizedDescription)"
-            Logger.error("Error actualizando perfil: \(error.localizedDescription)")
+            // Los errores ya vienen personalizados de las funciones individuales
+            errorMessage = error.localizedDescription
+            Logger.error("❌ Error actualizando perfil: \(error.localizedDescription)")
         }
     }
 
     private func updateProfile() async throws {
         guard let userId = authViewModel.user?.id.uuidString else {
-            throw NSError(domain: "EditProfile", code: 1, userInfo: [NSLocalizedDescriptionKey: "Usuario no autenticado"])
+            throw NSError(
+                domain: "CamposDeGalicia",
+                code: 2001,
+                userInfo: [NSLocalizedDescriptionKey: "No se pudo identificar tu usuario. Por favor, inicia sesión de nuevo"]
+            )
+        }
+
+        // Validar que nombre y apellidos no estén vacíos
+        let trimmedNombre = nombre.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedApellidos = apellidos.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        guard !trimmedNombre.isEmpty else {
+            throw NSError(
+                domain: "CamposDeGalicia",
+                code: 2002,
+                userInfo: [NSLocalizedDescriptionKey: "El nombre no puede estar vacío"]
+            )
+        }
+
+        guard !trimmedApellidos.isEmpty else {
+            throw NSError(
+                domain: "CamposDeGalicia",
+                code: 2003,
+                userInfo: [NSLocalizedDescriptionKey: "Los apellidos no pueden estar vacíos"]
+            )
         }
 
         struct PerfilUpdate: Encodable {
@@ -403,14 +459,22 @@ struct EditProfileView: View {
             let apellidos: String
         }
 
-        let update = PerfilUpdate(nombre: nombre, apellidos: apellidos)
+        let update = PerfilUpdate(nombre: trimmedNombre, apellidos: trimmedApellidos)
 
-        _ = try await supabase.from("perfiles")
-            .update(update)
-            .eq("id", value: userId)
-            .execute()
+        do {
+            _ = try await supabase.from("perfiles")
+                .update(update)
+                .eq("id", value: userId)
+                .execute()
 
-        Logger.success("✅ Nombre y apellidos actualizados")
+            Logger.success("✅ Nombre y apellidos actualizados")
+        } catch {
+            throw NSError(
+                domain: "CamposDeGalicia",
+                code: 2004,
+                userInfo: [NSLocalizedDescriptionKey: "No se pudieron actualizar los datos. Verifica tu conexión e inténtalo de nuevo"]
+            )
+        }
     }
 
     private func updatePassword() async throws {
@@ -419,24 +483,115 @@ struct EditProfileView: View {
         }
 
         guard isPasswordValid(newPassword) else {
-            throw NSError(domain: "EditProfile", code: 3, userInfo: [NSLocalizedDescriptionKey: "La contraseña no cumple los requisitos"])
+            throw NSError(domain: "EditProfile", code: 3, userInfo: [NSLocalizedDescriptionKey: "La contraseña no cumple los requisitos de seguridad"])
         }
 
-        // Actualizar contraseña en Supabase Auth
-        try await supabase.auth.update(user: UserAttributes(password: newPassword))
+        // Actualizar contraseña en Supabase Auth con manejo de errores personalizado
+        do {
+            try await supabase.auth.update(user: UserAttributes(password: newPassword))
+            Logger.success("✅ Contraseña actualizada")
+        } catch {
+            // Convertir errores de Supabase a mensajes personalizados
+            let customError = parsePasswordError(error)
+            throw customError
+        }
+    }
 
-        Logger.success("✅ Contraseña actualizada")
+    /// Convierte errores de Supabase en mensajes personalizados amigables
+    private func parsePasswordError(_ error: Error) -> NSError {
+        let errorDescription = error.localizedDescription.lowercased()
+
+        // Detectar tipos de error comunes
+        if errorDescription.contains("same as the old password") ||
+           errorDescription.contains("same password") ||
+           errorDescription.contains("identical") {
+            return NSError(
+                domain: "CamposDeGalicia",
+                code: 1001,
+                userInfo: [NSLocalizedDescriptionKey: "La nueva contraseña debe ser diferente a la actual"]
+            )
+        }
+
+        if errorDescription.contains("weak") ||
+           errorDescription.contains("too short") ||
+           errorDescription.contains("password is too weak") {
+            return NSError(
+                domain: "CamposDeGalicia",
+                code: 1002,
+                userInfo: [NSLocalizedDescriptionKey: "La contraseña es demasiado débil. Debe tener al menos 8 caracteres, una mayúscula, una minúscula y un número"]
+            )
+        }
+
+        if errorDescription.contains("invalid") ||
+           errorDescription.contains("malformed") {
+            return NSError(
+                domain: "CamposDeGalicia",
+                code: 1003,
+                userInfo: [NSLocalizedDescriptionKey: "El formato de la contraseña no es válido"]
+            )
+        }
+
+        if errorDescription.contains("unauthorized") ||
+           errorDescription.contains("not authenticated") ||
+           errorDescription.contains("session") {
+            return NSError(
+                domain: "CamposDeGalicia",
+                code: 1004,
+                userInfo: [NSLocalizedDescriptionKey: "Tu sesión ha expirado. Por favor, cierra sesión y vuelve a iniciarla"]
+            )
+        }
+
+        if errorDescription.contains("network") ||
+           errorDescription.contains("connection") ||
+           errorDescription.contains("timeout") {
+            return NSError(
+                domain: "CamposDeGalicia",
+                code: 1005,
+                userInfo: [NSLocalizedDescriptionKey: "Error de conexión. Verifica tu conexión a internet e inténtalo de nuevo"]
+            )
+        }
+
+        // Error genérico personalizado
+        return NSError(
+            domain: "CamposDeGalicia",
+            code: 1099,
+            userInfo: [NSLocalizedDescriptionKey: "No se pudo cambiar la contraseña. Por favor, inténtalo de nuevo más tarde"]
+        )
     }
 
     private func uploadPhoto(_ data: Data) async throws {
         isUploadingPhoto = true
         defer { isUploadingPhoto = false }
 
-        _ = try await authViewModel.uploadProfilePhoto(imageData: data)
-        selectedPhotoData = nil
-        selectedPhotoItem = nil
+        guard data.count > 0 else {
+            throw NSError(
+                domain: "CamposDeGalicia",
+                code: 3001,
+                userInfo: [NSLocalizedDescriptionKey: "La imagen seleccionada no es válida"]
+            )
+        }
 
-        Logger.success("✅ Foto de perfil subida")
+        // Verificar que es una imagen válida
+        guard UIImage(data: data) != nil else {
+            throw NSError(
+                domain: "CamposDeGalicia",
+                code: 3002,
+                userInfo: [NSLocalizedDescriptionKey: "El archivo seleccionado no es una imagen válida"]
+            )
+        }
+
+        do {
+            _ = try await authViewModel.uploadProfilePhoto(imageData: data)
+            selectedPhotoData = nil
+            selectedPhotoItem = nil
+            Logger.success("✅ Foto de perfil subida")
+        } catch {
+            throw NSError(
+                domain: "CamposDeGalicia",
+                code: 3003,
+                userInfo: [NSLocalizedDescriptionKey: "No se pudo subir la foto. Verifica tu conexión e inténtalo de nuevo"]
+            )
+        }
     }
 
     private func deletePhoto() async {
@@ -447,9 +602,11 @@ struct EditProfileView: View {
             try await authViewModel.deleteProfilePhoto()
             selectedPhotoData = nil
             selectedPhotoItem = nil
-            successMessage = "✅ Foto eliminada"
+            successMessage = "✅ Foto de perfil eliminada correctamente"
+            Logger.success("✅ Foto de perfil eliminada")
         } catch {
-            errorMessage = "Error al eliminar foto: \(error.localizedDescription)"
+            errorMessage = "No se pudo eliminar la foto. Por favor, inténtalo de nuevo"
+            Logger.error("❌ Error al eliminar foto: \(error.localizedDescription)")
         }
     }
 }

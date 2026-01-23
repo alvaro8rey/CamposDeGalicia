@@ -403,24 +403,26 @@ struct EditProfileView: View {
             // Success - mostrar qué se actualizó
             if !updatedItems.isEmpty {
                 let items = updatedItems.joined(separator: ", ")
-                successMessage = "✅ Se actualizó correctamente: \(items)"
                 Logger.success("✅ Perfil actualizado: \(items)")
 
                 // Actualizar ViewModel
                 authViewModel.nombre = nombre
                 authViewModel.apellidos = apellidos
 
-                // Cerrar después de 2 segundos
-                DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                // Toast de éxito
+                ToastManager.shared.success("✅ Perfil actualizado: \(items)")
+
+                // Cerrar después de 1 segundo
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
                     dismiss()
                 }
             } else {
-                errorMessage = "No se realizaron cambios"
+                ToastManager.shared.warning("No se realizaron cambios")
             }
 
         } catch {
             // Los errores ya vienen personalizados de las funciones individuales
-            errorMessage = error.localizedDescription
+            ToastManager.shared.error(error.localizedDescription)
             Logger.error("❌ Error actualizando perfil: \(error.localizedDescription)")
         }
     }
@@ -602,10 +604,10 @@ struct EditProfileView: View {
             try await authViewModel.deleteProfilePhoto()
             selectedPhotoData = nil
             selectedPhotoItem = nil
-            successMessage = "✅ Foto de perfil eliminada correctamente"
+            ToastManager.shared.success("📸 Foto de perfil eliminada")
             Logger.success("✅ Foto de perfil eliminada")
         } catch {
-            errorMessage = "No se pudo eliminar la foto. Por favor, inténtalo de nuevo"
+            ToastManager.shared.error("No se pudo eliminar la foto. Inténtalo de nuevo")
             Logger.error("❌ Error al eliminar foto: \(error.localizedDescription)")
         }
     }

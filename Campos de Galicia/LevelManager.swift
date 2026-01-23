@@ -206,6 +206,11 @@ final class LevelManager {
                     totalXP += (logro.xp ?? 0)
                     newLogros.append(logro.id)
                     logrosDesbloqueadosIds.insert(logro.id)
+
+                    // Toast de logro desbloqueado
+                    Task { @MainActor in
+                        ToastManager.shared.achievement("🏆 ¡Nuevo logro! \(logro.nombre)")
+                    }
                 } catch {
                     print("⚠️ Error insertando logro \(logro.id): \(error)")
                 }
@@ -260,11 +265,13 @@ final class LevelManager {
         )
 
         let existing = try await supabase.from("niveles")
-            .select("id_usuario")
+            .select("id_usuario, level")
             .eq("id_usuario", value: userId)
             .execute()
 
+        var previousLevel: Int?
         if let rows = try JSONSerialization.jsonObject(with: existing.data, options: []) as? [[String: Any]], !rows.isEmpty {
+            previousLevel = rows.first?["level"] as? Int
             if rows.count > 1 {
                 _ = try await supabase.from("niveles").delete().eq("id_usuario", value: userId).execute()
                 _ = try await supabase.from("niveles").insert(nivelData).execute()
@@ -273,6 +280,13 @@ final class LevelManager {
             }
         } else {
             _ = try await supabase.from("niveles").insert(nivelData).execute()
+        }
+
+        // Toast si subió de nivel
+        if let prevLevel = previousLevel, newLevel > prevLevel {
+            Task { @MainActor in
+                ToastManager.shared.levelUp(newLevel)
+            }
         }
 
         // 13) Notifica (compatible con tu código actual, incluyendo reseñas)
@@ -379,6 +393,18 @@ final class LevelManager {
         DispatchQueue.main.async {
             NotificationCenter.default.post(name: .didUpdateXP, object: nil, userInfo: payload)
             // ProgressStore.shared.applyNotificationPayload(payload)
+
+            // Toast de recompensa diaria
+            ToastManager.shared.show(Toast(
+                type: .achievement,
+                message: "🎁 +\(dailyXP) XP - Racha de \(accessData.dias_consecutivos) días",
+                duration: 4.0
+            ))
+
+            // Toast si subió de nivel
+            if newLevel > currentLevel {
+                ToastManager.shared.levelUp(newLevel)
+            }
         }
     }
 

@@ -207,20 +207,23 @@ struct CampoDetalleView: View {
     // MARK: - Visit Methods
     private func markVisitWithProximityCheck() async {
         guard let campo = campoValue, let lat = campo.latitud, let lon = campo.longitud else {
-            locationAlertMessage = "Este campo no tiene coordenadas válidas."
-            showLocationAlert = true
+            await MainActor.run {
+                ToastManager.shared.error("Este campo no tiene coordenadas válidas")
+            }
             return
         }
 
         guard let userLoc = await LocationService.shared.requestCurrentLocation() else {
-            locationAlertMessage = "No pudimos obtener tu ubicación. Activa los permisos de localización."
-            showLocationAlert = true
+            await MainActor.run {
+                ToastManager.shared.error("No pudimos obtener tu ubicación. Activa los permisos")
+            }
             return
         }
 
         if userLoc.horizontalAccuracy < 0 || userLoc.horizontalAccuracy > maxAllowedAccuracy {
-            locationAlertMessage = "La señal de GPS es poco precisa ahora mismo. Inténtalo de nuevo al aire libre."
-            showLocationAlert = true
+            await MainActor.run {
+                ToastManager.shared.warning("La señal de GPS es poco precisa. Inténtalo al aire libre")
+            }
             return
         }
 
@@ -232,8 +235,9 @@ struct CampoDetalleView: View {
         } else {
             let pretty = formatDistance(distance)
             let radiusPretty = formatDistance(visitRadiusMeters)
-            locationAlertMessage = "Estás a ~\(pretty) del campo. Acércate (≤ \(radiusPretty)) para marcar la visita."
-            showLocationAlert = true
+            await MainActor.run {
+                ToastManager.shared.warning("Estás a ~\(pretty) del campo. Acércate (≤ \(radiusPretty))")
+            }
         }
     }
 
@@ -269,12 +273,15 @@ struct CampoDetalleView: View {
                 "id_campo": campo.id.uuidString
             ]
             _ = try await supabase.from("visitas").insert(visita).execute()
-            isVisited = true
-            visitSuccessMessage = "¡Has visitado \(campo.nombre)!"
-            showVisitSuccessAlert = true
+            await MainActor.run {
+                isVisited = true
+                ToastManager.shared.success("✅ ¡Visitado! \(campo.nombre)")
+            }
             NotificationCenter.default.post(name: .didUpdateVisits, object: nil)
         } catch {
-            errorMessage = "Error al registrar visita"
+            await MainActor.run {
+                ToastManager.shared.error("Error al registrar visita")
+            }
             print(error)
         }
     }
@@ -289,12 +296,15 @@ struct CampoDetalleView: View {
                 .eq("id_usuario", value: currentUser.id.uuidString)
                 .eq("id_campo", value: campo.id.uuidString)
                 .execute()
-            isVisited = false
-            visitSuccessMessage = "Visita desmarcada"
-            showVisitSuccessAlert = true
+            await MainActor.run {
+                isVisited = false
+                ToastManager.shared.info("Visita desmarcada")
+            }
             NotificationCenter.default.post(name: .didUpdateVisits, object: nil)
         } catch {
-            errorMessage = "Error al desmarcar visita"
+            await MainActor.run {
+                ToastManager.shared.error("Error al desmarcar visita")
+            }
             print(error)
         }
     }
@@ -340,12 +350,16 @@ struct CampoDetalleView: View {
     private func submitContribucion(_ contribucion: CampoContribucion) async {
         do {
             _ = try await supabase.from("campo_contribuciones").insert(contribucion).execute()
-            errorMessage = "Contribución enviada con éxito. ¡Gracias!"
-            showingContribucionForm = false
+            await MainActor.run {
+                showingContribucionForm = false
+                ToastManager.shared.success("✅ Contribución enviada. ¡Gracias!")
+            }
             camposViewModel.invalidateExtras(for: campoID)
             await fetchContribucionesAprobadas(forceRefresh: true)
         } catch {
-            errorMessage = "Error al enviar contribución"
+            await MainActor.run {
+                ToastManager.shared.error("Error al enviar contribución")
+            }
             print(error)
         }
     }

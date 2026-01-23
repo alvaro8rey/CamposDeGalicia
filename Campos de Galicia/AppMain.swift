@@ -124,6 +124,7 @@ struct AppMain: App {
             .accentColor(.blue)
             .environmentObject(geofenceManager)
             .environmentObject(camposViewModel)
+            .withToast()
             .onAppear {
                 locationManager.requestLocation()
                 if geofenceManager.autoCheckinEnabled {

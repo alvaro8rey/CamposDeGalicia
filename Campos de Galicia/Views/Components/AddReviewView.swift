@@ -397,6 +397,17 @@ struct AddReviewView: View {
                 do {
                     try await LevelManager.shared.updateLevelAndXP(for: userId.uuidString)
                     Logger.success("✅ XP actualizado correctamente")
+
+                    // Toast de éxito
+                    await MainActor.run {
+                        let baseXP = 25
+                        var bonusXP = 0
+                        if reviewText.count > 100 { bonusXP += 10 }
+                        if !allPhotoURLs.isEmpty { bonusXP += 15 }
+                        let totalXP = baseXP + bonusXP
+
+                        ToastManager.shared.xpGained(totalXP, reason: isEditMode ? "Reseña actualizada" : "Reseña publicada")
+                    }
                 } catch {
                     Logger.error("⚠️ Error al actualizar XP: \(error.localizedDescription)")
                     // No lanzamos el error para no bloquear la UI, la reseña ya está publicada
@@ -415,7 +426,9 @@ struct AddReviewView: View {
             dismiss()
 
         } catch {
-            errorMessage = "Error al \(isEditMode ? "actualizar" : "publicar") la reseña: \(error.localizedDescription)"
+            await MainActor.run {
+                ToastManager.shared.error("Error al \(isEditMode ? "actualizar" : "publicar") la reseña")
+            }
             Logger.error("Error: \(error.localizedDescription)")
         }
     }

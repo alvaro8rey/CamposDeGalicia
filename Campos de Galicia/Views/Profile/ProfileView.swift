@@ -134,13 +134,26 @@ struct ProfileView: View {
 
     // MARK: - Welcome Section
     private var welcomeSection: some View {
-        VStack(spacing: 8) {
-            Text("¡Hola, \(authViewModel.nombre)!")
-                .font(.system(size: 28, weight: .bold, design: .rounded))
-                .foregroundColor(.primary)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal)
+        HStack(spacing: 16) {
+            UserAvatarView(
+                avatarURL: authViewModel.avatarURL,
+                userName: authViewModel.nombre,
+                size: 60
+            )
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text("¡Hola, \(authViewModel.nombre)!")
+                    .font(.system(size: 24, weight: .bold, design: .rounded))
+                    .foregroundColor(.primary)
+
+                Text("\(authViewModel.apellidos)")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+            }
+
+            Spacer()
         }
+        .padding(.horizontal)
     }
 
     // MARK: - Progress Bar

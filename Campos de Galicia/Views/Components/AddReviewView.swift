@@ -382,6 +382,7 @@ struct AddReviewView: View {
                     reseña: reviewText.trimmingCharacters(in: .whitespacesAndNewlines),
                     rating: rating,
                     reviewer_name: reviewerName.isEmpty ? "Usuario" : reviewerName,
+                    reviewer_avatar_url: authViewModel.avatarURL,
                     fotos: finalPhotoURLs,
                     is_anonymous: isAnonymous
                 )

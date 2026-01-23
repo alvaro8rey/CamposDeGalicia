@@ -11,6 +11,7 @@ class AuthViewModel: ObservableObject {
     @Published var user: User? = nil
     @Published var nombre: String = ""
     @Published var apellidos: String = ""
+    @Published var avatarURL: String? = nil
 
     // MARK: - Singleton
     static let shared = AuthViewModel()
@@ -79,6 +80,7 @@ class AuthViewModel: ObservableObject {
         self.user = nil
         self.nombre = ""
         self.apellidos = ""
+        self.avatarURL = nil
 
         Logger.info("✅ Sesión cerrada")
         AnalyticsManager.shared.trackLogout()
@@ -107,7 +109,7 @@ class AuthViewModel: ObservableObject {
         }
 
         let perfilResponse = try await supabase.from("perfiles")
-            .select("nombre, apellidos")
+            .select("nombre, apellidos, avatar_url")
             .eq("id", value: user.id.uuidString)
             .single()
             .execute()
@@ -116,6 +118,7 @@ class AuthViewModel: ObservableObject {
         if let dict = jsonObject as? [String: Any] {
             self.nombre = dict["nombre"] as? String ?? ""
             self.apellidos = dict["apellidos"] as? String ?? ""
+            self.avatarURL = dict["avatar_url"] as? String
             Logger.debug("Perfil cargado: \(self.nombre) \(self.apellidos)")
         }
     }
@@ -145,5 +148,59 @@ class AuthViewModel: ObservableObject {
 
         Logger.success("✅ Perfil actualizado")
         AnalyticsManager.shared.track(.profileUpdate)
+    }
+
+    /// Subir foto de perfil
+    func uploadProfilePhoto(imageData: Data) async throws -> String {
+        guard let user = user else {
+            throw NSError(domain: "AuthViewModel", code: 401, userInfo: [
+                NSLocalizedDescriptionKey: "Usuario no autenticado"
+            ])
+        }
+
+        let fileName = "\(user.id.uuidString)_\(Date().timeIntervalSince1970).jpg"
+        let filePath = "avatars/\(fileName)"
+
+        // Subir imagen a Supabase Storage
+        _ = try await supabase.storage
+            .from("profile-photos")
+            .upload(path: filePath, file: imageData, options: FileOptions(contentType: "image/jpeg"))
+
+        // Obtener URL pública
+        let publicURL = try supabase.storage
+            .from("profile-photos")
+            .getPublicURL(path: filePath)
+
+        // Actualizar perfil con la URL
+        let updatedPerfil: [String: String] = ["avatar_url": publicURL.absoluteString]
+        _ = try await supabase.from("perfiles")
+            .update(updatedPerfil)
+            .eq("id", value: user.id.uuidString)
+            .execute()
+
+        self.avatarURL = publicURL.absoluteString
+
+        Logger.success("✅ Foto de perfil actualizada")
+        return publicURL.absoluteString
+    }
+
+    /// Eliminar foto de perfil
+    func deleteProfilePhoto() async throws {
+        guard let user = user else {
+            throw NSError(domain: "AuthViewModel", code: 401, userInfo: [
+                NSLocalizedDescriptionKey: "Usuario no autenticado"
+            ])
+        }
+
+        // Actualizar perfil para remover la URL
+        let updatedPerfil: [String: Any?] = ["avatar_url": nil]
+        _ = try await supabase.from("perfiles")
+            .update(updatedPerfil)
+            .eq("id", value: user.id.uuidString)
+            .execute()
+
+        self.avatarURL = nil
+
+        Logger.success("✅ Foto de perfil eliminada")
     }
 }

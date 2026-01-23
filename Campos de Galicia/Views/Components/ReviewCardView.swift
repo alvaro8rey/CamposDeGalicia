@@ -19,23 +19,12 @@ struct ReviewCardView: View {
         VStack(alignment: .leading, spacing: 12) {
             // Header: Avatar + Name + Rating
             HStack(alignment: .top, spacing: 12) {
-                // Avatar Circle
-                ZStack {
-                    Circle()
-                        .fill(
-                            LinearGradient(
-                                colors: [.blue.opacity(0.3), .purple.opacity(0.2)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                        .frame(width: 40, height: 40)
-
-                    Text(review.displayName.prefix(1).uppercased())
-                        .font(.headline)
-                        .fontWeight(.semibold)
-                        .foregroundColor(.blue)
-                }
+                // Avatar
+                UserAvatarView(
+                    avatarURL: review.reviewer_avatar_url,
+                    userName: review.displayName,
+                    size: 40
+                )
 
                 VStack(alignment: .leading, spacing: 4) {
                     HStack {
@@ -467,16 +456,11 @@ struct CompactReviewCardView: View {
 
             // User info
             HStack(spacing: 8) {
-                ZStack {
-                    Circle()
-                        .fill(Color.blue.opacity(0.2))
-                        .frame(width: 24, height: 24)
-
-                    Text(review.displayName.prefix(1).uppercased())
-                        .font(.caption)
-                        .fontWeight(.semibold)
-                        .foregroundColor(.blue)
-                }
+                UserAvatarView(
+                    avatarURL: review.reviewer_avatar_url,
+                    userName: review.displayName,
+                    size: 24
+                )
 
                 Text(review.displayName)
                     .font(.caption)

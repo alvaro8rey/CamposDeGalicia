@@ -10,6 +10,7 @@ struct Review: Identifiable, Codable, Equatable {
     let created_at: Date?
     let updated_at: Date?
     let reviewer_name: String?
+    let reviewer_avatar_url: String?
     let fotos: [String]?
     let is_anonymous: Bool?
 
@@ -22,6 +23,7 @@ struct Review: Identifiable, Codable, Equatable {
         case created_at
         case updated_at
         case reviewer_name
+        case reviewer_avatar_url
         case fotos
         case is_anonymous
     }
@@ -56,6 +58,7 @@ struct ReviewCreate: Codable {
     let reseña: String
     let rating: Int
     let reviewer_name: String
+    let reviewer_avatar_url: String?
     let fotos: [String]?
     let is_anonymous: Bool
 
@@ -65,6 +68,7 @@ struct ReviewCreate: Codable {
         case reseña
         case rating
         case reviewer_name
+        case reviewer_avatar_url
         case fotos
         case is_anonymous
     }

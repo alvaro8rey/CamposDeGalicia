@@ -1,5 +1,6 @@
 import SwiftUI
 import Supabase
+import PhotosUI
 
 /// Vista modal para editar el perfil completo del usuario
 struct EditProfileView: View {
@@ -21,6 +22,12 @@ struct EditProfileView: View {
     @State private var showPasswordFields: Bool = false
     @State private var showEmailChangeConfirmation: Bool = false
 
+    // Photo picker
+    @State private var selectedPhotoItem: PhotosPickerItem?
+    @State private var selectedPhotoData: Data?
+    @State private var isUploadingPhoto: Bool = false
+    @State private var showDeletePhotoConfirmation: Bool = false
+
     // MARK: - Initialization
     init(nombre: String, apellidos: String, email: String) {
         _nombre = State(initialValue: nombre)
@@ -32,6 +39,66 @@ struct EditProfileView: View {
     var body: some View {
         NavigationView {
             Form {
+                // MARK: - Profile Photo Section
+                Section {
+                    VStack(spacing: 16) {
+                        // Avatar Preview
+                        UserAvatarView(
+                            avatarURL: selectedPhotoData != nil ? nil : authViewModel.avatarURL,
+                            userName: nombre.isEmpty ? "U" : nombre,
+                            size: 100
+                        )
+                        .overlay {
+                            if let photoData = selectedPhotoData,
+                               let uiImage = UIImage(data: photoData) {
+                                Image(uiImage: uiImage)
+                                    .resizable()
+                                    .scaledToFill()
+                                    .frame(width: 100, height: 100)
+                                    .clipShape(Circle())
+                            }
+                        }
+
+                        // Photo Picker Button
+                        PhotosPicker(selection: $selectedPhotoItem, matching: .images) {
+                            Label(
+                                authViewModel.avatarURL == nil && selectedPhotoData == nil ? "Añadir foto" : "Cambiar foto",
+                                systemImage: "camera.fill"
+                            )
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                            .foregroundColor(.blue)
+                        }
+                        .onChange(of: selectedPhotoItem) { newItem in
+                            Task {
+                                if let data = try? await newItem?.loadTransferable(type: Data.self) {
+                                    selectedPhotoData = data
+                                }
+                            }
+                        }
+
+                        // Delete Photo Button
+                        if authViewModel.avatarURL != nil || selectedPhotoData != nil {
+                            Button(role: .destructive) {
+                                if selectedPhotoData != nil {
+                                    selectedPhotoData = nil
+                                    selectedPhotoItem = nil
+                                } else {
+                                    showDeletePhotoConfirmation = true
+                                }
+                            } label: {
+                                Label("Eliminar foto", systemImage: "trash.fill")
+                                    .font(.subheadline)
+                                    .fontWeight(.medium)
+                            }
+                        }
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 8)
+                } header: {
+                    Label("Foto de Perfil", systemImage: "person.crop.circle.fill")
+                }
+
                 // MARK: - Personal Info Section
                 Section {
                     TextField("Nombre", text: $nombre)
@@ -132,6 +199,16 @@ struct EditProfileView: View {
                 }
             }
             .disabled(isLoading)
+            .alert("¿Eliminar foto de perfil?", isPresented: $showDeletePhotoConfirmation) {
+                Button("Cancelar", role: .cancel) {}
+                Button("Eliminar", role: .destructive) {
+                    Task {
+                        await deletePhoto()
+                    }
+                }
+            } message: {
+                Text("Esta acción no se puede deshacer.")
+            }
             .overlay {
                 if isLoading {
                     ZStack {
@@ -282,12 +359,17 @@ struct EditProfileView: View {
         defer { isLoading = false }
 
         do {
-            // 1. Actualizar nombre y apellidos en perfiles
+            // 1. Subir foto de perfil si hay una nueva
+            if let photoData = selectedPhotoData {
+                try await uploadPhoto(photoData)
+            }
+
+            // 2. Actualizar nombre y apellidos en perfiles
             if nombre != authViewModel.nombre || apellidos != authViewModel.apellidos {
                 try await updateProfile()
             }
 
-            // 2. Actualizar contraseña si se cambió
+            // 3. Actualizar contraseña si se cambió
             if showPasswordFields && !newPassword.isEmpty {
                 try await updatePassword()
             }
@@ -344,6 +426,31 @@ struct EditProfileView: View {
         try await supabase.auth.update(user: UserAttributes(password: newPassword))
 
         Logger.success("✅ Contraseña actualizada")
+    }
+
+    private func uploadPhoto(_ data: Data) async throws {
+        isUploadingPhoto = true
+        defer { isUploadingPhoto = false }
+
+        _ = try await authViewModel.uploadProfilePhoto(imageData: data)
+        selectedPhotoData = nil
+        selectedPhotoItem = nil
+
+        Logger.success("✅ Foto de perfil subida")
+    }
+
+    private func deletePhoto() async {
+        isLoading = true
+        defer { isLoading = false }
+
+        do {
+            try await authViewModel.deleteProfilePhoto()
+            selectedPhotoData = nil
+            selectedPhotoItem = nil
+            successMessage = "✅ Foto eliminada"
+        } catch {
+            errorMessage = "Error al eliminar foto: \(error.localizedDescription)"
+        }
     }
 }
 

@@ -15,12 +15,25 @@ struct ReviewsSectionView: View {
     private let maxFeaturedReviews = 5
 
     var featuredReviews: [Review] {
-        // Mostrar las 5 mejores reseñas (rating más alto y más recientes)
+        // Mostrar las 5 mejores reseñas ordenadas por:
+        // 1. Nivel del usuario (más alto primero) - usuarios VIP tienen prioridad
+        // 2. Rating (más alto primero)
+        // 3. Fecha (más reciente primero)
         return reviewsManager.reviews
             .sorted { review1, review2 in
+                // Primero por nivel del usuario
+                let level1 = review1.reviewer_level ?? 1
+                let level2 = review2.reviewer_level ?? 1
+                if level1 != level2 {
+                    return level1 > level2
+                }
+
+                // Luego por rating
                 if review1.rating != review2.rating {
                     return review1.rating > review2.rating
                 }
+
+                // Finalmente por fecha
                 return (review1.created_at ?? Date.distantPast) > (review2.created_at ?? Date.distantPast)
             }
             .prefix(maxFeaturedReviews)

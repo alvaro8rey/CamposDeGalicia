@@ -113,10 +113,51 @@ final class LevelManager {
         }()
 
 
-        // 4) XP base
+        // 4) Reseñas del usuario y XP por reseñas
+        let reseñasResponse = try await supabase.from("reseñas")
+            .select("id, reseña, fotos, updated_at, created_at")
+            .eq("user_id", value: userId)
+            .execute()
+
+        let reseñasJSON = try JSONSerialization.jsonObject(with: reseñasResponse.data, options: [])
+        guard let reseñasArray = reseñasJSON as? [[String: Any]] else { throw LevelManagerError.dataParsingError }
+
+        var reviewXP = 0
+        let totalReseñas = reseñasArray.count
+
+        for reseña in reseñasArray {
+            // XP base por reseña: 25 XP
+            var reseñaXP = 25
+
+            // Bonus por reseña detallada (>100 caracteres): +10 XP
+            if let texto = reseña["reseña"] as? String, texto.count > 100 {
+                reseñaXP += 10
+            }
+
+            // Bonus por reseña con fotos: +15 XP
+            if let fotos = reseña["fotos"] as? [String], !fotos.isEmpty {
+                reseñaXP += 15
+            }
+
+            // Bonus por editar/mejorar reseña: +5 XP
+            if let createdAtStr = reseña["created_at"] as? String,
+               let updatedAtStr = reseña["updated_at"] as? String,
+               let createdAt = parseVisitDate(createdAtStr),
+               let updatedAt = parseVisitDate(updatedAtStr),
+               updatedAt.timeIntervalSince(createdAt) > 5 {
+                reseñaXP += 5
+            }
+
+            reviewXP += reseñaXP
+        }
+
+        Logger.debug("📝 Reseñas del usuario: \(totalReseñas)")
+        Logger.debug("⭐ XP por reseñas: \(reviewXP)")
+
+        // 5) XP base por visitas
         let baseXP = camposVisitados * 10
 
-        // 5) Logros y desbloqueados
+        // 6) Logros y desbloqueados
         let logrosResponse = try await supabase.from("logros")
             .select("id, nombre, descripcion, condicion, orden, xp")
             .execute()
@@ -129,26 +170,29 @@ final class LevelManager {
         let desbloqueadosRaw = try JSONDecoder().decode([[String: UUID]].self, from: logrosDesbloqueadosResponse.data)
         var logrosDesbloqueadosIds = Set(desbloqueadosRaw.compactMap { $0["id_logro"] })
 
-        // 6) XP por logros ya desbloqueados
-        var totalXP = baseXP
+        // 7) XP por logros ya desbloqueados
+        var totalXP = baseXP + reviewXP
         for logro in logros where logrosDesbloqueadosIds.contains(logro.id) {
             totalXP += (logro.xp ?? 0)
         }
 
-        // 7) XP inicial por crear sesión (si quieres contarlo siempre en totalXP)
+        // 8) XP inicial por crear sesión (si quieres contarlo siempre en totalXP)
         totalXP += INITIAL_ACHIEVEMENT_XP
 
-        // 8) Acceso diario (no otorga automáticamente)
+        Logger.debug("💰 XP Total: \(totalXP) (Base: \(baseXP), Reseñas: \(reviewXP), Logros: \(totalXP - baseXP - reviewXP - INITIAL_ACHIEVEMENT_XP))")
+
+        // 9) Acceso diario (no otorga automáticamente)
         let (dailyXP, hasClaimedToday) = try await checkDailyAccess(for: userIdUUID)
 
-        // 9) Desbloquear nuevos logros
+        // 10) Desbloquear nuevos logros (actualizados para incluir condiciones de reseñas)
         var newLogros: [UUID] = []
         for logro in logros where !logrosDesbloqueadosIds.contains(logro.id) {
             let shouldUnlock = ProgressUtils.evaluate(
                 condition: (logro.condicion ?? ""),
                 campos: camposVisitados,
                 provincias: provinciasVisitadas,
-                dias: diasConsecutivos
+                dias: diasConsecutivos,
+                reseñas: totalReseñas
             )
             if shouldUnlock {
                 let nuevo = LogroDesbloqueado(
@@ -231,7 +275,7 @@ final class LevelManager {
             _ = try await supabase.from("niveles").insert(nivelData).execute()
         }
 
-        // 13) Notifica (compatible con tu código actual)
+        // 13) Notifica (compatible con tu código actual, incluyendo reseñas)
         let payload: [String: Any] = [
             "xp": currentXP,
             "level": newLevel,
@@ -239,6 +283,8 @@ final class LevelManager {
             "camposVisitados": camposVisitados,
             "provinciasVisitadas": provinciasVisitadas,
             "diasConsecutivos": diasConsecutivos,
+            "reseñasEscritas": totalReseñas,
+            "xpReseñas": reviewXP,
             "dailyXP": dailyXP,
             "hasClaimedToday": hasClaimedToday
         ]

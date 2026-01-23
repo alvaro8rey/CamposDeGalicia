@@ -15,17 +15,47 @@ class ReviewsManager: ObservableObject {
         errorMessage = nil
 
         do {
+            // Obtener reseñas con el nivel del usuario usando una query con JOIN
             let response = try await supabase.from("reseñas")
-                .select("*")
+                .select("""
+                    *,
+                    niveles!reseñas_user_id_fkey(level)
+                """)
                 .eq("campo_id", value: campoId.uuidString)
                 .order("created_at", ascending: false)
                 .execute()
 
+            // Decodificar manualmente porque tenemos datos anidados
+            let json = try JSONSerialization.jsonObject(with: response.data, options: [])
+            guard let reviewsArray = json as? [[String: Any]] else {
+                throw NSError(domain: "ReviewsManager", code: 1, userInfo: [NSLocalizedDescriptionKey: "Formato de datos incorrecto"])
+            }
+
             let decoder = JSONDecoder()
             decoder.dateDecodingStrategy = .iso8601
-            decoder.keyDecodingStrategy = .useDefaultKeys
 
-            reviews = try decoder.decode([Review].self, from: response.data)
+            reviews = reviewsArray.compactMap { dict -> Review? in
+                var mutableDict = dict
+
+                // Extraer nivel del usuario desde el objeto anidado niveles
+                if let nivelesDict = dict["niveles"] as? [String: Any],
+                   let level = nivelesDict["level"] as? Int {
+                    mutableDict["reviewer_level"] = level
+                } else {
+                    mutableDict["reviewer_level"] = 1 // Nivel por defecto si no tiene
+                }
+
+                // Eliminar el objeto niveles anidado para evitar conflictos de decodificación
+                mutableDict.removeValue(forKey: "niveles")
+
+                do {
+                    let reviewData = try JSONSerialization.data(withJSONObject: mutableDict)
+                    return try decoder.decode(Review.self, from: reviewData)
+                } catch {
+                    Logger.error("Error decodificando reseña: \(error)")
+                    return nil
+                }
+            }
 
             // Calculate stats
             calculateStats()

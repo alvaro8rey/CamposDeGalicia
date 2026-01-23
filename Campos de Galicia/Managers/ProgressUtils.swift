@@ -13,13 +13,14 @@ enum ProgressUtils {
         }
     }
 
-    static func evaluate(condition: String, campos: Int, provincias: Int, dias: Int) -> Bool {
+    static func evaluate(condition: String, campos: Int, provincias: Int, dias: Int, reseñas: Int = 0) -> Bool {
         let parts = condition.split(separator: ">=").map { $0.trimmingCharacters(in: .whitespaces) }
         guard parts.count == 2, let target = Int(parts[1]) else { return false }
 
         if condition.contains("campos_visitados") { return campos >= target }
         if condition.contains("provincias_visitadas") { return provincias >= target }
         if condition.contains("dias_visitados") { return dias >= target }
+        if condition.contains("reseñas_escritas") { return reseñas >= target }
         return false
     }
 

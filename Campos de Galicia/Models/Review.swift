@@ -11,6 +11,7 @@ struct Review: Identifiable, Codable, Equatable {
     let updated_at: Date?
     let reviewer_name: String?
     let reviewer_avatar_url: String?
+    let reviewer_level: Int? // Nivel del usuario que escribió la reseña
     let fotos: [String]?
     let is_anonymous: Bool?
 
@@ -24,6 +25,7 @@ struct Review: Identifiable, Codable, Equatable {
         case updated_at
         case reviewer_name
         case reviewer_avatar_url
+        case reviewer_level
         case fotos
         case is_anonymous
     }
@@ -57,6 +59,11 @@ struct Review: Identifiable, Codable, Equatable {
         let formatter = RelativeDateTimeFormatter()
         formatter.unitsStyle = .full
         return formatter.localizedString(for: date, relativeTo: Date())
+    }
+
+    // Nivel de prioridad para ordenar reseñas destacadas
+    var displayPriority: Int {
+        reviewer_level ?? 1
     }
 }
 

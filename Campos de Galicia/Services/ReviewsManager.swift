@@ -111,6 +111,10 @@ class ReviewsManager: ObservableObject {
     // MARK: - Check if User Can Review
     func canUserReview(userId: UUID, campoId: UUID) async -> Bool {
         do {
+            Logger.debug("🔍 Verificando si usuario puede reseñar...")
+            Logger.debug("   Usuario ID: \(userId.uuidString)")
+            Logger.debug("   Campo ID: \(campoId.uuidString)")
+
             struct ReviewIdCheck: Codable {
                 let id: Int
             }
@@ -125,6 +129,8 @@ class ReviewsManager: ObservableObject {
             let decoder = JSONDecoder()
             let existingReviews = try decoder.decode([ReviewIdCheck].self, from: reviewResponse.data)
 
+            Logger.debug("   Reseñas existentes: \(existingReviews.count)")
+
             // Si ya hay una reseña, no puede dejar otra
             if !existingReviews.isEmpty {
                 Logger.debug("❌ Usuario ya dejó una reseña en este campo")
@@ -136,13 +142,20 @@ class ReviewsManager: ObservableObject {
                 let id: UUID
             }
 
+            Logger.debug("🔍 Consultando tabla visitas...")
             let visitResponse = try await supabase.from("visitas")
                 .select("id")
                 .eq("id_usuario", value: userId.uuidString)
                 .eq("id_campo", value: campoId.uuidString)
                 .execute()
 
+            // Log raw response
+            let responseString = String(data: visitResponse.data, encoding: .utf8) ?? "N/A"
+            Logger.debug("   Respuesta raw de visitas: \(responseString)")
+
             let visits = try decoder.decode([VisitCheck].self, from: visitResponse.data)
+
+            Logger.debug("   Visitas encontradas: \(visits.count)")
 
             // Solo puede reseñar si ha visitado el campo
             if visits.isEmpty {
@@ -154,7 +167,8 @@ class ReviewsManager: ObservableObject {
             return true
 
         } catch {
-            Logger.error("Error checking if user can review: \(error.localizedDescription)")
+            Logger.error("❌ Error checking if user can review: \(error.localizedDescription)")
+            Logger.error("   Error completo: \(error)")
             return false
         }
     }

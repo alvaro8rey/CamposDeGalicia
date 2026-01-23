@@ -1,4 +1,5 @@
 import SwiftUI
+import PhotosUI
 
 /// Vista de registro de nuevos usuarios
 struct RegisterView: View {
@@ -6,6 +7,7 @@ struct RegisterView: View {
     // MARK: - Environment
     @EnvironmentObject var authViewModel: AuthViewModel
     @Environment(\.dismiss) var dismiss
+    @Environment(\.colorScheme) var colorScheme
 
     // MARK: - State
     @State private var nombre: String = ""
@@ -17,108 +19,253 @@ struct RegisterView: View {
     @State private var showSuccessAlert: Bool = false
     @State private var successMessage: String = ""
 
+    // Photo picker
+    @State private var selectedPhotoItem: PhotosPickerItem?
+    @State private var selectedPhotoData: Data?
+
     // MARK: - Body
     var body: some View {
         NavigationView {
-            ScrollView {
-                VStack(spacing: 20) {
-                    // Icon
-                    Image(systemName: "person.crop.circle.fill.badge.plus")
-                        .resizable()
-                        .frame(width: 80, height: 80)
-                        .foregroundColor(.green)
-                        .padding(.top, 20)
+            ZStack {
+                // Gradient Background
+                LinearGradient(
+                    gradient: Gradient(colors: [
+                        Color.blue.opacity(colorScheme == .dark ? 0.15 : 0.1),
+                        Color.green.opacity(colorScheme == .dark ? 0.15 : 0.1)
+                    ]),
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+                .ignoresSafeArea()
 
-                    Text("Crear Cuenta")
-                        .font(.title)
-                        .fontWeight(.bold)
+                ScrollView {
+                    VStack(spacing: 30) {
+                        // Header
+                        VStack(spacing: 16) {
+                            ZStack {
+                                Circle()
+                                    .fill(LinearGradient(
+                                        gradient: Gradient(colors: [.blue, .green]),
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    ))
+                                    .frame(width: 100, height: 100)
 
-                    // Form fields
-                    VStack(spacing: 15) {
-                        // Nombre
-                        VStack(alignment: .leading, spacing: 5) {
-                            Text("Nombre")
-                                .font(.subheadline)
-                                .foregroundColor(.secondary)
-
-                            TextField("Tu nombre", text: $nombre)
-                                .textFieldStyle(RoundedBorderTextFieldStyle())
-                                .autocapitalization(.words)
-                                .disabled(isLoading)
-                        }
-
-                        // Apellidos
-                        VStack(alignment: .leading, spacing: 5) {
-                            Text("Apellidos")
-                                .font(.subheadline)
-                                .foregroundColor(.secondary)
-
-                            TextField("Tus apellidos", text: $apellidos)
-                                .textFieldStyle(RoundedBorderTextFieldStyle())
-                                .autocapitalization(.words)
-                                .disabled(isLoading)
-                        }
-
-                        // Email
-                        VStack(alignment: .leading, spacing: 5) {
-                            Text("Correo Electrónico")
-                                .font(.subheadline)
-                                .foregroundColor(.secondary)
-
-                            TextField("tu@email.com", text: $email)
-                                .textFieldStyle(RoundedBorderTextFieldStyle())
-                                .autocapitalization(.none)
-                                .keyboardType(.emailAddress)
-                                .disabled(isLoading)
-                        }
-
-                        // Password
-                        VStack(alignment: .leading, spacing: 5) {
-                            Text("Contraseña")
-                                .font(.subheadline)
-                                .foregroundColor(.secondary)
-
-                            SecureField("********", text: $password)
-                                .textFieldStyle(RoundedBorderTextFieldStyle())
-                                .disabled(isLoading)
-
-                            Text("Mínimo 8 caracteres, con mayúscula, minúscula y número")
-                                .font(.caption2)
-                                .foregroundColor(.secondary)
-                        }
-                    }
-                    .padding(.horizontal)
-
-                    // Error message
-                    if let errorMessage = errorMessage {
-                        Text(errorMessage)
-                            .font(.caption)
-                            .foregroundColor(.red)
-                            .padding(.horizontal)
-                            .multilineTextAlignment(.center)
-                    }
-
-                    // Register button
-                    Button(action: { Task { await registerAction() } }) {
-                        HStack {
-                            if isLoading {
-                                ProgressView()
-                                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                Image(systemName: "person.crop.circle.fill.badge.plus")
+                                    .resizable()
+                                    .scaledToFit()
+                                    .frame(width: 50, height: 50)
+                                    .foregroundColor(.white)
                             }
-                            Text(isLoading ? "Creando cuenta..." : "Crear Cuenta")
-                                .font(.headline)
-                        }
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(isRegisterButtonDisabled ? Color.gray : Color.green)
-                        .foregroundColor(.white)
-                        .cornerRadius(12)
-                    }
-                    .disabled(isRegisterButtonDisabled || isLoading)
-                    .padding(.horizontal)
-                    .padding(.top, 10)
+                            .padding(.top, 20)
 
-                    Spacer()
+                            Text("Crear Cuenta")
+                                .font(.system(size: 28, weight: .bold, design: .rounded))
+                                .foregroundColor(.primary)
+
+                            Text("Únete a la comunidad de Campos de Galicia")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                                .multilineTextAlignment(.center)
+                        }
+
+                        // Form Card
+                        VStack(spacing: 24) {
+                            // Profile Photo Section
+                            VStack(spacing: 12) {
+                                Text("Foto de perfil (opcional)")
+                                    .font(.subheadline)
+                                    .fontWeight(.medium)
+                                    .foregroundColor(.secondary)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                                HStack(spacing: 16) {
+                                    // Avatar Preview
+                                    ZStack {
+                                        Circle()
+                                            .fill(Color.blue.opacity(0.2))
+                                            .frame(width: 80, height: 80)
+
+                                        if let photoData = selectedPhotoData,
+                                           let uiImage = UIImage(data: photoData) {
+                                            Image(uiImage: uiImage)
+                                                .resizable()
+                                                .scaledToFill()
+                                                .frame(width: 80, height: 80)
+                                                .clipShape(Circle())
+                                        } else {
+                                            Image(systemName: "person.fill")
+                                                .font(.system(size: 35))
+                                                .foregroundColor(.blue)
+                                        }
+                                    }
+
+                                    VStack(alignment: .leading, spacing: 8) {
+                                        PhotosPicker(selection: $selectedPhotoItem, matching: .images) {
+                                            HStack {
+                                                Image(systemName: "camera.fill")
+                                                Text(selectedPhotoData == nil ? "Seleccionar foto" : "Cambiar foto")
+                                            }
+                                            .font(.subheadline)
+                                            .fontWeight(.medium)
+                                            .foregroundColor(.white)
+                                            .padding(.horizontal, 16)
+                                            .padding(.vertical, 10)
+                                            .background(Color.blue)
+                                            .cornerRadius(10)
+                                        }
+                                        .onChange(of: selectedPhotoItem) { newItem in
+                                            Task {
+                                                if let data = try? await newItem?.loadTransferable(type: Data.self) {
+                                                    selectedPhotoData = data
+                                                }
+                                            }
+                                        }
+
+                                        if selectedPhotoData != nil {
+                                            Button(action: {
+                                                selectedPhotoData = nil
+                                                selectedPhotoItem = nil
+                                            }) {
+                                                HStack {
+                                                    Image(systemName: "trash.fill")
+                                                    Text("Eliminar")
+                                                }
+                                                .font(.caption)
+                                                .foregroundColor(.red)
+                                            }
+                                        }
+                                    }
+
+                                    Spacer()
+                                }
+                                .padding()
+                                .background(Color(UIColor.secondarySystemBackground))
+                                .cornerRadius(12)
+                            }
+
+                            // Form fields
+                            VStack(spacing: 16) {
+                                // Nombre
+                                VStack(alignment: .leading, spacing: 8) {
+                                    Label("Nombre", systemImage: "person.fill")
+                                        .font(.subheadline)
+                                        .fontWeight(.medium)
+                                        .foregroundColor(.secondary)
+
+                                    TextField("Tu nombre", text: $nombre)
+                                        .padding()
+                                        .background(Color(UIColor.secondarySystemBackground))
+                                        .cornerRadius(12)
+                                        .autocapitalization(.words)
+                                        .disabled(isLoading)
+                                }
+
+                                // Apellidos
+                                VStack(alignment: .leading, spacing: 8) {
+                                    Label("Apellidos", systemImage: "person.fill")
+                                        .font(.subheadline)
+                                        .fontWeight(.medium)
+                                        .foregroundColor(.secondary)
+
+                                    TextField("Tus apellidos", text: $apellidos)
+                                        .padding()
+                                        .background(Color(UIColor.secondarySystemBackground))
+                                        .cornerRadius(12)
+                                        .autocapitalization(.words)
+                                        .disabled(isLoading)
+                                }
+
+                                // Email
+                                VStack(alignment: .leading, spacing: 8) {
+                                    Label("Correo Electrónico", systemImage: "envelope.fill")
+                                        .font(.subheadline)
+                                        .fontWeight(.medium)
+                                        .foregroundColor(.secondary)
+
+                                    TextField("tu@email.com", text: $email)
+                                        .padding()
+                                        .background(Color(UIColor.secondarySystemBackground))
+                                        .cornerRadius(12)
+                                        .autocapitalization(.none)
+                                        .keyboardType(.emailAddress)
+                                        .disabled(isLoading)
+                                }
+
+                                // Password
+                                VStack(alignment: .leading, spacing: 8) {
+                                    Label("Contraseña", systemImage: "lock.fill")
+                                        .font(.subheadline)
+                                        .fontWeight(.medium)
+                                        .foregroundColor(.secondary)
+
+                                    SecureField("********", text: $password)
+                                        .padding()
+                                        .background(Color(UIColor.secondarySystemBackground))
+                                        .cornerRadius(12)
+                                        .disabled(isLoading)
+
+                                    HStack(spacing: 4) {
+                                        Image(systemName: "info.circle.fill")
+                                            .font(.caption2)
+                                            .foregroundColor(.secondary)
+                                        Text("Mínimo 8 caracteres, con mayúscula, minúscula y número")
+                                            .font(.caption2)
+                                            .foregroundColor(.secondary)
+                                    }
+                                }
+                            }
+
+                            // Error message
+                            if let errorMessage = errorMessage {
+                                HStack(spacing: 8) {
+                                    Image(systemName: "exclamationmark.triangle.fill")
+                                        .foregroundColor(.red)
+                                    Text(errorMessage)
+                                        .font(.caption)
+                                        .foregroundColor(.red)
+                                }
+                                .padding()
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .background(Color.red.opacity(0.1))
+                                .cornerRadius(10)
+                            }
+
+                            // Register button
+                            Button(action: { Task { await registerAction() } }) {
+                                HStack(spacing: 8) {
+                                    if isLoading {
+                                        ProgressView()
+                                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                    }
+                                    Text(isLoading ? "Creando cuenta..." : "Crear Cuenta")
+                                        .font(.headline)
+                                        .fontWeight(.semibold)
+                                }
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 16)
+                                .background(
+                                    LinearGradient(
+                                        gradient: Gradient(colors: isRegisterButtonDisabled ? [.gray, .gray] : [.blue, .green]),
+                                        startPoint: .leading,
+                                        endPoint: .trailing
+                                    )
+                                )
+                                .foregroundColor(.white)
+                                .cornerRadius(12)
+                                .shadow(color: isRegisterButtonDisabled ? .clear : .green.opacity(0.3), radius: 8, x: 0, y: 4)
+                            }
+                            .disabled(isRegisterButtonDisabled || isLoading)
+                        }
+                        .padding(.horizontal, 24)
+                        .padding(.vertical, 32)
+                        .background(Color(UIColor.systemBackground))
+                        .cornerRadius(20)
+                        .shadow(color: Color.black.opacity(0.1), radius: 10, x: 0, y: 5)
+                        .padding(.horizontal, 20)
+
+                        Spacer()
+                    }
                 }
             }
             .navigationTitle("Registro")
@@ -173,12 +320,25 @@ struct RegisterView: View {
         isLoading = true
 
         do {
+            // 1. Registrar usuario
             let userId = try await authViewModel.register(
                 email: email,
                 password: password,
                 nombre: nombre,
                 apellidos: apellidos
             )
+
+            // 2. Subir foto de perfil si se seleccionó una
+            if let photoData = selectedPhotoData {
+                do {
+                    // Usar el mismo método que EditProfileView
+                    _ = try await authViewModel.uploadProfilePhoto(imageData: photoData)
+                    Logger.success("✅ Foto de perfil subida correctamente")
+                } catch {
+                    // No fallar el registro si falla la foto, solo loggear
+                    Logger.error("⚠️ Error al subir foto de perfil: \(error.localizedDescription)")
+                }
+            }
 
             successMessage = "Tu cuenta ha sido creada. Por favor revisa tu correo para verificar tu cuenta."
             showSuccessAlert = true

@@ -541,7 +541,10 @@ struct CampoListView: View {
                             VStack(alignment: .leading, spacing: 8) {
                                 let imageURL = (campo.foto_url?.isEmpty == false ? campo.foto_url : nil) ?? defaultImageURL
                                 if let url = URL(string: imageURL) {
-                                    CachedAsyncImage(url: url) { image in
+                                    CachedAsyncImage(
+                                        url: url,
+                                        targetSize: CGSize(width: 400, height: 200)
+                                    ) { image in
                                         image
                                             .resizable()
                                             .scaledToFill()
@@ -574,7 +577,10 @@ struct CampoListView: View {
                             HStack(spacing: 12) {
                                 let imageURL = (campo.foto_url?.isEmpty == false ? campo.foto_url : nil) ?? defaultImageURL
                                 if let url = URL(string: imageURL) {
-                                    CachedAsyncImage(url: url) { image in
+                                    CachedAsyncImage(
+                                        url: url,
+                                        targetSize: CGSize(width: 120, height: 120)
+                                    ) { image in
                                         image
                                             .resizable()
                                             .scaledToFill()

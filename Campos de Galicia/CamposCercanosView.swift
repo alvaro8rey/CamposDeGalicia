@@ -223,7 +223,10 @@ private struct CampoRowView_Classic: View {
         HStack(spacing: 12) {
             let imageURL = (campoWithDistance.campo.foto_url?.isEmpty == false ? campoWithDistance.campo.foto_url : nil) ?? defaultImageURL
             if let url = URL(string: imageURL) {
-                CachedAsyncImage(url: url) { image in
+                CachedAsyncImage(
+                    url: url,
+                    targetSize: CGSize(width: 120, height: 120)
+                ) { image in
                     image
                         .resizable()
                         .scaledToFill()

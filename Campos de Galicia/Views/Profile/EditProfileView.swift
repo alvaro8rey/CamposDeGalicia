@@ -409,12 +409,12 @@ struct EditProfileView: View {
                 authViewModel.nombre = nombre
                 authViewModel.apellidos = apellidos
 
-                // Toast de éxito
-                ToastManager.shared.success("✅ Perfil actualizado: \(items)")
+                // Cerrar inmediatamente para que el toast se vea
+                dismiss()
 
-                // Cerrar después de 1 segundo
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                    dismiss()
+                // Toast de éxito (se mostrará después de cerrar)
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    ToastManager.shared.success("✅ Perfil actualizado: \(items)")
                 }
             } else {
                 ToastManager.shared.warning("No se realizaron cambios")

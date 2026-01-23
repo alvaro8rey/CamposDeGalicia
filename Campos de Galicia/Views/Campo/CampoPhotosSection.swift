@@ -27,7 +27,10 @@ struct CampoPhotosSection: View {
 
                         VStack(spacing: 8) {
                             if let url = URL(string: foto.url) {
-                                CachedAsyncImage(url: url) { image in
+                                CachedAsyncImage(
+                                    url: url,
+                                    targetSize: CGSize(width: 260, height: 260)
+                                ) { image in
                                     image
                                         .resizable()
                                         .scaledToFill()

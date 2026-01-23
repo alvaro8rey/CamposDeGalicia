@@ -75,6 +75,15 @@ final class CamposViewModel: ObservableObject {
         await loadCampos(forceRefresh: true)
     }
 
+    /// Limpia el caché de extras expirados para liberar memoria
+    func cleanExpiredExtras() {
+        let expiredKeys = campoExtras.filter { !isExtrasValid($0.value) }.map { $0.key }
+        expiredKeys.forEach { campoExtras.removeValue(forKey: $0) }
+        if !expiredKeys.isEmpty {
+            Logger.debug("🗑️ Cleaned \(expiredKeys.count) expired extras from memory")
+        }
+    }
+
     func campo(with id: UUID) -> CampoModel? {
         campos.first { $0.id == id }
     }

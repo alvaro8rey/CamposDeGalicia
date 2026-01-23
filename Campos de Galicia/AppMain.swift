@@ -28,9 +28,10 @@ struct AppMain: App {
         let viewModel = CamposViewModel()
         _camposViewModel = StateObject(wrappedValue: viewModel)
 
+        // Reducir cache para evitar problemas de memoria
         let imageCache = URLCache(
-            memoryCapacity: 50_000_000,
-            diskCapacity: 100_000_000
+            memoryCapacity: 15_000_000,  // 15 MB (antes 50 MB)
+            diskCapacity: 40_000_000      // 40 MB (antes 100 MB)
         )
         URLCache.shared = imageCache
 
@@ -129,6 +130,14 @@ struct AppMain: App {
                 locationManager.requestLocation()
                 if geofenceManager.autoCheckinEnabled {
                     geofenceManager.refreshWith(campos: camposViewModel.campos)
+                }
+
+                // Limpiar cache expirado periódicamente para liberar memoria
+                Task {
+                    while true {
+                        try? await Task.sleep(nanoseconds: 5_000_000_000) // 5 minutos
+                        await camposViewModel.cleanExpiredExtras()
+                    }
                 }
             }
             .onOpenURL { url in

@@ -12,7 +12,10 @@ struct CampoHeroImage: View {
         GeometryReader { geometry in
             ZStack(alignment: .bottomLeading) {
                 if let url = URL(string: imageURL) {
-                    CachedAsyncImage(url: url) { image in
+                    CachedAsyncImage(
+                        url: url,
+                        targetSize: CGSize(width: 800, height: 300)
+                    ) { image in
                         image
                             .resizable()
                             .scaledToFill()

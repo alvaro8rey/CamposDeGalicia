@@ -299,15 +299,9 @@ struct CampoDetalleView: View {
                 }
                 .background(Color(UIColor.systemBackground))
             } else {
-                VStack(spacing: 16) {
-                    ProgressView("Cargando campo...")
-                    Text("No se encontró la información del campo.")
-                        .font(.footnote)
-                        .foregroundColor(.secondary)
-                        .multilineTextAlignment(.center)
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .padding()
+                LoadingView(message: "Cargando información del campo...", style: .shimmer)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .padding()
             }
         }
         .background(

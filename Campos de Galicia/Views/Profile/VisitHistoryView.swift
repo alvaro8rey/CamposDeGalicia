@@ -16,12 +16,8 @@ struct VisitHistoryView: View {
                 .fontWeight(.bold)
 
             if profileVM.isLoadingHistorial {
-                HStack {
-                    Spacer()
-                    ProgressView()
-                    Spacer()
-                }
-                .padding()
+                LoadingView(message: "Cargando visitas...", style: .spinner)
+                    .frame(height: 100)
             } else if profileVM.historialCampos.isEmpty {
                 VStack(spacing: 8) {
                     Image(systemName: "map")

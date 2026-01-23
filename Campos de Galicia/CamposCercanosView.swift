@@ -51,8 +51,7 @@ struct CamposCercanosView: View {
                 ScrollView {
                     VStack(spacing: 0) {
                         if isLoadingLocation {
-                            ProgressView("Obteniendo ubicación...")
-                                .progressViewStyle(CircularProgressViewStyle(tint: .blue))
+                            LoadingView(message: "Obteniendo tu ubicación...", style: .spinner)
                                 .padding(.top, 40)
                         } else if let errorMessage = errorMessage {
                             EmptyCard(text: errorMessage)

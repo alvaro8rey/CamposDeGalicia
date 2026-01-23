@@ -167,12 +167,9 @@ struct ReviewsSectionView: View {
 
             // Loading / Error / Empty States
             if reviewsManager.isLoading {
-                HStack {
-                    Spacer()
-                    ProgressView("Cargando reseñas...")
-                    Spacer()
-                }
-                .padding(40)
+                LoadingView(message: "Cargando reseñas...", style: .skeleton)
+                    .frame(height: 300)
+                    .padding(.horizontal)
             } else if let errorMessage = reviewsManager.errorMessage {
                 ErrorView(message: errorMessage) {
                     Task { await loadReviews() }

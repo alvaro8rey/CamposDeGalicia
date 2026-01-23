@@ -33,10 +33,12 @@ struct ContentView: View {
     var body: some View {
         VStack(spacing: 0) {
             if camposViewModel.isLoading && filteredCampos.isEmpty {
-                ProgressView("Cargando campos...")
-                    .progressViewStyle(CircularProgressViewStyle(tint: .blue))
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .background(Color(.systemBackground))
+                // Usar skeleton loading para mejor UX
+                if isGridView {
+                    SkeletonGridView()
+                } else {
+                    LoadingView(message: "Cargando campos de Galicia...", style: .skeleton)
+                }
             } else {
                 // Barra de botones y filtros
                 FilterBarView(

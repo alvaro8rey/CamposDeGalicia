@@ -157,8 +157,7 @@ struct LogrosView: View {
             }
 
             if isLoadingLogros {
-                ProgressView("Cargando logros...")
-                    .progressViewStyle(CircularProgressViewStyle(tint: .blue))
+                LoadingView(message: "Cargando logros...", style: .skeleton)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 30)
             } else {

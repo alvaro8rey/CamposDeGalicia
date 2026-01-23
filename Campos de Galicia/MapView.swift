@@ -470,7 +470,6 @@ struct MapaView: View {
 
     private func prepareRouteSummary(for destination: MapAnnotationItem) {
         guard let userLocation = mapView?.userLocation.location?.coordinate else {
-            print("⚠️ No se pudo obtener la ubicación del usuario")
             return
         }
 
@@ -656,15 +655,9 @@ struct CustomMapView: UIViewRepresentable {
         }
 
         func mapView(_ mapView: MKMapView, didUpdate userLocation: MKUserLocation) {
-            guard let location = userLocation.location else {
-                print("⚠️ [MapView] didUpdate userLocation pero location es nil")
-                return
-            }
-
-            print("📍 [MapView] Ubicación actualizada: \(location.coordinate.latitude), \(location.coordinate.longitude)")
+            guard let location = userLocation.location else { return }
 
             if parent.isNavigating {
-                print("🚗 [MapView] Navegando - actualizando mapa y pasos")
                 // Centrar el mapa en la ubicación del usuario
                 let region = MKCoordinateRegion(center: location.coordinate,
                                                latitudinalMeters: 300,
@@ -676,8 +669,6 @@ struct CustomMapView: UIViewRepresentable {
 
                 // Verificar si necesitamos recalcular la ruta
                 checkIfRecalculationNeeded(userLocation: location.coordinate)
-            } else {
-                print("ℹ️ [MapView] No estamos navegando - ubicación ignorada")
             }
         }
         

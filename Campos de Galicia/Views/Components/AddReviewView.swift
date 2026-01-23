@@ -392,6 +392,15 @@ struct AddReviewView: View {
                     .execute()
 
                 Logger.success("✅ Reseña publicada correctamente")
+
+                // Actualizar nivel y XP del usuario después de publicar la reseña
+                do {
+                    try await LevelManager.shared.updateLevelAndXP(for: userId.uuidString)
+                    Logger.success("✅ XP actualizado correctamente")
+                } catch {
+                    Logger.error("⚠️ Error al actualizar XP: \(error.localizedDescription)")
+                    // No lanzamos el error para no bloquear la UI, la reseña ya está publicada
+                }
             }
 
             // Show success animation

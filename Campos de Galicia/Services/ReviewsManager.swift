@@ -82,17 +82,19 @@ class ReviewsManager: ObservableObject {
                         mutableDict["reviewer_level"] = 1 // Nivel por defecto
                     }
 
-                    // Si reviewer_name o reviewer_avatar_url son NULL, usar datos de perfiles
+                    // Siempre usar datos de perfiles para nombre y avatar (son los más actualizados)
                     if let profile = profilesDictionary[userIdStr] {
-                        // Solo sobrescribir si el valor actual es null
-                        if dict["reviewer_name"] == nil || (dict["reviewer_name"] as? String) == nil {
-                            let fullName = "\(profile.nombre ?? "") \(profile.apellidos ?? "")".trimmingCharacters(in: .whitespaces)
-                            mutableDict["reviewer_name"] = fullName.isEmpty ? "Usuario" : fullName
+                        let fullName = "\(profile.nombre ?? "") \(profile.apellidos ?? "")".trimmingCharacters(in: .whitespaces)
+
+                        // Usar nombre de perfil si está disponible, sino mantener el guardado en reviewer_name
+                        if !fullName.isEmpty {
+                            mutableDict["reviewer_name"] = fullName
+                        } else if dict["reviewer_name"] == nil || (dict["reviewer_name"] as? String)?.isEmpty == true {
+                            mutableDict["reviewer_name"] = "Usuario"
                         }
 
-                        if dict["reviewer_avatar_url"] == nil || (dict["reviewer_avatar_url"] as? String) == nil {
-                            mutableDict["reviewer_avatar_url"] = profile.avatar_url
-                        }
+                        // Usar avatar de perfil (siempre el más actualizado)
+                        mutableDict["reviewer_avatar_url"] = profile.avatar_url
                     }
                 }
 

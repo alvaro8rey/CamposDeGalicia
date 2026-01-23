@@ -6,30 +6,20 @@ struct LevelsInfoView: View {
     @State private var currentXP: Int = 0
     @State private var xpToNextLevel: Int = 100
     @State private var errorMessage: String? = nil
-
-    @State private var logros: [Logro] = []
-    @State private var logrosDesbloqueados: [LogroDesbloqueado] = []
-    @State private var dailyRewards: [AccesoDiario] = []
-
     @State private var isLoading: Bool = false
     @State private var lastUpdatedFromNotification: Date? = nil
     @Environment(\.colorScheme) var colorScheme
 
-    private var validLogrosWithDetails: [(LogroDesbloqueado, Logro)] {
-        logrosDesbloqueados
-            .compactMap { ld in logros.first { $0.id == ld.id_logro }.map { (ld, $0) } }
-            .sorted { $0.0.fecha_desbloqueo > $1.0.fecha_desbloqueo }
-    }
-
     var body: some View {
         ScrollView {
-            VStack(spacing: 30) {
+            VStack(spacing: 24) {
                 titleSection
                 progressSection
                 explanationSection
-                achievementsSection
+                xpMethodsSection
+                benefitsSection
                 errorSection
-                Spacer()
+                Spacer(minLength: 30)
             }
             .padding(.vertical, 20)
         }
@@ -46,7 +36,7 @@ struct LevelsInfoView: View {
         .navigationTitle("Niveles")
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
-            Task { await loadInitialData() }
+            Task { await loadUserData() }
         }
         .onReceive(NotificationCenter.default.publisher(for: .didUpdateXP)) { notification in
             if let userInfo = notification.userInfo,
@@ -59,12 +49,6 @@ struct LevelsInfoView: View {
                 lastUpdatedFromNotification = Date()
             }
         }
-        .onReceive(NotificationCenter.default.publisher(for: .didUnlockAchievement)) { _ in
-            Task {
-                await loadLogrosDesbloqueados()
-                await loadDailyRewards()
-            }
-        }
     }
 
     // MARK: - Sections
@@ -75,7 +59,7 @@ struct LevelsInfoView: View {
                 .foregroundColor(.yellow)
                 .font(.title2)
             Text("Información sobre Niveles")
-                .font(.system(size: 26, weight: .bold, design: .rounded))
+                .font(.system(size: 24, weight: .bold, design: .rounded))
             Spacer()
             ZStack {
                 Circle()
@@ -98,7 +82,7 @@ struct LevelsInfoView: View {
     }
 
     private var progressSection: some View {
-        // Cálculo “in-level”
+        // Cálculo "in-level"
         let base = LevelCurve.xpNeededToReachLevel(level)
         let span = max(LevelCurve.xpSpanForLevel(level), 1)
         let gainedInLevel = max(0, currentXP - base)
@@ -161,18 +145,23 @@ struct LevelsInfoView: View {
         .padding(.horizontal, 16)
     }
 
-
     private var explanationSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Image(systemName: "info.circle.fill").foregroundColor(.blue).font(.title3)
+                Image(systemName: "info.circle.fill")
+                    .foregroundColor(.blue)
+                    .font(.title3)
                 Text("¿Para qué sirven los niveles?")
                     .font(.system(size: 20, weight: .bold, design: .rounded))
             }
-            Text("Los niveles representan tu progreso y dedicación en la app. A medida que subes de nivel, desbloqueas nuevas funcionalidades y obtienes mayor reconocimiento dentro de la comunidad.")
-                .font(.system(size: 16, design: .rounded))
-                .foregroundColor(.primary.opacity(0.85))
-                .lineSpacing(5)
+
+            VStack(alignment: .leading, spacing: 10) {
+                BenefitRow(icon: "star.fill", color: .yellow, text: "Mayor visibilidad de tus reseñas")
+                BenefitRow(icon: "medal.fill", color: .orange, text: "Reconocimiento dentro de la comunidad")
+                BenefitRow(icon: "chart.line.uptrend.xyaxis", color: .green, text: "Seguimiento de tu progreso y dedicación")
+                BenefitRow(icon: "trophy.fill", color: .purple, text: "Desbloqueo de logros y recompensas")
+            }
+            .padding(.top, 4)
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 15)
@@ -183,55 +172,105 @@ struct LevelsInfoView: View {
         .padding(.horizontal, 16)
     }
 
-    private var achievementsSection: some View {
-        let hasLogros = !logrosDesbloqueados.isEmpty || !dailyRewards.isEmpty
-        let hasValidLogros = !validLogrosWithDetails.isEmpty
-        let initialAchievementUUID = UUID(uuidString: "00000000-0000-0000-0000-000000000001") ?? UUID()
-        let hasInitialLogro = !logrosDesbloqueados.contains {
-            $0.id_logro == initialAchievementUUID
-        }
+    private var xpMethodsSection: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack {
+                Image(systemName: "sparkles")
+                    .foregroundColor(.green)
+                    .font(.title3)
+                Text("¿Cómo conseguir XP?")
+                    .font(.system(size: 20, weight: .bold, design: .rounded))
+            }
 
-        return VStack(alignment: .leading, spacing: 15) {
-            Text("Historial de Logros y Experiencia")
-                .font(.system(size: 20, weight: .bold, design: .rounded))
-                .padding(.horizontal, 20)
+            VStack(spacing: 10) {
+                XPMethodCard(
+                    icon: "map.fill",
+                    title: "Visitar campos",
+                    description: "Marca campos como visitados para ganar XP",
+                    xpRange: "Variable"
+                )
 
-            if !hasLogros {
-                Text("No has desbloqueado ningún logro ni recompensa diaria aún. ¡Explora más campos!")
-                    .font(.system(size: 16, design: .rounded))
-                    .foregroundColor(.primary.opacity(0.7))
-                    .padding()
-                    .frame(maxWidth: .infinity)
-                    .background(Color(UIColor.secondarySystemBackground).opacity(0.55))
-                    .cornerRadius(12)
-                    .padding(.horizontal, 20)
-            } else {
-                if hasValidLogros {
-                    ForEach(validLogrosWithDetails, id: \.0.id) { desbloqueado, logro in
-                        AchievementCard(logroDesbloqueado: desbloqueado, logro: logro)
-                            .transition(.scale)
-                    }
-                }
-                if !dailyRewards.isEmpty {
-                    ForEach(dailyRewards) { reward in
-                        DailyRewardCard(reward: reward)
-                            .transition(.scale)
-                    }
-                }
-                if hasInitialLogro {
-                    InitialAchievementCard()
-                        .transition(.scale)
-                }
+                XPMethodCard(
+                    icon: "text.bubble.fill",
+                    title: "Escribir reseñas",
+                    description: "Deja reseñas en campos visitados",
+                    xpRange: "25-55 XP",
+                    details: [
+                        "Base: 25 XP",
+                        "Reseña detallada (+100 caracteres): +10 XP",
+                        "Con fotos: +15 XP",
+                        "Editada/mejorada: +5 XP"
+                    ]
+                )
+
+                XPMethodCard(
+                    icon: "calendar.badge.clock",
+                    title: "Recompensa diaria",
+                    description: "Reclama tu recompensa cada día en la sección de Logros",
+                    xpRange: "20-70 XP",
+                    details: [
+                        "Día 1: 20 XP",
+                        "Día 2: 30 XP",
+                        "Día 3: 40 XP",
+                        "Día 4: 50 XP",
+                        "Día 5-6: 70 XP"
+                    ]
+                )
+
+                XPMethodCard(
+                    icon: "trophy.fill",
+                    title: "Desbloquear logros",
+                    description: "Completa objetivos para ganar XP extra",
+                    xpRange: "50-1000 XP",
+                    details: [
+                        "Campos visitados: 50-500 XP",
+                        "Rachas diarias: 100-300 XP",
+                        "Reseñas escritas: 50-1000 XP",
+                        "Y muchos más..."
+                    ]
+                )
             }
         }
-        .padding(.vertical, 10)
+        .padding(.horizontal, 20)
+        .padding(.vertical, 15)
+        .background(Color(UIColor.secondarySystemBackground))
+        .cornerRadius(15)
+        .overlay(RoundedRectangle(cornerRadius: 15).stroke(Color.green.opacity(0.2), lineWidth: 1))
+        .shadow(color: Color.black.opacity(0.1), radius: 8, x: 0, y: 4)
+        .padding(.horizontal, 16)
+    }
+
+    private var benefitsSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Image(systemName: "gift.fill")
+                    .foregroundColor(.purple)
+                    .font(.title3)
+                Text("Beneficios por nivel")
+                    .font(.system(size: 20, weight: .bold, design: .rounded))
+            }
+
+            Text("A medida que subes de nivel, tus reseñas aparecerán primero en la lista destacada de cada campo, dándote mayor visibilidad ante otros usuarios.")
+                .font(.system(size: 15, design: .rounded))
+                .foregroundColor(.primary.opacity(0.85))
+                .lineSpacing(4)
+                .padding(.top, 4)
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 15)
+        .background(Color(UIColor.secondarySystemBackground))
+        .cornerRadius(15)
+        .overlay(RoundedRectangle(cornerRadius: 15).stroke(Color.purple.opacity(0.2), lineWidth: 1))
+        .shadow(color: Color.black.opacity(0.1), radius: 8, x: 0, y: 4)
+        .padding(.horizontal, 16)
     }
 
     private var errorSection: some View {
         Group {
             if let errorMessage = errorMessage {
                 HStack(spacing: 8) {
-                    Image(systemName: "exclamationmark.triangle.fill").foregroundColor(.red)
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .foregroundColor(.red)
                     Text(errorMessage)
                         .font(.system(size: 14, design: .rounded))
                         .foregroundColor(.red)
@@ -244,16 +283,7 @@ struct LevelsInfoView: View {
         }
     }
 
-    // MARK: - Data
-
-    private func loadInitialData() async {
-        isLoading = true
-        await loadUserData()
-        await loadLogros()
-        await loadLogrosDesbloqueados()
-        await loadDailyRewards()
-        isLoading = false
-    }
+    // MARK: - Data Loading
 
     private func loadUserData() async {
         guard let currentUser = supabase.auth.currentUser else {
@@ -290,234 +320,99 @@ struct LevelsInfoView: View {
             errorMessage = "Error al cargar datos de nivel: \(error.localizedDescription)"
         }
     }
+}
 
-    private func loadLogros() async {
-        do {
-            let response = try await supabase.from("logros")
-                .select("id, nombre, descripcion, condicion, orden, xp")
-                .execute()
-            let decoder = JSONDecoder()
-            logros = try decoder.decode([Logro].self, from: response.data)
-        } catch {
-            errorMessage = "Error al cargar logros: \(error.localizedDescription)"
-        }
-    }
+// MARK: - Supporting Views
 
-    private func loadLogrosDesbloqueados() async {
-        guard let user = supabase.auth.currentUser else {
-            errorMessage = "Usuario no autenticado"
-            return
-        }
+struct BenefitRow: View {
+    let icon: String
+    let color: Color
+    let text: String
 
-        do {
-            let response = try await supabase.from("logros_desbloqueados")
-                .select()
-                .eq("id_usuario", value: user.id.uuidString)
-                .execute()
-
-            let data = response.data
-            let jsonObject = try JSONSerialization.jsonObject(with: data, options: [])
-            guard let array = jsonObject as? [[String: Any]] else {
-                errorMessage = "Formato inesperado de logros desbloqueados"
-                return
-            }
-
-            let iso = ISO8601DateFormatter()
-            iso.formatOptions = [.withInternetDateTime, .withFractionalSeconds, .withTimeZone]
-            iso.timeZone = TimeZone(secondsFromGMT: 0)
-
-            let fallback = DateFormatter()
-            fallback.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSSSS"
-            fallback.timeZone = TimeZone(secondsFromGMT: 0)
-
-            logrosDesbloqueados = array.compactMap { dict in
-                guard let idStr = dict["id"] as? String,
-                      let id = UUID(uuidString: idStr),
-                      let uidStr = dict["id_usuario"] as? String,
-                      let uid = UUID(uuidString: uidStr),
-                      let lidStr = dict["id_logro"] as? String,
-                      let lid = UUID(uuidString: lidStr),
-                      let fStr = dict["fecha_desbloqueo"] as? String,
-                      let fecha = iso.date(from: fStr) ?? fallback.date(from: fStr)
-                else { return nil }
-
-                return LogroDesbloqueado(id: id, id_usuario: uid, id_logro: lid, fecha_desbloqueo: fecha)
-            }
-        } catch {
-            errorMessage = "Error al cargar logros desbloqueados: \(error.localizedDescription)"
-        }
-    }
-
-    private func loadDailyRewards() async {
-        guard let user = supabase.auth.currentUser else {
-            errorMessage = "Usuario no autenticado"
-            return
-        }
-
-        do {
-            let response = try await supabase.from("accesos_diarios")
-                .select("id, id_usuario, ultimo_acceso, dias_consecutivos, ultima_recompensa_reclamada")
-                .eq("id_usuario", value: user.id.uuidString)
-                .execute()
-            let decoder = JSONDecoder()
-            decoder.dateDecodingStrategy = .iso8601
-            let dataArray = try decoder.decode([AccesoDiario].self, from: response.data)
-            dailyRewards = dataArray.filter { $0.ultima_recompensa_reclamada != nil }
-        } catch {
-            errorMessage = "Error al cargar recompensas diarias: \(error.localizedDescription)"
+    var body: some View {
+        HStack(spacing: 10) {
+            Image(systemName: icon)
+                .foregroundColor(color)
+                .font(.system(size: 16))
+                .frame(width: 24)
+            Text(text)
+                .font(.system(size: 15, design: .rounded))
+                .foregroundColor(.primary.opacity(0.85))
         }
     }
 }
 
-
-// MARK: - Cards (incluidas aquí para evitar errores de símbolo no encontrado)
-
-struct AchievementCard: View {
-    let logroDesbloqueado: LogroDesbloqueado
-    let logro: Logro
-    @Environment(\.colorScheme) var colorScheme
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 8) {
-                Image(systemName: "checkmark.seal.fill")
-                    .foregroundColor(.green)
-                    .font(.title3)
-
-                Text(logro.nombre)
-                    .font(.system(size: 18, weight: .semibold, design: .rounded))
-                    .lineLimit(1)
-                    .truncationMode(.tail)
-
-                Spacer()
-
-                Text("+\(logro.xp ?? 0) XP")
-                    .font(.system(size: 14, weight: .bold, design: .rounded))
-                    .foregroundColor(.green)
-            }
-
-            if let descripcion = logro.descripcion, !descripcion.isEmpty {
-                Text(descripcion)
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .lineSpacing(3)
-            }
-
-            Text("Desbloqueado el: \(DateFormatter.localizedString(from: logroDesbloqueado.fecha_desbloqueo, dateStyle: .medium, timeStyle: .none))")
-                .font(.footnote)
-                .foregroundColor(.secondary)
-        }
-        .padding(14)
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(Color(UIColor.secondarySystemBackground))
-                .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
-        )
-        .padding(.horizontal, 16) // 👈 margen lateral igual que el resto
-    }
-}
-
-
-struct DailyRewardCard: View {
-    let reward: AccesoDiario
-    @Environment(\.colorScheme) var colorScheme
-
-    private let formatter: DateFormatter = {
-        let f = DateFormatter()
-        f.dateStyle = .medium
-        f.timeStyle = .none
-        return f
-    }()
-
-    private func xp(for day: Int) -> Int {
-        switch day {
-        case 1: return 20
-        case 2: return 30
-        case 3: return 40
-        case 4: return 50
-        case 5, 6: return 70
-        default: return 20
-        }
-    }
+struct XPMethodCard: View {
+    let icon: String
+    let title: String
+    let description: String
+    let xpRange: String
+    var details: [String]? = nil
+    @State private var isExpanded: Bool = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 8) {
-                Image(systemName: "sun.max.fill")
-                    .foregroundColor(.orange)
-                    .font(.title3)
+            Button(action: {
+                if details != nil {
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                        isExpanded.toggle()
+                    }
+                }
+            }) {
+                HStack(spacing: 12) {
+                    Image(systemName: icon)
+                        .foregroundColor(.green)
+                        .font(.system(size: 20))
+                        .frame(width: 30)
 
-                Text("Acceso Diario - Día \(reward.dias_consecutivos)")
-                    .font(.system(size: 18, weight: .semibold, design: .rounded))
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(title)
+                            .font(.system(size: 16, weight: .semibold, design: .rounded))
+                            .foregroundColor(.primary)
+                        Text(description)
+                            .font(.system(size: 13, design: .rounded))
+                            .foregroundColor(.secondary)
+                            .lineLimit(2)
+                    }
 
-                Spacer()
+                    Spacer()
 
-                Text("+\(xp(for: reward.dias_consecutivos)) XP")
-                    .font(.system(size: 14, weight: .bold, design: .rounded))
-                    .foregroundColor(.green)
+                    VStack(alignment: .trailing, spacing: 2) {
+                        Text(xpRange)
+                            .font(.system(size: 13, weight: .bold, design: .rounded))
+                            .foregroundColor(.green)
+
+                        if details != nil {
+                            Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
+                                .font(.system(size: 12))
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                }
             }
+            .buttonStyle(PlainButtonStyle())
 
-            Text("Reclamado el: \(formatter.string(from: reward.ultima_recompensa_reclamada ?? Date()))")
-                .font(.footnote)
-                .foregroundColor(.secondary)
+            if isExpanded, let details = details {
+                Divider()
+                    .padding(.vertical, 4)
 
-            Text("Recompensa por acceso diario.")
-                .font(.subheadline)
-                .foregroundColor(.secondary)
+                VStack(alignment: .leading, spacing: 6) {
+                    ForEach(details, id: \.self) { detail in
+                        HStack(spacing: 8) {
+                            Circle()
+                                .fill(Color.green.opacity(0.7))
+                                .frame(width: 6, height: 6)
+                            Text(detail)
+                                .font(.system(size: 13, design: .rounded))
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                }
+                .padding(.leading, 42)
+            }
         }
         .padding(14)
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(Color(UIColor.secondarySystemBackground))
-                .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
-        )
-        .padding(.horizontal, 16) // 👈 margen lateral igual que el resto
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-}
-
-struct InitialAchievementCard: View {
-    @Environment(\.colorScheme) var colorScheme
-
-    private let formatter: DateFormatter = {
-        let f = DateFormatter()
-        f.dateStyle = .medium
-        f.timeStyle = .none
-        return f
-    }()
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 8) {
-                Image(systemName: "star.fill")
-                    .foregroundColor(.yellow)
-                    .font(.title3)
-
-                Text("Creación de sesión")
-                    .font(.system(size: 18, weight: .semibold, design: .rounded))
-
-                Spacer()
-
-                Text("+100 XP")
-                    .font(.system(size: 14, weight: .bold, design: .rounded))
-                    .foregroundColor(.green)
-            }
-
-            Text("Desbloqueado el: \(formatter.string(from: Date()))")
-                .font(.footnote)
-                .foregroundColor(.secondary)
-
-            Text("Recompensa por crear tu cuenta.")
-                .font(.subheadline)
-                .foregroundColor(.secondary)
-        }
-        .padding(14)
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(Color(UIColor.secondarySystemBackground))
-                .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
-        )
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color(UIColor.tertiarySystemBackground))
+        .cornerRadius(12)
     }
 }

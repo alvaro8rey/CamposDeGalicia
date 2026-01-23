@@ -512,6 +512,10 @@ struct MapaView: View {
     }
     
     private func startNavigation() {
+        print("🚀 Iniciando navegación...")
+        print("📍 Ubicación del usuario: \(mapView?.userLocation.location?.coordinate.latitude ?? 0), \(mapView?.userLocation.location?.coordinate.longitude ?? 0)")
+        print("🎯 Destino: \(pendingDestination?.title ?? "desconocido")")
+
         withAnimation(.spring()) {
             self.showRouteSummary = false
             self.externalIsNavigating = true
@@ -522,16 +526,26 @@ struct MapaView: View {
 
         // Pasar el destino al Coordinator para que pueda recalcular rutas
         if let mapView = self.mapView, let destination = pendingDestination {
+            print("✅ Configurando destino en Coordinator")
             (mapView.delegate as? CustomMapView.Coordinator)?.setCurrentDestination(destination)
         }
+
+        print("🧭 User tracking mode: \(userTrackingMode == .followWithHeading ? "followWithHeading" : "otro")")
     }
     
     private func stopNavigation() {
+        print("🛑 Deteniendo navegación...")
         self.externalIsNavigating = false
         self.showRouteSummary = false
         self.route = nil
         self.currentStepIndex = 0
         self.distanceToNextStep = 0
+
+        // Detener actualizaciones de ubicación
+        if let mapView = self.mapView {
+            (mapView.delegate as? CustomMapView.Coordinator)?.stopLocationUpdates()
+        }
+
         resetMapToInitialState()
     }
 
@@ -641,23 +655,82 @@ struct CustomMapView: UIViewRepresentable {
         Coordinator(self)
     }
 
-    class Coordinator: NSObject, MKMapViewDelegate {
+    class Coordinator: NSObject, MKMapViewDelegate, CLLocationManagerDelegate {
         var parent: CustomMapView
         private var lastRecalculationDate = Date()
         private var currentDestination: MapAnnotationItem?
+        private var locationManager: CLLocationManager?
 
         init(_ parent: CustomMapView) {
             self.parent = parent
+            super.init()
+            setupLocationManager()
+        }
+
+        private func setupLocationManager() {
+            locationManager = CLLocationManager()
+            locationManager?.delegate = self
+            locationManager?.desiredAccuracy = kCLLocationAccuracyBestForNavigation
+            locationManager?.distanceFilter = 5 // Actualizar cada 5 metros
+            locationManager?.activityType = .automotiveNavigation
+            locationManager?.allowsBackgroundLocationUpdates = true
+            locationManager?.pausesLocationUpdatesAutomatically = false
+            print("📱 Location Manager configurado para navegación")
         }
 
         func setCurrentDestination(_ destination: MapAnnotationItem) {
             self.currentDestination = destination
+            // Iniciar actualizaciones de ubicación para navegación
+            print("🚀 Iniciando actualizaciones de ubicación continuas...")
+            locationManager?.startUpdatingLocation()
+            locationManager?.startUpdatingHeading()
+        }
+
+        func stopLocationUpdates() {
+            print("🛑 Deteniendo actualizaciones de ubicación")
+            locationManager?.stopUpdatingLocation()
+            locationManager?.stopUpdatingHeading()
+        }
+
+        // MARK: - CLLocationManagerDelegate
+        func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
+            guard let location = locations.last else { return }
+            print("📍 CLLocationManager actualizó ubicación: \(location.coordinate.latitude), \(location.coordinate.longitude)")
+            print("   Precisión: \(location.horizontalAccuracy)m, Velocidad: \(location.speed)m/s")
+
+            if parent.isNavigating {
+                print("✅ Navegando - procesando ubicación")
+                // Centrar el mapa en la ubicación del usuario
+                DispatchQueue.main.async {
+                    let region = MKCoordinateRegion(center: location.coordinate,
+                                                   latitudinalMeters: 300,
+                                                   longitudinalMeters: 300)
+                    self.parent.mapView?.setRegion(region, animated: true)
+                }
+
+                // Actualizar paso actual y distancia en tiempo real
+                updateCurrentStep(userLocation: location.coordinate)
+
+                // Verificar si necesitamos recalcular la ruta
+                checkIfRecalculationNeeded(userLocation: location.coordinate)
+            }
+        }
+
+        func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
+            print("❌ Error en location manager: \(error.localizedDescription)")
         }
 
         func mapView(_ mapView: MKMapView, didUpdate userLocation: MKUserLocation) {
-            guard let location = userLocation.location else { return }
+            guard let location = userLocation.location else {
+                print("⚠️ didUpdate llamado pero location es nil")
+                return
+            }
+
+            print("📍 didUpdate userLocation: \(location.coordinate.latitude), \(location.coordinate.longitude)")
+            print("🧭 isNavigating: \(parent.isNavigating)")
 
             if parent.isNavigating {
+                print("✅ Navegando - actualizando ubicación")
                 // Centrar el mapa en la ubicación del usuario
                 let region = MKCoordinateRegion(center: location.coordinate,
                                                latitudinalMeters: 300,
@@ -669,6 +742,8 @@ struct CustomMapView: UIViewRepresentable {
 
                 // Verificar si necesitamos recalcular la ruta
                 checkIfRecalculationNeeded(userLocation: location.coordinate)
+            } else {
+                print("⏸️ No navegando - ignorando actualización")
             }
         }
         
@@ -733,9 +808,17 @@ struct CustomMapView: UIViewRepresentable {
         }
 
         private func checkIfRecalculationNeeded(userLocation: CLLocationCoordinate2D) {
-            guard parent.isNavigating, let currentRoute = parent.route, let destination = currentDestination else { return }
+            guard parent.isNavigating, let currentRoute = parent.route, let destination = currentDestination else {
+                print("⚠️ No se puede verificar recalculación: isNavigating=\(parent.isNavigating), route=\(parent.route != nil), destination=\(currentDestination != nil)")
+                return
+            }
+
             // Reducir tiempo entre recalculaciones de 15 a 5 segundos
-            if Date().timeIntervalSince(lastRecalculationDate) < 5 { return }
+            let timeSinceLastRecalc = Date().timeIntervalSince(lastRecalculationDate)
+            if timeSinceLastRecalc < 5 {
+                print("⏳ Muy pronto para recalcular (pasaron \(String(format: "%.1f", timeSinceLastRecalc))s)")
+                return
+            }
 
             let userPoint = MKMapPoint(userLocation)
             var minDistance = Double.greatestFiniteMagnitude
@@ -745,8 +828,11 @@ struct CustomMapView: UIViewRepresentable {
                 if distance < minDistance { minDistance = distance }
             }
 
+            print("📏 Distancia mínima a la ruta: \(String(format: "%.1f", minDistance))m")
+
             // Recalcular si te desvías más de 30 metros de la ruta (antes 50m)
             if minDistance > 30 {
+                print("🔄 RECALCULANDO RUTA - Usuario se desvió \(String(format: "%.1f", minDistance))m de la ruta")
                 lastRecalculationDate = Date()
                 DispatchQueue.main.async {
                     // Resetear el índice del paso actual al recalcular

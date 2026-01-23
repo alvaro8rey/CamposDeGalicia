@@ -8,6 +8,7 @@ struct LevelsInfoView: View {
     @State private var errorMessage: String? = nil
     @State private var isLoading: Bool = false
     @State private var lastUpdatedFromNotification: Date? = nil
+    @State private var expandedCardId: String? = nil // Control de acordeón
     @Environment(\.colorScheme) var colorScheme
 
     var body: some View {
@@ -184,13 +185,16 @@ struct LevelsInfoView: View {
 
             VStack(spacing: 10) {
                 XPMethodCard(
+                    id: "visitar",
                     icon: "map.fill",
                     title: "Visitar campos",
                     description: "Marca campos como visitados para ganar XP",
-                    xpRange: "Variable"
+                    xpRange: "Variable",
+                    expandedCardId: $expandedCardId
                 )
 
                 XPMethodCard(
+                    id: "reseñas",
                     icon: "text.bubble.fill",
                     title: "Escribir reseñas",
                     description: "Deja reseñas en campos visitados",
@@ -200,10 +204,12 @@ struct LevelsInfoView: View {
                         "Reseña detallada (+100 caracteres): +10 XP",
                         "Con fotos: +15 XP",
                         "Editada/mejorada: +5 XP"
-                    ]
+                    ],
+                    expandedCardId: $expandedCardId
                 )
 
                 XPMethodCard(
+                    id: "diaria",
                     icon: "calendar.badge.clock",
                     title: "Recompensa diaria",
                     description: "Reclama tu recompensa cada día en la sección de Logros",
@@ -214,10 +220,12 @@ struct LevelsInfoView: View {
                         "Día 3: 40 XP",
                         "Día 4: 50 XP",
                         "Día 5-6: 70 XP"
-                    ]
+                    ],
+                    expandedCardId: $expandedCardId
                 )
 
                 XPMethodCard(
+                    id: "logros",
                     icon: "trophy.fill",
                     title: "Desbloquear logros",
                     description: "Completa objetivos para ganar XP extra",
@@ -227,7 +235,8 @@ struct LevelsInfoView: View {
                         "Rachas diarias: 100-300 XP",
                         "Reseñas escritas: 50-1000 XP",
                         "Y muchos más..."
-                    ]
+                    ],
+                    expandedCardId: $expandedCardId
                 )
             }
         }
@@ -343,19 +352,25 @@ struct BenefitRow: View {
 }
 
 struct XPMethodCard: View {
+    let id: String
     let icon: String
     let title: String
     let description: String
     let xpRange: String
     var details: [String]? = nil
-    @State private var isExpanded: Bool = false
+    @Binding var expandedCardId: String?
+
+    private var isExpanded: Bool {
+        expandedCardId == id
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             Button(action: {
                 if details != nil {
                     withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                        isExpanded.toggle()
+                        // Toggle: si está expandida, colapsar; sino, expandir esta y colapsar las demás
+                        expandedCardId = isExpanded ? nil : id
                     }
                 }
             }) {
@@ -372,7 +387,7 @@ struct XPMethodCard: View {
                         Text(description)
                             .font(.system(size: 13, design: .rounded))
                             .foregroundColor(.secondary)
-                            .lineLimit(2)
+                            .lineLimit(isExpanded ? nil : 2) // Sin límite cuando está expandida
                     }
 
                     Spacer()

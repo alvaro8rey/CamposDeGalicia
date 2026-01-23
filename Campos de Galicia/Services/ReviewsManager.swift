@@ -47,7 +47,25 @@ class ReviewsManager: ObservableObject {
             // Crear diccionario de user_id -> level
             let levelsDictionary = Dictionary(uniqueKeysWithValues: userLevels.map { ($0.id_usuario, $0.level) })
 
-            // 4. Mapear niveles a las reseñas usando JSON manipulation
+            // 4. Obtener perfiles de esos usuarios (para nombre y avatar)
+            struct UserProfile: Codable {
+                let id: String
+                let nombre: String?
+                let apellidos: String?
+                let avatar_url: String?
+            }
+
+            let profilesResponse = try await supabase.from("perfiles")
+                .select("id, nombre, apellidos, avatar_url")
+                .in("id", values: Array(uniqueUserIds))
+                .execute()
+
+            let userProfiles = try decoder.decode([UserProfile].self, from: profilesResponse.data)
+
+            // Crear diccionario de user_id -> profile
+            let profilesDictionary = Dictionary(uniqueKeysWithValues: userProfiles.map { ($0.id, $0) })
+
+            // 5. Mapear niveles y perfiles a las reseñas usando JSON manipulation
             let json = try JSONSerialization.jsonObject(with: response.data, options: [])
             guard let reviewsArray = json as? [[String: Any]] else {
                 throw NSError(domain: "ReviewsManager", code: 1, userInfo: [NSLocalizedDescriptionKey: "Formato de datos incorrecto"])
@@ -56,12 +74,26 @@ class ReviewsManager: ObservableObject {
             reviews = reviewsArray.compactMap { dict -> Review? in
                 var mutableDict = dict
 
-                // Agregar nivel del usuario si existe
-                if let userIdStr = dict["user_id"] as? String,
-                   let level = levelsDictionary[userIdStr] {
-                    mutableDict["reviewer_level"] = level
-                } else {
-                    mutableDict["reviewer_level"] = 1 // Nivel por defecto
+                if let userIdStr = dict["user_id"] as? String {
+                    // Agregar nivel del usuario si existe
+                    if let level = levelsDictionary[userIdStr] {
+                        mutableDict["reviewer_level"] = level
+                    } else {
+                        mutableDict["reviewer_level"] = 1 // Nivel por defecto
+                    }
+
+                    // Si reviewer_name o reviewer_avatar_url son NULL, usar datos de perfiles
+                    if let profile = profilesDictionary[userIdStr] {
+                        // Solo sobrescribir si el valor actual es null
+                        if dict["reviewer_name"] == nil || (dict["reviewer_name"] as? String) == nil {
+                            let fullName = "\(profile.nombre ?? "") \(profile.apellidos ?? "")".trimmingCharacters(in: .whitespaces)
+                            mutableDict["reviewer_name"] = fullName.isEmpty ? "Usuario" : fullName
+                        }
+
+                        if dict["reviewer_avatar_url"] == nil || (dict["reviewer_avatar_url"] as? String) == nil {
+                            mutableDict["reviewer_avatar_url"] = profile.avatar_url
+                        }
+                    }
                 }
 
                 do {

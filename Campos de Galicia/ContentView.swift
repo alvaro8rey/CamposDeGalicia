@@ -125,9 +125,21 @@ struct ContentView: View {
 
     func applyFilters() {
         filteredCampos = camposViewModel.campos.filter { campo in
-            let matchesNombre = searchNombre.isEmpty || campo.nombre.lowercased().contains(searchNombre.lowercased())
+            // Normalizar strings para comparación (sin acentos ni diferencias de mayúsculas)
+            let normalizedSearchNombre = searchNombre
+                .folding(options: [.diacriticInsensitive, .caseInsensitive], locale: .current)
+            let normalizedCampoNombre = campo.nombre
+                .folding(options: [.diacriticInsensitive, .caseInsensitive], locale: .current)
+
+            let normalizedSearchLocalidad = searchLocalidad
+                .folding(options: [.diacriticInsensitive, .caseInsensitive], locale: .current)
+            let normalizedCampoLocalidad = (campo.localidad ?? "")
+                .folding(options: [.diacriticInsensitive, .caseInsensitive], locale: .current)
+
+            let matchesNombre = searchNombre.isEmpty || normalizedCampoNombre.contains(normalizedSearchNombre)
             let matchesProvincia = selectedProvincia == "Todas" || campo.provincia == selectedProvincia
-            let matchesLocalidad = searchLocalidad.isEmpty || campo.localidad.lowercased().contains(searchLocalidad.lowercased())
+            let matchesLocalidad = searchLocalidad.isEmpty || normalizedCampoLocalidad.contains(normalizedSearchLocalidad)
+
             return matchesNombre && matchesProvincia && matchesLocalidad
         }
         withAnimation(.easeInOut) {

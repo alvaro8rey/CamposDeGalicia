@@ -543,7 +543,7 @@ struct CampoListView: View {
                                 if let url = URL(string: imageURL) {
                                     CachedAsyncImage(
                                         url: url,
-                                        targetSize: CGSize(width: 400, height: 200)
+                                        targetSize: CGSize(width: 1200, height: 600)
                                     ) { image in
                                         image
                                             .resizable()

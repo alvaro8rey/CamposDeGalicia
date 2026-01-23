@@ -14,7 +14,7 @@ struct CampoHeroImage: View {
                 if let url = URL(string: imageURL) {
                     CachedAsyncImage(
                         url: url,
-                        targetSize: CGSize(width: 800, height: 300)
+                        targetSize: CGSize(width: 1200, height: 700)
                     ) { image in
                         image
                             .resizable()

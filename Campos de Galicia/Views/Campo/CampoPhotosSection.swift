@@ -29,7 +29,7 @@ struct CampoPhotosSection: View {
                             if let url = URL(string: foto.url) {
                                 CachedAsyncImage(
                                     url: url,
-                                    targetSize: CGSize(width: 260, height: 260)
+                                    targetSize: CGSize(width: 400, height: 400)
                                 ) { image in
                                     image
                                         .resizable()

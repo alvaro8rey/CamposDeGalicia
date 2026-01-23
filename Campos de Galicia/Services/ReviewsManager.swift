@@ -15,38 +15,54 @@ class ReviewsManager: ObservableObject {
         errorMessage = nil
 
         do {
-            // Obtener reseñas con el nivel del usuario usando una query con JOIN
+            // 1. Obtener reseñas sin niveles
             let response = try await supabase.from("reseñas")
-                .select("""
-                    *,
-                    niveles!reseñas_user_id_fkey(level)
-                """)
+                .select("*")
                 .eq("campo_id", value: campoId.uuidString)
                 .order("created_at", ascending: false)
                 .execute()
 
-            // Decodificar manualmente porque tenemos datos anidados
+            let decoder = JSONDecoder()
+            decoder.dateDecodingStrategy = .iso8601
+
+            // Decodificar reseñas (reviewer_level será nil por ahora)
+            var tempReviews = try decoder.decode([Review].self, from: response.data)
+
+            // 2. Obtener user_ids únicos de las reseñas
+            let uniqueUserIds = Set(tempReviews.map { $0.user_id.uuidString })
+
+            // 3. Obtener niveles de esos usuarios
+            struct UserLevel: Codable {
+                let id_usuario: String
+                let level: Int
+            }
+
+            let levelsResponse = try await supabase.from("niveles")
+                .select("id_usuario, level")
+                .in("id_usuario", values: Array(uniqueUserIds))
+                .execute()
+
+            let userLevels = try decoder.decode([UserLevel].self, from: levelsResponse.data)
+
+            // Crear diccionario de user_id -> level
+            let levelsDictionary = Dictionary(uniqueKeysWithValues: userLevels.map { ($0.id_usuario, $0.level) })
+
+            // 4. Mapear niveles a las reseñas usando JSON manipulation
             let json = try JSONSerialization.jsonObject(with: response.data, options: [])
             guard let reviewsArray = json as? [[String: Any]] else {
                 throw NSError(domain: "ReviewsManager", code: 1, userInfo: [NSLocalizedDescriptionKey: "Formato de datos incorrecto"])
             }
 
-            let decoder = JSONDecoder()
-            decoder.dateDecodingStrategy = .iso8601
-
             reviews = reviewsArray.compactMap { dict -> Review? in
                 var mutableDict = dict
 
-                // Extraer nivel del usuario desde el objeto anidado niveles
-                if let nivelesDict = dict["niveles"] as? [String: Any],
-                   let level = nivelesDict["level"] as? Int {
+                // Agregar nivel del usuario si existe
+                if let userIdStr = dict["user_id"] as? String,
+                   let level = levelsDictionary[userIdStr] {
                     mutableDict["reviewer_level"] = level
                 } else {
-                    mutableDict["reviewer_level"] = 1 // Nivel por defecto si no tiene
+                    mutableDict["reviewer_level"] = 1 // Nivel por defecto
                 }
-
-                // Eliminar el objeto niveles anidado para evitar conflictos de decodificación
-                mutableDict.removeValue(forKey: "niveles")
 
                 do {
                     let reviewData = try JSONSerialization.data(withJSONObject: mutableDict)
@@ -60,7 +76,7 @@ class ReviewsManager: ObservableObject {
             // Calculate stats
             calculateStats()
 
-            Logger.debug("✅ Cargadas \(reviews.count) reseñas")
+            Logger.debug("✅ Cargadas \(reviews.count) reseñas con niveles")
         } catch {
             errorMessage = "Error al cargar reseñas: \(error.localizedDescription)"
             Logger.error("Error loading reviews: \(error.localizedDescription)")

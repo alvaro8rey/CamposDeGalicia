@@ -106,12 +106,25 @@ struct MapaView: View {
         }
         return annotationItems
     }
-    
-    // Filtro para el buscador (Insensible a acentos y mayúsculas)
+
+    // Filtro para el buscador con fuzzy search (Tolerante a errores, acentos y mayúsculas)
     var searchResults: [CampoModel] {
         if searchText.isEmpty { return [] }
-        return camposViewModel.campos.filter {
-            $0.nombre.localizedCaseInsensitiveContains(searchText)
+
+        // Normalizar texto de búsqueda
+        let normalizedSearch = searchText
+            .folding(options: [.diacriticInsensitive, .caseInsensitive], locale: .current)
+
+        return camposViewModel.campos.filter { campo in
+            // Normalizar nombre y localidad del campo
+            let normalizedNombre = campo.nombre
+                .folding(options: [.diacriticInsensitive, .caseInsensitive], locale: .current)
+            let normalizedLocalidad = (campo.localidad ?? "")
+                .folding(options: [.diacriticInsensitive, .caseInsensitive], locale: .current)
+
+            // Buscar con fuzzy match en nombre o localidad
+            return fuzzyMatch(search: normalizedSearch, target: normalizedNombre, threshold: 0.5) ||
+                   fuzzyMatch(search: normalizedSearch, target: normalizedLocalidad, threshold: 0.5)
         }
     }
 
@@ -588,6 +601,101 @@ struct MapaView: View {
             }
         }
         self.annotationItems = newAnnotations
+    }
+
+    // MARK: - Fuzzy Search Functions
+
+    /// Búsqueda difusa que tolera errores de escritura, espacios, etc.
+    /// - Parameters:
+    ///   - search: Texto de búsqueda
+    ///   - target: Texto objetivo donde buscar
+    ///   - threshold: Umbral de similitud (0.0 a 1.0). Por defecto 0.5 (50%)
+    /// - Returns: true si hay coincidencia o similitud suficiente
+    private func fuzzyMatch(search: String, target: String, threshold: Double = 0.5) -> Bool {
+        // Si está vacío, no filtramos
+        if search.isEmpty { return true }
+
+        // 1. Coincidencia exacta (sin espacios)
+        let searchNoSpaces = search.replacingOccurrences(of: " ", with: "")
+        let targetNoSpaces = target.replacingOccurrences(of: " ", with: "")
+
+        if targetNoSpaces.contains(searchNoSpaces) {
+            return true
+        }
+
+        // 2. Coincidencia con espacios
+        if target.contains(search) {
+            return true
+        }
+
+        // 3. Coincidencia de palabras individuales
+        let searchWords = search.split(separator: " ").map(String.init)
+        let targetWords = target.split(separator: " ").map(String.init)
+
+        // Si todas las palabras de búsqueda están en el target
+        let allWordsMatch = searchWords.allSatisfy { searchWord in
+            targetWords.contains { targetWord in
+                targetWord.contains(searchWord) || stringSimilarity(searchWord, targetWord) >= threshold
+            }
+        }
+
+        if allWordsMatch && !searchWords.isEmpty {
+            return true
+        }
+
+        // 4. Similitud global usando Levenshtein
+        let similarity = stringSimilarity(searchNoSpaces, targetNoSpaces)
+        return similarity >= threshold
+    }
+
+    /// Calcula la similitud entre dos strings usando Levenshtein Distance
+    /// - Returns: Valor entre 0.0 (sin similitud) y 1.0 (idénticos)
+    private func stringSimilarity(_ s1: String, _ s2: String) -> Double {
+        // Si alguno está vacío
+        if s1.isEmpty || s2.isEmpty {
+            return s1.isEmpty && s2.isEmpty ? 1.0 : 0.0
+        }
+
+        let distance = levenshteinDistance(s1, s2)
+        let maxLength = max(s1.count, s2.count)
+
+        // Convertir distancia a similitud (1.0 = idénticos, 0.0 = muy diferentes)
+        return 1.0 - (Double(distance) / Double(maxLength))
+    }
+
+    /// Algoritmo de Levenshtein Distance - calcula el número mínimo de ediciones
+    /// (inserciones, eliminaciones o sustituciones) para transformar s1 en s2
+    private func levenshteinDistance(_ s1: String, _ s2: String) -> Int {
+        let s1Array = Array(s1)
+        let s2Array = Array(s2)
+
+        let m = s1Array.count
+        let n = s2Array.count
+
+        // Crear matriz de distancias
+        var dp = Array(repeating: Array(repeating: 0, count: n + 1), count: m + 1)
+
+        // Inicializar primera fila y columna
+        for i in 0...m {
+            dp[i][0] = i
+        }
+        for j in 0...n {
+            dp[0][j] = j
+        }
+
+        // Calcular distancias
+        for i in 1...m {
+            for j in 1...n {
+                let cost = s1Array[i - 1] == s2Array[j - 1] ? 0 : 1
+                dp[i][j] = min(
+                    dp[i - 1][j] + 1,      // Eliminación
+                    dp[i][j - 1] + 1,      // Inserción
+                    dp[i - 1][j - 1] + cost // Sustitución
+                )
+            }
+        }
+
+        return dp[m][n]
     }
 }
 

@@ -29,10 +29,19 @@ struct Review: Identifiable, Codable, Equatable {
     }
 
     var isEdited: Bool {
-        guard let created = created_at, let updated = updated_at else {
+        // Si updated_at es nil, nunca fue editada
+        guard let updated = updated_at else {
             return false
         }
-        return updated.timeIntervalSince(created) > 60 // Más de 1 minuto de diferencia
+
+        // Si no hay created_at, asumir que no está editada
+        guard let created = created_at else {
+            return false
+        }
+
+        // Consideramos editada si hay más de 5 segundos de diferencia
+        // (para evitar falsos positivos por latencia de red)
+        return updated.timeIntervalSince(created) > 5
     }
 
     // Computed property for display

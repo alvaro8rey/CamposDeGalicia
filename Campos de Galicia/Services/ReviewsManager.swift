@@ -94,28 +94,32 @@ class ReviewsManager: ObservableObject {
                 let rating: Int
                 let fotos: [String]?
                 let is_anonymous: Bool
-                let updated_at: String
             }
 
             let update = ReviewUpdate(
                 reseña: text,
                 rating: rating,
                 fotos: fotos,
-                is_anonymous: isAnonymous,
-                updated_at: ISO8601DateFormatter().string(from: Date())
+                is_anonymous: isAnonymous
             )
 
-            _ = try await supabase.from("reseñas")
+            Logger.debug("🔄 Actualizando reseña ID: \(reviewId) para usuario: \(userId.uuidString)")
+            Logger.debug("📝 Nuevo contenido: \(text.prefix(50))...")
+            Logger.debug("⭐ Nuevo rating: \(rating)")
+
+            let response = try await supabase.from("reseñas")
                 .update(update)
                 .eq("id", value: reviewId)
                 .eq("user_id", value: userId.uuidString)
                 .execute()
 
-            Logger.success("✅ Reseña actualizada")
+            Logger.debug("✅ Respuesta de Supabase: \(String(data: response.data, encoding: .utf8) ?? "N/A")")
+            Logger.success("✅ Reseña actualizada en la base de datos")
             return true
         } catch {
             errorMessage = "Error al actualizar reseña: \(error.localizedDescription)"
-            Logger.error("Error updating review: \(error.localizedDescription)")
+            Logger.error("❌ Error updating review: \(error.localizedDescription)")
+            Logger.error("❌ Error details: \(error)")
             return false
         }
     }

@@ -3,6 +3,7 @@ import SwiftUI
 struct ContentView: View {
     @EnvironmentObject var camposViewModel: CamposViewModel
     @EnvironmentObject var authViewModel: AuthViewModel
+    @Environment(\.colorScheme) var colorScheme
 
     // Estados para los filtros
     @State private var searchNombre: String = ""
@@ -97,7 +98,14 @@ struct ContentView: View {
             }
         }
         .background(
-            LinearGradient(gradient: Gradient(colors: [Color.blue.opacity(0.15), Color(UIColor.systemBackground).opacity(0.9)]), startPoint: .topLeading, endPoint: .bottomTrailing)
+            LinearGradient(
+                gradient: Gradient(colors: [
+                    Color.blue.opacity(colorScheme == .dark ? 0.1 : 0.05),
+                    Color.green.opacity(colorScheme == .dark ? 0.1 : 0.05)
+                ]),
+                startPoint: .top, endPoint: .bottom
+            )
+            .ignoresSafeArea()
         )
         .onChange(of: camposViewModel.campos) { newCampos in
             print("Campos cambió, actualizando filteredCampos: \(newCampos.count) campos")

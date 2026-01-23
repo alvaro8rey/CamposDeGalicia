@@ -11,6 +11,7 @@ extension CLLocationCoordinate2D: Equatable {
 struct CamposCercanosView: View {
     @EnvironmentObject var camposViewModel: CamposViewModel
     @EnvironmentObject var authViewModel: AuthViewModel
+    @Environment(\.colorScheme) var colorScheme
     @Binding var userLocation: CLLocationCoordinate2D?
     @Binding var isLoadingLocation: Bool
     @Binding var distanciaPredeterminada: Double
@@ -94,9 +95,11 @@ struct CamposCercanosView: View {
             }
             .background(
                 LinearGradient(
-                    gradient: Gradient(colors: [Color.blue.opacity(0.15), Color(UIColor.systemBackground).opacity(0.9)]),
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
+                    gradient: Gradient(colors: [
+                        Color.blue.opacity(colorScheme == .dark ? 0.1 : 0.05),
+                        Color.green.opacity(colorScheme == .dark ? 0.1 : 0.05)
+                    ]),
+                    startPoint: .top, endPoint: .bottom
                 )
                 .ignoresSafeArea()
             )

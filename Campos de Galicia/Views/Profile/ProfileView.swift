@@ -60,6 +60,16 @@ struct ProfileView: View {
             }
             .padding(.vertical)
         }
+        .background(
+            LinearGradient(
+                gradient: Gradient(colors: [
+                    Color.blue.opacity(colorScheme == .dark ? 0.1 : 0.05),
+                    Color.green.opacity(colorScheme == .dark ? 0.1 : 0.05)
+                ]),
+                startPoint: .top, endPoint: .bottom
+            )
+            .ignoresSafeArea()
+        )
         .navigationTitle("Perfil")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {

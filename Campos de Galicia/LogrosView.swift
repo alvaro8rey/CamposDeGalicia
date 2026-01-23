@@ -3,6 +3,8 @@ import Supabase
 import UserNotifications
 
 struct LogrosView: View {
+    @Environment(\.colorScheme) var colorScheme
+
     // Estado de usuario y progreso
     @State private var userId: String?
     @State private var camposVisitados = 0
@@ -52,6 +54,16 @@ struct LogrosView: View {
             .padding(.vertical, 20)
             .padding(.horizontal, 16)
         }
+        .background(
+            LinearGradient(
+                gradient: Gradient(colors: [
+                    Color.blue.opacity(colorScheme == .dark ? 0.1 : 0.05),
+                    Color.green.opacity(colorScheme == .dark ? 0.1 : 0.05)
+                ]),
+                startPoint: .top, endPoint: .bottom
+            )
+            .ignoresSafeArea()
+        )
         .navigationTitle("Logros y Recompensas")
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {

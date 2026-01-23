@@ -191,6 +191,7 @@ struct ReviewsSectionView: View {
                 onReviewAdded: {
                     Task {
                         await loadReviews()
+                        await checkIfUserCanReview()
                     }
                     reviewToEdit = nil
                 }
@@ -214,6 +215,14 @@ struct ReviewsSectionView: View {
                     }
                 }
             )
+        }
+        .onChange(of: showAllReviews) { isShowing in
+            // Recargar reseñas cuando se cierra el modal
+            if !isShowing {
+                Task {
+                    await loadReviews()
+                }
+            }
         }
     }
 
@@ -242,6 +251,8 @@ struct ReviewsSectionView: View {
         if success {
             // Review already removed from array by manager
             Logger.success("Reseña eliminada")
+            // Actualizar el estado de canUserReview
+            await checkIfUserCanReview()
         }
     }
 }

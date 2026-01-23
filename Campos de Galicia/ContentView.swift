@@ -124,7 +124,8 @@ struct ContentView: View {
     }
 
     func applyFilters() {
-        filteredCampos = camposViewModel.campos.filter { campo in
+        // Calcular similitud para cada campo y filtrar
+        let camposConSimilitud = camposViewModel.campos.compactMap { campo -> (campo: CampoModel, score: Double)? in
             // Normalizar strings para comparación (sin acentos ni diferencias de mayúsculas)
             let normalizedSearchNombre = searchNombre
                 .folding(options: [.diacriticInsensitive, .caseInsensitive], locale: .current)
@@ -136,27 +137,110 @@ struct ContentView: View {
             let normalizedCampoLocalidad = (campo.localidad ?? "")
                 .folding(options: [.diacriticInsensitive, .caseInsensitive], locale: .current)
 
-            // Búsqueda con tolerancia a errores (fuzzy search)
-            let matchesNombre = searchNombre.isEmpty || fuzzyMatch(
-                search: normalizedSearchNombre,
-                target: normalizedCampoNombre,
-                threshold: 0.5
-            )
-
+            // Verificar provincia primero
             let matchesProvincia = selectedProvincia == "Todas" || campo.provincia == selectedProvincia
+            if !matchesProvincia {
+                return nil
+            }
 
-            let matchesLocalidad = searchLocalidad.isEmpty || fuzzyMatch(
-                search: normalizedSearchLocalidad,
-                target: normalizedCampoLocalidad,
-                threshold: 0.5
+            // Calcular scores de similitud
+            let scoreNombre = searchNombre.isEmpty ? 1.0 : calculateMatchScore(
+                search: normalizedSearchNombre,
+                target: normalizedCampoNombre
             )
 
-            return matchesNombre && matchesProvincia && matchesLocalidad
+            let scoreLocalidad = searchLocalidad.isEmpty ? 1.0 : calculateMatchScore(
+                search: normalizedSearchLocalidad,
+                target: normalizedCampoLocalidad
+            )
+
+            // Filtrar los que cumplen el umbral (50%)
+            if (searchNombre.isEmpty || scoreNombre >= 0.5) &&
+               (searchLocalidad.isEmpty || scoreLocalidad >= 0.5) {
+                // Score combinado (promedio ponderado)
+                let combinedScore = (scoreNombre + scoreLocalidad) / 2.0
+                return (campo, combinedScore)
+            }
+
+            return nil
         }
+
+        // Ordenar por score descendente (más similares primero)
+        filteredCampos = camposConSimilitud
+            .sorted { $0.score > $1.score }
+            .map { $0.campo }
+
         withAnimation(.easeInOut) {
             isFilterExpanded = false
             camposMostrados = filteredCampos.count
         }
+    }
+
+    /// Calcula un score de similitud entre el texto de búsqueda y el objetivo
+    /// - Parameters:
+    ///   - search: Texto de búsqueda
+    ///   - target: Texto objetivo donde buscar
+    /// - Returns: Score entre 0.0 (sin similitud) y 1.0 (coincidencia perfecta)
+    private func calculateMatchScore(search: String, target: String) -> Double {
+        if search.isEmpty || target.isEmpty { return 0.0 }
+
+        let searchNoSpaces = search.replacingOccurrences(of: " ", with: "")
+        let targetNoSpaces = target.replacingOccurrences(of: " ", with: "")
+
+        // 1. Coincidencia exacta (sin espacios) = 1.0
+        if targetNoSpaces == searchNoSpaces {
+            return 1.0
+        }
+
+        // 2. Coincidencia exacta con espacios = 0.98
+        if target == search {
+            return 0.98
+        }
+
+        // 3. Target contiene search completo (sin espacios) = 0.95
+        if targetNoSpaces.contains(searchNoSpaces) {
+            return 0.95
+        }
+
+        // 4. Target contiene search con espacios = 0.90
+        if target.contains(search) {
+            return 0.90
+        }
+
+        // 5. Coincidencia de palabras individuales = 0.70-0.85
+        let searchWords = search.split(separator: " ").map(String.init)
+        let targetWords = target.split(separator: " ").map(String.init)
+
+        if !searchWords.isEmpty {
+            var wordMatchCount = 0
+            var totalWordSimilarity = 0.0
+
+            for searchWord in searchWords {
+                var bestWordMatch = 0.0
+                for targetWord in targetWords {
+                    if targetWord.contains(searchWord) {
+                        bestWordMatch = 0.85
+                        break
+                    } else {
+                        let similarity = stringSimilarity(searchWord, targetWord)
+                        bestWordMatch = max(bestWordMatch, similarity)
+                    }
+                }
+                if bestWordMatch >= 0.5 {
+                    wordMatchCount += 1
+                    totalWordSimilarity += bestWordMatch
+                }
+            }
+
+            if wordMatchCount == searchWords.count && wordMatchCount > 0 {
+                let avgSimilarity = totalWordSimilarity / Double(searchWords.count)
+                return avgSimilarity * 0.85 // Reducir un poco el score de palabras
+            }
+        }
+
+        // 6. Similitud por Levenshtein Distance = 0.0-0.70
+        let similarity = stringSimilarity(searchNoSpaces, targetNoSpaces)
+        return similarity * 0.70 // Reducir el peso de similitud pura
     }
 
     /// Búsqueda difusa que tolera errores de escritura, espacios, etc.

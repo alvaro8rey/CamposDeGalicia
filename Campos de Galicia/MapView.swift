@@ -115,17 +115,34 @@ struct MapaView: View {
         let normalizedSearch = searchText
             .folding(options: [.diacriticInsensitive, .caseInsensitive], locale: .current)
 
-        return camposViewModel.campos.filter { campo in
+        // Calcular similitud para cada campo y filtrar
+        let camposConSimilitud = camposViewModel.campos.compactMap { campo -> (campo: CampoModel, score: Double)? in
             // Normalizar nombre y localidad del campo
             let normalizedNombre = campo.nombre
                 .folding(options: [.diacriticInsensitive, .caseInsensitive], locale: .current)
             let normalizedLocalidad = (campo.localidad ?? "")
                 .folding(options: [.diacriticInsensitive, .caseInsensitive], locale: .current)
 
-            // Buscar con fuzzy match en nombre o localidad
-            return fuzzyMatch(search: normalizedSearch, target: normalizedNombre, threshold: 0.5) ||
-                   fuzzyMatch(search: normalizedSearch, target: normalizedLocalidad, threshold: 0.5)
+            // Calcular score de similitud (0.0 a 1.0)
+            let scoreNombre = calculateMatchScore(search: normalizedSearch, target: normalizedNombre)
+            let scoreLocalidad = calculateMatchScore(search: normalizedSearch, target: normalizedLocalidad)
+
+            // Usar el score más alto entre nombre y localidad
+            let bestScore = max(scoreNombre, scoreLocalidad)
+
+            // Filtrar los que tienen al menos 50% de similitud
+            if bestScore >= 0.5 {
+                return (campo, bestScore)
+            }
+            return nil
         }
+
+        // Ordenar por score descendente (más similares primero)
+        let sortedCampos = camposConSimilitud
+            .sorted { $0.score > $1.score }
+            .map { $0.campo }
+
+        return sortedCampos
     }
 
     var body: some View {
@@ -605,6 +622,73 @@ struct MapaView: View {
 
     // MARK: - Fuzzy Search Functions
 
+    /// Calcula un score de similitud entre el texto de búsqueda y el objetivo
+    /// - Parameters:
+    ///   - search: Texto de búsqueda
+    ///   - target: Texto objetivo donde buscar
+    /// - Returns: Score entre 0.0 (sin similitud) y 1.0 (coincidencia perfecta)
+    private func calculateMatchScore(search: String, target: String) -> Double {
+        if search.isEmpty || target.isEmpty { return 0.0 }
+
+        let searchNoSpaces = search.replacingOccurrences(of: " ", with: "")
+        let targetNoSpaces = target.replacingOccurrences(of: " ", with: "")
+
+        // 1. Coincidencia exacta (sin espacios) = 1.0
+        if targetNoSpaces == searchNoSpaces {
+            return 1.0
+        }
+
+        // 2. Coincidencia exacta con espacios = 0.98
+        if target == search {
+            return 0.98
+        }
+
+        // 3. Target contiene search completo (sin espacios) = 0.95
+        if targetNoSpaces.contains(searchNoSpaces) {
+            return 0.95
+        }
+
+        // 4. Target contiene search con espacios = 0.90
+        if target.contains(search) {
+            return 0.90
+        }
+
+        // 5. Coincidencia de palabras individuales = 0.70-0.85
+        let searchWords = search.split(separator: " ").map(String.init)
+        let targetWords = target.split(separator: " ").map(String.init)
+
+        if !searchWords.isEmpty {
+            var wordMatchCount = 0
+            var totalWordSimilarity = 0.0
+
+            for searchWord in searchWords {
+                var bestWordMatch = 0.0
+                for targetWord in targetWords {
+                    if targetWord.contains(searchWord) {
+                        bestWordMatch = 0.85
+                        break
+                    } else {
+                        let similarity = stringSimilarity(searchWord, targetWord)
+                        bestWordMatch = max(bestWordMatch, similarity)
+                    }
+                }
+                if bestWordMatch >= 0.5 {
+                    wordMatchCount += 1
+                    totalWordSimilarity += bestWordMatch
+                }
+            }
+
+            if wordMatchCount == searchWords.count && wordMatchCount > 0 {
+                let avgSimilarity = totalWordSimilarity / Double(searchWords.count)
+                return avgSimilarity * 0.85 // Reducir un poco el score de palabras
+            }
+        }
+
+        // 6. Similitud por Levenshtein Distance = 0.0-0.70
+        let similarity = stringSimilarity(searchNoSpaces, targetNoSpaces)
+        return similarity * 0.70 // Reducir el peso de similitud pura
+    }
+
     /// Búsqueda difusa que tolera errores de escritura, espacios, etc.
     /// - Parameters:
     ///   - search: Texto de búsqueda
@@ -829,16 +913,12 @@ struct CustomMapView: UIViewRepresentable {
         }
 
         func mapView(_ mapView: MKMapView, didUpdate userLocation: MKUserLocation) {
-            guard let location = userLocation.location else {
-                print("⚠️ didUpdate llamado pero location es nil")
-                return
-            }
+            guard let location = userLocation.location else { return }
 
-            print("📍 didUpdate userLocation: \(location.coordinate.latitude), \(location.coordinate.longitude)")
-            print("🧭 isNavigating: \(parent.isNavigating)")
-
+            // Solo procesar actualizaciones cuando estamos navegando
             if parent.isNavigating {
-                print("✅ Navegando - actualizando ubicación")
+                print("📍 Ubicación actualizada: \(location.coordinate.latitude), \(location.coordinate.longitude)")
+
                 // Centrar el mapa en la ubicación del usuario
                 let region = MKCoordinateRegion(center: location.coordinate,
                                                latitudinalMeters: 300,
@@ -850,9 +930,8 @@ struct CustomMapView: UIViewRepresentable {
 
                 // Verificar si necesitamos recalcular la ruta
                 checkIfRecalculationNeeded(userLocation: location.coordinate)
-            } else {
-                print("⏸️ No navegando - ignorando actualización")
             }
+            // No hacer nada ni loggear si no estamos navegando
         }
         
         private func updateCurrentStep(userLocation: CLLocationCoordinate2D) {

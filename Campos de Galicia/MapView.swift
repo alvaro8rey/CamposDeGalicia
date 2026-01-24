@@ -28,7 +28,7 @@ class CampoAnnotation: MKPointAnnotation {
 
 // Identificador de cluster para agrupar anotaciones
 extension CampoAnnotation {
-    override var clusteringIdentifier: String? {
+    var clusteringIdentifier: String? {
         get { "CampoCluster" }
         set { }
     }

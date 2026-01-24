@@ -1,4 +1,5 @@
 import SwiftUI
+import Supabase
 
 struct ContentView: View {
     @EnvironmentObject var camposViewModel: CamposViewModel
@@ -530,6 +531,9 @@ struct CampoListView: View {
     // URL de la imagen predeterminada de Supabase
     private let defaultImageURL = "https://ooqdrhkzsexjnmnvpwqw.supabase.co/storage/v1/object/public/fotos-campos/sin-imagen.png"
 
+    // Campos visitados por el usuario
+    @State private var visitedCampoIds: Set<UUID> = []
+
     var body: some View {
         ScrollView {
             LazyVStack(spacing: 0) {
@@ -538,34 +542,49 @@ struct CampoListView: View {
                         // Vista en cuadrados (tarjetas)
                         NavigationLink(destination: CampoDetalleView(campoID: campo.id)
                             .environmentObject(authViewModel)) {
-                            VStack(alignment: .leading, spacing: 8) {
-                                let imageURL = (campo.foto_url?.isEmpty == false ? campo.foto_url : nil) ?? defaultImageURL
-                                if let url = URL(string: imageURL) {
-                                    CachedAsyncImage(
-                                        url: url,
-                                        targetSize: CGSize(width: 1200, height: 600)
-                                    ) { image in
-                                        image
-                                            .resizable()
-                                            .scaledToFill()
-                                            .frame(width: UIScreen.main.bounds.width - 40, height: 180)
-                                            .cornerRadius(12)
-                                            .clipped()
-                                    } placeholder: {
-                                        Color.gray.opacity(0.3)
-                                            .frame(width: UIScreen.main.bounds.width - 40, height: 180)
-                                            .cornerRadius(12)
+                            ZStack(alignment: .topTrailing) {
+                                VStack(alignment: .leading, spacing: 8) {
+                                    let imageURL = (campo.foto_url?.isEmpty == false ? campo.foto_url : nil) ?? defaultImageURL
+                                    if let url = URL(string: imageURL) {
+                                        CachedAsyncImage(
+                                            url: url,
+                                            targetSize: CGSize(width: 1200, height: 600)
+                                        ) { image in
+                                            image
+                                                .resizable()
+                                                .scaledToFill()
+                                                .frame(width: UIScreen.main.bounds.width - 40, height: 180)
+                                                .cornerRadius(12)
+                                                .clipped()
+                                        } placeholder: {
+                                            Color.gray.opacity(0.3)
+                                                .frame(width: UIScreen.main.bounds.width - 40, height: 180)
+                                                .cornerRadius(12)
+                                        }
                                     }
+
+                                    Text(campo.nombre)
+                                        .font(.title3)
+                                        .fontWeight(.bold)
+                                        .foregroundColor(.primary)
+
+                                    Text("\(campo.localidad), \(campo.provincia)")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
                                 }
 
-                                Text(campo.nombre)
-                                    .font(.title3)
-                                    .fontWeight(.bold)
-                                    .foregroundColor(.primary)
-
-                                Text("\(campo.localidad), \(campo.provincia)")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
+                                // Indicador de campo visitado
+                                if visitedCampoIds.contains(campo.id) {
+                                    Image(systemName: "checkmark.circle.fill")
+                                        .font(.system(size: 28))
+                                        .foregroundColor(.orange)
+                                        .background(
+                                            Circle()
+                                                .fill(Color.white)
+                                                .frame(width: 24, height: 24)
+                                        )
+                                        .padding(12)
+                                }
                             }
                             .padding()
                         }
@@ -577,20 +596,35 @@ struct CampoListView: View {
                             HStack(spacing: 12) {
                                 let imageURL = (campo.foto_url?.isEmpty == false ? campo.foto_url : nil) ?? defaultImageURL
                                 if let url = URL(string: imageURL) {
-                                    CachedAsyncImage(
-                                        url: url,
-                                        targetSize: CGSize(width: 120, height: 120)
-                                    ) { image in
-                                        image
-                                            .resizable()
-                                            .scaledToFill()
-                                            .frame(width: 60, height: 60)
-                                            .cornerRadius(10)
-                                            .clipped()
-                                    } placeholder: {
-                                        Color.gray.opacity(0.3)
-                                            .frame(width: 60, height: 60)
-                                            .cornerRadius(10)
+                                    ZStack(alignment: .topTrailing) {
+                                        CachedAsyncImage(
+                                            url: url,
+                                            targetSize: CGSize(width: 120, height: 120)
+                                        ) { image in
+                                            image
+                                                .resizable()
+                                                .scaledToFill()
+                                                .frame(width: 60, height: 60)
+                                                .cornerRadius(10)
+                                                .clipped()
+                                        } placeholder: {
+                                            Color.gray.opacity(0.3)
+                                                .frame(width: 60, height: 60)
+                                                .cornerRadius(10)
+                                        }
+
+                                        // Indicador de campo visitado
+                                        if visitedCampoIds.contains(campo.id) {
+                                            Image(systemName: "checkmark.circle.fill")
+                                                .font(.system(size: 18))
+                                                .foregroundColor(.orange)
+                                                .background(
+                                                    Circle()
+                                                        .fill(Color.white)
+                                                        .frame(width: 14, height: 14)
+                                                )
+                                                .offset(x: 4, y: -4)
+                                        }
                                     }
                                 }
                                 VStack(alignment: .leading, spacing: 4) {
@@ -614,5 +648,31 @@ struct CampoListView: View {
             await onRefresh()
         }
         .background(Color.clear)
+        .onAppear {
+            loadVisitedCampos()
+        }
+    }
+
+    private func loadVisitedCampos() {
+        guard let userId = authViewModel.user?.id.uuidString else { return }
+
+        Task {
+            do {
+                let response = try await supabase.from("visitas")
+                    .select("id_campo")
+                    .eq("id_usuario", value: userId)
+                    .execute()
+
+                if let jsonData = try? JSONSerialization.jsonObject(with: response.data) as? [[String: Any]] {
+                    let ids = jsonData.compactMap { dict -> UUID? in
+                        guard let idString = dict["id_campo"] as? String else { return nil }
+                        return UUID(uuidString: idString)
+                    }
+                    visitedCampoIds = Set(ids)
+                }
+            } catch {
+                Logger.error("Error loading visited campos: \(error.localizedDescription)")
+            }
+        }
     }
 }

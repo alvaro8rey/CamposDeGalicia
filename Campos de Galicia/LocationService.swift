@@ -10,7 +10,8 @@ final class LocationService: NSObject, CLLocationManagerDelegate {
     private override init() {
         super.init()
         manager.delegate = self
-        manager.desiredAccuracy = kCLLocationAccuracyBest
+        // Usar precisión moderada para ser más rápido
+        manager.desiredAccuracy = kCLLocationAccuracyNearestTenMeters
         manager.distanceFilter = kCLDistanceFilterNone
     }
 
@@ -31,8 +32,8 @@ final class LocationService: NSObject, CLLocationManagerDelegate {
         return await withCheckedContinuation { (continuation: CheckedContinuation<CLLocation?, Never>) in
             self.continuation = continuation
             self.manager.requestLocation()
-            // fallback por si tarda demasiado (10s)
-            DispatchQueue.main.asyncAfter(deadline: .now() + 10) { [weak self] in
+            // fallback por si tarda demasiado (5s)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 5) { [weak self] in
                 guard let self else { return }
                 if let cont = self.continuation {
                     self.continuation = nil

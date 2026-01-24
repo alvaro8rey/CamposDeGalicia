@@ -49,7 +49,7 @@ struct CampoDetalleView: View {
         Group {
             if let campo = campo {
                 ScrollView {
-                    VStack(alignment: .leading, spacing: 20) {
+                    VStack(alignment: .leading, spacing: 16) {
                         // Hero Image
                         CampoHeroImage(
                             imageURL: (campo.foto_url?.isEmpty == false ? campo.foto_url : nil) ?? defaultImageURL,
@@ -73,7 +73,7 @@ struct CampoDetalleView: View {
                             isLoggedIn: supabase.auth.currentUser != nil,
                             onContribute: { showingContribucionForm = true }
                         )
-                        .padding(.top, -40) // Overlap con la imagen hero
+                        .padding(.top, -30) // Overlap con la imagen hero
 
                         // Location Section
                         CampoLocationSection(campo: campo)

@@ -7,10 +7,10 @@ struct CampoInfoCard: View {
     let onContribute: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: 12) {
             // Nombre del campo
             Text(campo.nombre)
-                .font(.system(size: 28, weight: .bold))
+                .font(.system(size: 22, weight: .bold))
                 .foregroundStyle(
                     LinearGradient(
                         colors: [.primary, .primary.opacity(0.8)],
@@ -61,7 +61,7 @@ struct CampoInfoCard: View {
                     }
                     .foregroundColor(.white)
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 14)
+                    .padding(.vertical, 12)
                     .background(
                         LinearGradient(
                             colors: [.blue, .blue.opacity(0.8)],
@@ -74,7 +74,7 @@ struct CampoInfoCard: View {
                 }
             }
         }
-        .padding(20)
+        .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             ZStack {
@@ -110,7 +110,7 @@ struct CampoInfoCard: View {
                     lineWidth: 1
                 )
         )
-        .shadow(color: Color.black.opacity(0.1), radius: 20, x: 0, y: 10)
+        .shadow(color: Color.black.opacity(0.08), radius: 12, x: 0, y: 6)
         .padding(.horizontal, 16)
     }
 }
@@ -122,14 +122,14 @@ struct InfoBadge: View {
     let color: Color
 
     var body: some View {
-        HStack(spacing: 6) {
+        HStack(spacing: 5) {
             ZStack {
                 Circle()
                     .fill(color.opacity(0.15))
-                    .frame(width: 28, height: 28)
+                    .frame(width: 24, height: 24)
 
                 Image(systemName: icon)
-                    .font(.caption2)
+                    .font(.system(size: 10))
                     .foregroundColor(color)
             }
 
@@ -138,8 +138,8 @@ struct InfoBadge: View {
                 .fontWeight(.medium)
                 .foregroundColor(.primary)
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
         .background(
             Capsule()
                 .fill(color.opacity(0.08))

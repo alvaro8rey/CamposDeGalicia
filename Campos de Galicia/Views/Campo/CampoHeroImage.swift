@@ -21,7 +21,7 @@ struct CampoHeroImage: View {
                         image
                             .resizable()
                             .scaledToFill()
-                            .frame(width: geometry.size.width, height: 300)
+                            .frame(width: geometry.size.width, height: 220)
                             .clipped()
                     } placeholder: {
                         ZStack {
@@ -33,7 +33,7 @@ struct CampoHeroImage: View {
                             ProgressView()
                                 .tint(.white)
                         }
-                        .frame(width: geometry.size.width, height: 300)
+                        .frame(width: geometry.size.width, height: 220)
                     }
                 }
 
@@ -46,29 +46,29 @@ struct CampoHeroImage: View {
                     startPoint: .center,
                     endPoint: .bottom
                 )
-                .frame(height: 300)
+                .frame(height: 220)
 
                 // Visit Badge con glassmorphism
                 if isLoggedIn {
                     Button(action: onToggleVisit) {
-                        HStack(spacing: 8) {
+                        HStack(spacing: 6) {
                             if isCheckingLocation {
                                 ProgressView()
                                     .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                                    .scaleEffect(0.8)
+                                    .scaleEffect(0.7)
                             } else {
                                 Image(systemName: isVisited ? "checkmark.circle.fill" : "mappin.circle.fill")
-                                    .font(.body)
+                                    .font(.caption)
                                     .imageScale(.medium)
                             }
 
                             Text(isCheckingLocation ? "Verificando..." : (isVisited ? "Visitado" : "Marcar visita"))
-                                .font(.subheadline)
+                                .font(.caption)
                                 .fontWeight(.semibold)
                         }
                         .foregroundColor(.white)
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 10)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
                         .background(
                             ZStack {
                                 // Glassmorphism effect
@@ -91,13 +91,13 @@ struct CampoHeroImage: View {
                         )
                     }
                     .disabled(isCheckingLocation)
-                    .padding(20)
+                    .padding(16)
                     .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isVisited)
                     .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isCheckingLocation)
                 }
             }
             .frame(maxWidth: .infinity)
         }
-        .frame(height: 300)
+        .frame(height: 220)
     }
 }

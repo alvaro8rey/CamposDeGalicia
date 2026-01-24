@@ -735,7 +735,7 @@ struct MapaView: View {
             userTrackingMode = .follow
 
             if externalIsNavigating {
-                // Si estamos navegando, usar zoom cercano
+                // Si estamos navegando, mantener zoom cercano
                 if let mapView = mapView, let userLocation = mapView.userLocation.location?.coordinate {
                     let region = MKCoordinateRegion(
                         center: userLocation,
@@ -745,26 +745,29 @@ struct MapaView: View {
                     mapView.setRegion(region, animated: true)
                 }
             } else {
-                // Modo normal: dejar que MapKit maneje el zoom
+                // Modo normal: dejar que MapKit maneje el zoom (NO hacer zoom cercano)
                 mapView?.setUserTrackingMode(.follow, animated: true)
             }
         } else if userTrackingMode == .follow {
-            // Activar seguimiento con orientación (como Google Maps)
+            // Activar seguimiento con orientación
             userTrackingMode = .followWithHeading
 
-            // Establecer cámara 3D para navegación
-            if let mapView = mapView, let userLocation = mapView.userLocation.location?.coordinate {
-                // Obtener el heading actual si está disponible
-                let currentHeading = mapView.camera.heading
+            if externalIsNavigating {
+                // SOLO durante navegación: usar cámara 3D con zoom cercano
+                if let mapView = mapView, let userLocation = mapView.userLocation.location?.coordinate {
+                    let currentHeading = mapView.camera.heading
 
-                let camera = MKMapCamera(
-                    lookingAtCenter: userLocation,
-                    fromDistance: 400,
-                    pitch: 45,
-                    heading: currentHeading // Mantener el heading actual en vez de resetear a 0
-                )
-                mapView.setCamera(camera, animated: true)
-                // NO llamar a setUserTrackingMode para evitar ajuste automático de zoom
+                    let camera = MKMapCamera(
+                        lookingAtCenter: userLocation,
+                        fromDistance: 400,
+                        pitch: 45,
+                        heading: currentHeading
+                    )
+                    mapView.setCamera(camera, animated: true)
+                }
+            } else {
+                // Modo normal: usar tracking de MapKit SIN zoom forzado
+                mapView?.setUserTrackingMode(.followWithHeading, animated: true)
             }
         } else {
             // Desactivar seguimiento
@@ -1014,9 +1017,11 @@ struct CustomMapView: UIViewRepresentable {
     func updateUIView(_ uiView: MKMapView, context: Context) {
         uiView.mapType = isSatelliteView ? .satellite : .standard
 
-        // Solo aplicar userTrackingMode si NO estamos en modo followWithHeading
-        // (en followWithHeading manejamos la cámara manualmente para evitar zoom rebote)
-        if uiView.userTrackingMode != userTrackingMode && userTrackingMode != .followWithHeading {
+        // Solo skip setUserTrackingMode si estamos NAVEGANDO y en modo followWithHeading
+        // (durante navegación manejamos la cámara manualmente para mantener zoom fijo)
+        let shouldSkipTracking = isNavigating && userTrackingMode == .followWithHeading
+
+        if uiView.userTrackingMode != userTrackingMode && !shouldSkipTracking {
             uiView.setUserTrackingMode(userTrackingMode, animated: true)
         }
 

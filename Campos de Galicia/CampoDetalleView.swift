@@ -207,16 +207,27 @@ struct CampoDetalleView: View {
             return
         }
 
+        // Verificar el estado de los permisos ANTES de solicitar ubicación
+        let authStatus = CLLocationManager().authorizationStatus
+
         guard let userLoc = await LocationService.shared.requestCurrentLocation() else {
             await MainActor.run {
-                ToastManager.shared.error("No pudimos obtener tu ubicación. Activa los permisos")
+                // Mensaje específico según el estado de permisos
+                switch authStatus {
+                case .denied, .restricted:
+                    ToastManager.shared.error("Permisos de ubicación denegados. Ve a Ajustes → Campos de Galicia → Ubicación")
+                case .notDetermined:
+                    ToastManager.shared.error("Debes permitir el acceso a tu ubicación")
+                default:
+                    ToastManager.shared.error("No se pudo obtener tu ubicación. Revisa tu conexión GPS")
+                }
             }
             return
         }
 
         if userLoc.horizontalAccuracy < 0 || userLoc.horizontalAccuracy > maxAllowedAccuracy {
             await MainActor.run {
-                ToastManager.shared.warning("La señal de GPS es poco precisa. Inténtalo al aire libre")
+                ToastManager.shared.warning("La señal de GPS es poco precisa (\(Int(userLoc.horizontalAccuracy))m). Inténtalo al aire libre")
             }
             return
         }

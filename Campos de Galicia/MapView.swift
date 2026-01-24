@@ -673,19 +673,6 @@ struct MapaView: View {
             self.userTrackingMode = .followWithHeading
         }
 
-        // 🔍 Zoom inicial tipo Google Maps
-        if let mapView = self.mapView, let userLocation = mapView.userLocation.location?.coordinate {
-            // Crear cámara 3D con zoom cercano
-            let camera = MKMapCamera(
-                lookingAtCenter: userLocation,
-                fromDistance: 400,  // Altura fija que se mantendrá
-                pitch: 45,
-                heading: 0
-            )
-            // Aplicar cámara - NO activamos setUserTrackingMode para evitar que MapKit ajuste el zoom
-            mapView.setCamera(camera, animated: true)
-        }
-
         // Pasar el destino al Coordinator para que pueda recalcular rutas
         if let mapView = self.mapView, let destination = pendingDestination {
             print("✅ Configurando destino en Coordinator")
@@ -731,55 +718,11 @@ struct MapaView: View {
 
     private func toggleTracking() {
         if userTrackingMode == .none {
-            // Activar seguimiento simple
             userTrackingMode = .follow
-
-            if externalIsNavigating {
-                // Si estamos navegando, mantener zoom cercano
-                if let mapView = mapView, let userLocation = mapView.userLocation.location?.coordinate {
-                    let region = MKCoordinateRegion(
-                        center: userLocation,
-                        latitudinalMeters: 400,
-                        longitudinalMeters: 400
-                    )
-                    mapView.setRegion(region, animated: true)
-                }
-            } else {
-                // Modo normal: dejar que MapKit maneje el zoom (NO hacer zoom cercano)
-                mapView?.setUserTrackingMode(.follow, animated: true)
-            }
         } else if userTrackingMode == .follow {
-            // Activar seguimiento con orientación
             userTrackingMode = .followWithHeading
-
-            if externalIsNavigating {
-                // SOLO durante navegación: usar cámara 3D con zoom cercano
-                if let mapView = mapView, let userLocation = mapView.userLocation.location?.coordinate {
-                    let currentHeading = mapView.camera.heading
-
-                    let camera = MKMapCamera(
-                        lookingAtCenter: userLocation,
-                        fromDistance: 400,
-                        pitch: 45,
-                        heading: currentHeading
-                    )
-                    mapView.setCamera(camera, animated: true)
-                }
-            } else {
-                // Modo normal: usar tracking de MapKit SIN zoom forzado
-                mapView?.setUserTrackingMode(.followWithHeading, animated: true)
-            }
         } else {
-            // Desactivar seguimiento
             userTrackingMode = .none
-
-            if externalIsNavigating {
-                // Si estamos navegando, NO llamar a setUserTrackingMode para mantener el zoom
-                // Solo actualizamos el estado
-            } else {
-                // Modo normal: desactivar tracking de MapKit
-                mapView?.setUserTrackingMode(.none, animated: true)
-            }
         }
     }
     
@@ -1017,13 +960,9 @@ struct CustomMapView: UIViewRepresentable {
     func updateUIView(_ uiView: MKMapView, context: Context) {
         uiView.mapType = isSatelliteView ? .satellite : .standard
 
-        // Durante navegación, NO llamar a setUserTrackingMode para ningún modo
-        // Manejamos todo manualmente para mantener el zoom fijo a 400m
-        if !isNavigating {
-            // Solo en modo normal (sin navegación), usar tracking nativo de MapKit
-            if uiView.userTrackingMode != userTrackingMode {
-                uiView.setUserTrackingMode(userTrackingMode, animated: true)
-            }
+        // Siempre usar tracking nativo de MapKit (sin restricciones)
+        if uiView.userTrackingMode != userTrackingMode {
+            uiView.setUserTrackingMode(userTrackingMode, animated: true)
         }
 
         let currentAnnos = uiView.annotations.compactMap { $0 as? CampoAnnotation }
@@ -1083,39 +1022,6 @@ struct CustomMapView: UIViewRepresentable {
 
             if parent.isNavigating {
                 print("✅ Navegando - procesando ubicación")
-
-                // 🎯 Actualizar cámara según el modo de tracking durante navegación
-                DispatchQueue.main.async {
-                    guard let mapView = self.parent.mapView else { return }
-
-                    switch self.parent.userTrackingMode {
-                    case .followWithHeading:
-                        // Cámara 3D con orientación tipo Google Maps
-                        let camera = MKMapCamera(
-                            lookingAtCenter: location.coordinate,
-                            fromDistance: 400,
-                            pitch: 45,
-                            heading: location.course >= 0 ? location.course : 0
-                        )
-                        mapView.setCamera(camera, animated: true)
-
-                    case .follow:
-                        // Centrar en 2D sin rotación, manteniendo zoom 400m
-                        let region = MKCoordinateRegion(
-                            center: location.coordinate,
-                            latitudinalMeters: 400,
-                            longitudinalMeters: 400
-                        )
-                        mapView.setRegion(region, animated: true)
-
-                    case .none:
-                        // NO mover el mapa - usuario puede explorarlo libremente manteniendo zoom
-                        break
-
-                    @unknown default:
-                        break
-                    }
-                }
 
                 // Actualizar paso actual y distancia en tiempo real
                 updateCurrentStep(userLocation: location.coordinate)

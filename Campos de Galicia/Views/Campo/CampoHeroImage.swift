@@ -11,7 +11,7 @@ struct CampoHeroImage: View {
 
     var body: some View {
         GeometryReader { geometry in
-            ZStack(alignment: .bottomLeading) {
+            ZStack(alignment: .topLeading) {
                 // Background Image
                 if let url = URL(string: imageURL) {
                     CachedAsyncImage(

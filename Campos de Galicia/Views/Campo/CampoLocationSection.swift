@@ -43,19 +43,13 @@ struct CampoLocationSection: View {
                                     endPoint: .trailing
                                 )
                             )
-
-                        Spacer()
-
-                        // Icono de expansión
-                        Image(systemName: isExpanded ? "chevron.up.circle.fill" : "chevron.down.circle.fill")
-                            .font(.title3)
-                            .foregroundColor(.blue)
-                            .rotationEffect(.degrees(isExpanded ? 0 : 0))
                     }
                 }
                 .buttonStyle(.plain)
 
-                // Botón pequeño de "Cómo llegar" cuando está plegado - a la altura del título
+                Spacer()
+
+                // Botón pequeño de "Cómo llegar" cuando está plegado - a la izquierda del chevron
                 if !isExpanded, let lat = campo.latitud, let lon = campo.longitud {
                     Button(action: {
                         openDirections(latitude: lat, longitude: lon)
@@ -78,6 +72,19 @@ struct CampoLocationSection: View {
                     }
                     .transition(.scale.combined(with: .opacity))
                 }
+
+                // Icono de expansión
+                Button(action: {
+                    withAnimation(.spring(response: 0.4, dampingFraction: 0.75)) {
+                        isExpanded.toggle()
+                    }
+                }) {
+                    Image(systemName: isExpanded ? "chevron.up.circle.fill" : "chevron.down.circle.fill")
+                        .font(.title3)
+                        .foregroundColor(.blue)
+                        .rotationEffect(.degrees(isExpanded ? 0 : 0))
+                }
+                .buttonStyle(.plain)
             }
 
             // Detalles de ubicación (solo visible cuando está expandido)

@@ -164,7 +164,7 @@ class AuthViewModel: ObservableObject {
         // Subir imagen a Supabase Storage
         _ = try await supabase.storage
             .from("profile-photos")
-            .upload(path: filePath, file: imageData, options: FileOptions(contentType: "image/jpeg"))
+            .upload(filePath, data: imageData, options: FileOptions(contentType: "image/jpeg"))
 
         // Obtener URL pública
         let publicURL = try supabase.storage

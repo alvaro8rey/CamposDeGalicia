@@ -109,12 +109,12 @@ struct ContentView: View {
             )
             .ignoresSafeArea()
         )
-        .onChange(of: camposViewModel.campos) { newCampos in
+        .onChange(of: camposViewModel.campos) { oldCampos, newCampos in
             print("Campos cambió, actualizando filteredCampos: \(newCampos.count) campos")
             filteredCampos = newCampos
             camposMostrados = filteredCampos.count
         }
-        .onChange(of: camposViewModel.errorMessage) { message in
+        .onChange(of: camposViewModel.errorMessage) { oldMessage, message in
             if let message = message {
                 print("Error al cargar campos: \(message)")
             }
@@ -125,7 +125,7 @@ struct ContentView: View {
             showOnboarding = !hasSeenOnboarding
         }
         // Cerrar el cover cuando el onboarding marque la flag
-        .onChange(of: hasSeenOnboarding) { seen in
+        .onChange(of: hasSeenOnboarding) { wasSeen, seen in
             if seen { showOnboarding = false }
         }
         .fullScreenCover(isPresented: $showOnboarding) {

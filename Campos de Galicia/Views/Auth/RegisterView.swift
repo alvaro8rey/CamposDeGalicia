@@ -114,7 +114,7 @@ struct RegisterView: View {
                                             .background(Color.blue)
                                             .cornerRadius(10)
                                         }
-                                        .onChange(of: selectedPhotoItem) { newItem in
+                                        .onChange(of: selectedPhotoItem) { oldItem, newItem in
                                             Task {
                                                 if let data = try? await newItem?.loadTransferable(type: Data.self) {
                                                     selectedPhotoData = data

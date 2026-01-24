@@ -26,7 +26,7 @@ class ReviewsManager: ObservableObject {
             decoder.dateDecodingStrategy = .iso8601
 
             // Decodificar reseñas (reviewer_level será nil por ahora)
-            var tempReviews = try decoder.decode([Review].self, from: response.data)
+            let tempReviews = try decoder.decode([Review].self, from: response.data)
 
             // 2. Obtener user_ids únicos de las reseñas
             let uniqueUserIds = Set(tempReviews.map { $0.user_id.uuidString })

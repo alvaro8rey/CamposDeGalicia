@@ -313,7 +313,7 @@ struct MapaView: View {
         .onAppear {
             applyFiltros()
         }
-        .onChange(of: externalIsNavigating) { navigating in
+        .onChange(of: externalIsNavigating) { wasNavigating, navigating in
             if !navigating {
                 resetMapToInitialState()
             }

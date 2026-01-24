@@ -37,7 +37,7 @@ final class LevelManager {
         if !uniqueCampoIds.isEmpty {
             let provinciasResponse = try await supabase.from("campos")
                 .select("provincia")
-                .in("id", value: Array(uniqueCampoIds)) // ids como String (UUID-string)
+                .in("id", values: Array(uniqueCampoIds)) // ids como String (UUID-string)
                 .execute()
 
             let provinciasJSON = try JSONSerialization.jsonObject(with: provinciasResponse.data, options: [])
@@ -318,7 +318,7 @@ final class LevelManager {
     }
 
     func claimDailyReward(for userId: String) async throws {
-        guard let userIdUUID = UUID(uuidString: userId) else { throw LevelManagerError.invalidUserId }
+        guard UUID(uuidString: userId) != nil else { throw LevelManagerError.invalidUserId }
         guard let currentUser = supabase.auth.currentUser, currentUser.id.uuidString == userId else {
             throw LevelManagerError.userIdMismatch
         }
@@ -429,7 +429,7 @@ final class LevelManager {
             records.sort { ($0.ultimo_acceso ?? .distantPast) > ($1.ultimo_acceso ?? .distantPast) }
             let idsToDelete = records.dropFirst().map { $0.id.uuidString }
             if !idsToDelete.isEmpty {
-                _ = try await supabase.from("accesos_diarios").delete().in("id", value: idsToDelete).execute()
+                _ = try await supabase.from("accesos_diarios").delete().in("id", values: idsToDelete).execute()
             }
             records = [records.first!]
         }

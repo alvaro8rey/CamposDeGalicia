@@ -129,7 +129,7 @@ struct AddReviewView: View {
                                 Label("Añadir fotos (\(existingPhotoURLs.count + selectedPhotos.count)/\(maxPhotos))", systemImage: "photo.on.rectangle.angled")
                                     .font(.subheadline)
                             }
-                            .onChange(of: selectedPhotos) { newSelection in
+                            .onChange(of: selectedPhotos) { oldSelection, newSelection in
                                 Task {
                                     await loadPhotoPreviews(from: newSelection)
                                 }
@@ -318,7 +318,7 @@ struct AddReviewView: View {
 
             _ = try await supabase.storage
                 .from("fotos-campos")
-                .upload(path: fileName, file: data)
+                .upload(fileName, data: data)
 
             let publicURL = try supabase.storage
                 .from("fotos-campos")

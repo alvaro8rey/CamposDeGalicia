@@ -229,7 +229,7 @@ struct ReviewsSectionView: View {
                 }
             )
         }
-        .onChange(of: showAllReviews) { isShowing in
+        .onChange(of: showAllReviews) { wasShowing, isShowing in
             // Recargar reseñas cuando se cierra el modal
             if !isShowing {
                 Task {

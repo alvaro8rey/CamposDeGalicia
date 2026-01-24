@@ -178,7 +178,7 @@ struct CampoDetalleView: View {
                 await fetchContribucionesAprobadas(forceRefresh: false)
             }
         }
-        .onChange(of: camposViewModel.campos) { _ in
+        .onChange(of: camposViewModel.campos) { oldCampos, newCampos in
             syncCampo()
         }
         .alert(isPresented: $showLocationAlert) {

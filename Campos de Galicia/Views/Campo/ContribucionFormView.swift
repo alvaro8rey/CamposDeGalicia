@@ -31,7 +31,7 @@ struct ContribucionFormView: View {
                         Label("Añadir fotos", systemImage: "photo.on.rectangle.angled")
                             .foregroundColor(.blue)
                     }
-                    .onChange(of: selectedPhotos) { newSelection in
+                    .onChange(of: selectedPhotos) { oldSelection, newSelection in
                         Task {
                             await loadPhotoPreviews(from: newSelection)
                         }
@@ -157,9 +157,8 @@ struct ContribucionFormView: View {
             guard let data = try await item.loadTransferable(type: Data.self) else { continue }
 
             let fileName = "\(campo.id.uuidString)-\(UUID().uuidString)-photo-\(index).jpg"
-            let filePath = "fotos-campos/\(fileName)"
 
-            _ = try await supabase.storage.from("fotos-campos").upload(path: fileName, file: data)
+            _ = try await supabase.storage.from("fotos-campos").upload(fileName, data: data)
 
             let publicURL = try supabase.storage.from("fotos-campos").getPublicURL(path: fileName).absoluteString
             uploadedURLs.append(publicURL)

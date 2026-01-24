@@ -106,10 +106,10 @@ struct CamposCercanosView: View {
                 updateNearbyCampos()
                 if userLocation == nil { requestLocation() }
             }
-            .onChange(of: userLocation) { _ in updateNearbyCampos() }
-            .onChange(of: camposViewModel.campos) { _ in updateNearbyCampos() }
-            .onChange(of: selectedDistance) { _ in updateNearbyCampos() }
-            .onChange(of: distanciaPredeterminada) { newDistance in
+            .onChange(of: userLocation) { oldLocation, newLocation in updateNearbyCampos() }
+            .onChange(of: camposViewModel.campos) { oldCampos, newCampos in updateNearbyCampos() }
+            .onChange(of: selectedDistance) { oldDistance, newDistance in updateNearbyCampos() }
+            .onChange(of: distanciaPredeterminada) { oldDistance, newDistance in
                 let validDistance = distanceOptions.min(by: { abs($0 - newDistance) < abs($1 - newDistance) }) ?? 10.0
                 selectedDistance = validDistance
                 updateNearbyCampos()

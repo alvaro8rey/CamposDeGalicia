@@ -218,7 +218,7 @@ struct ProfileView: View {
                         .foregroundColor(.secondary)
                 }
             }
-            .onChange(of: autoCheckinStored) { newValue in
+            .onChange(of: autoCheckinStored) { oldValue, newValue in
                 geofenceManager.setAutoCheckin(newValue, campos: camposViewModel.campos)
                 if newValue {
                     Logger.info("✅ Auto check-in activado")

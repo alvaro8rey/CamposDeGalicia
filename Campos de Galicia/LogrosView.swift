@@ -69,7 +69,7 @@ struct LogrosView: View {
         .onAppear {
             Task { await boot() }
         }
-        .onChange(of: hasClaimedToday) { _ in
+        .onChange(of: hasClaimedToday) { wasClaimed, isClaimed in
             scheduleDailyRewardNotification() // reprograma/cancela según estado
         }
         .alert(isPresented: $showPermissionAlert) {
@@ -412,7 +412,7 @@ struct LogrosView: View {
             if !campoIds.isEmpty {
                 let pResp = try await supabase.from("campos")
                     .select("provincia")
-                    .in("id", value: Array(campoIds))
+                    .in("id", values: Array(campoIds))
                     .execute()
                 if let pArr = try JSONSerialization.jsonObject(with: pResp.data) as? [[String: Any]] {
                     let uniqProv = Set(pArr.compactMap { $0["provincia"] as? String })

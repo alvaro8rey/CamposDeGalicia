@@ -229,7 +229,7 @@ class ProfileViewModel: ObservableObject {
     func savePreferences(for userId: String) async {
         do {
             let preferences = Preferences(id_usuario: userId, distancia_predeterminada: distanciaPredeterminada)
-            let response = try await supabase.from("preferencias").upsert(preferences).execute()
+            _ = try await supabase.from("preferencias").upsert(preferences).execute()
             Logger.success("✅ Preferencias guardadas: \(distanciaPredeterminada)km")
         } catch {
             errorMessage = "Error al guardar preferencias: \(error.localizedDescription)"

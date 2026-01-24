@@ -733,18 +733,35 @@ struct MapaView: View {
         if userTrackingMode == .none {
             // Activar seguimiento simple
             userTrackingMode = .follow
-            // Usar setUserTrackingMode de MapKit para modo simple
-            mapView?.setUserTrackingMode(.follow, animated: true)
+
+            if externalIsNavigating {
+                // Si estamos navegando, usar zoom cercano
+                if let mapView = mapView, let userLocation = mapView.userLocation.location?.coordinate {
+                    let region = MKCoordinateRegion(
+                        center: userLocation,
+                        latitudinalMeters: 400,
+                        longitudinalMeters: 400
+                    )
+                    mapView.setRegion(region, animated: true)
+                }
+            } else {
+                // Modo normal: dejar que MapKit maneje el zoom
+                mapView?.setUserTrackingMode(.follow, animated: true)
+            }
         } else if userTrackingMode == .follow {
             // Activar seguimiento con orientación (como Google Maps)
             userTrackingMode = .followWithHeading
+
             // Establecer cámara 3D para navegación
             if let mapView = mapView, let userLocation = mapView.userLocation.location?.coordinate {
+                // Obtener el heading actual si está disponible
+                let currentHeading = mapView.camera.heading
+
                 let camera = MKMapCamera(
                     lookingAtCenter: userLocation,
                     fromDistance: 400,
                     pitch: 45,
-                    heading: 0
+                    heading: currentHeading // Mantener el heading actual en vez de resetear a 0
                 )
                 mapView.setCamera(camera, animated: true)
                 // NO llamar a setUserTrackingMode para evitar ajuste automático de zoom
@@ -752,7 +769,14 @@ struct MapaView: View {
         } else {
             // Desactivar seguimiento
             userTrackingMode = .none
-            mapView?.setUserTrackingMode(.none, animated: true)
+
+            if externalIsNavigating {
+                // Si estamos navegando, NO llamar a setUserTrackingMode para mantener el zoom
+                // Solo actualizamos el estado
+            } else {
+                // Modo normal: desactivar tracking de MapKit
+                mapView?.setUserTrackingMode(.none, animated: true)
+            }
         }
     }
     

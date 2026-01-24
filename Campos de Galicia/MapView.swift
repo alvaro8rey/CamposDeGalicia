@@ -297,19 +297,18 @@ struct MapaView: View {
                     Button {
                         toggleTracking()
                     } label: {
-                        ZStack {
-                            // Indicador de orientación activa
-                            if userTrackingMode == .followWithHeading {
-                                Circle()
-                                    .fill(Color.blue.opacity(0.2))
-                                    .frame(width: 36, height: 36)
-                                    .animation(.easeInOut(duration: 0.3), value: userTrackingMode)
-                            }
-                            Image(systemName: trackingIcon)
-                                .font(.system(size: 20, weight: .bold))
-                        }
+                        Image(systemName: trackingIcon)
+                            .font(.system(size: 20, weight: .bold))
                     }
                     .liquidGlass(color: trackingIconColor)
+                    .overlay(
+                        // Indicador de orientación activa (detrás del botón)
+                        userTrackingMode == .followWithHeading ?
+                        Circle()
+                            .stroke(trackingIconColor, lineWidth: 2)
+                            .frame(width: 50, height: 50)
+                            .opacity(0.6) : nil
+                    )
                 }
                 .padding(.trailing, 16)
                 .padding(.bottom, externalIsNavigating ? 40 : (showRouteSummary ? 280 : 40))
@@ -674,22 +673,17 @@ struct MapaView: View {
             self.userTrackingMode = .followWithHeading
         }
 
-        // 🔍 Activar seguimiento tipo Google Maps
+        // 🔍 Zoom inicial tipo Google Maps
         if let mapView = self.mapView, let userLocation = mapView.userLocation.location?.coordinate {
             // Crear cámara 3D con zoom cercano
             let camera = MKMapCamera(
                 lookingAtCenter: userLocation,
-                fromDistance: 400,  // Altura fija
+                fromDistance: 400,  // Altura fija que se mantendrá
                 pitch: 45,
                 heading: 0
             )
-            // Aplicar cámara ANTES de activar tracking
+            // Aplicar cámara - NO activamos setUserTrackingMode para evitar que MapKit ajuste el zoom
             mapView.setCamera(camera, animated: true)
-
-            // Después activar el seguimiento con heading (esto mantiene el zoom)
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                mapView.setUserTrackingMode(.followWithHeading, animated: true)
-            }
         }
 
         // Pasar el destino al Coordinator para que pueda recalcular rutas
@@ -737,12 +731,14 @@ struct MapaView: View {
 
     private func toggleTracking() {
         if userTrackingMode == .none {
-            // Activar seguimiento simple - dejar que MapKit maneje el zoom
+            // Activar seguimiento simple
             userTrackingMode = .follow
+            // Usar setUserTrackingMode de MapKit para modo simple
+            mapView?.setUserTrackingMode(.follow, animated: true)
         } else if userTrackingMode == .follow {
             // Activar seguimiento con orientación (como Google Maps)
             userTrackingMode = .followWithHeading
-            // Solo en este caso, ajustamos la cámara para navegación
+            // Establecer cámara 3D para navegación
             if let mapView = mapView, let userLocation = mapView.userLocation.location?.coordinate {
                 let camera = MKMapCamera(
                     lookingAtCenter: userLocation,
@@ -751,10 +747,12 @@ struct MapaView: View {
                     heading: 0
                 )
                 mapView.setCamera(camera, animated: true)
+                // NO llamar a setUserTrackingMode para evitar ajuste automático de zoom
             }
         } else {
             // Desactivar seguimiento
             userTrackingMode = .none
+            mapView?.setUserTrackingMode(.none, animated: true)
         }
     }
     
@@ -991,7 +989,10 @@ struct CustomMapView: UIViewRepresentable {
 
     func updateUIView(_ uiView: MKMapView, context: Context) {
         uiView.mapType = isSatelliteView ? .satellite : .standard
-        if uiView.userTrackingMode != userTrackingMode {
+
+        // Solo aplicar userTrackingMode si NO estamos en modo followWithHeading
+        // (en followWithHeading manejamos la cámara manualmente para evitar zoom rebote)
+        if uiView.userTrackingMode != userTrackingMode && userTrackingMode != .followWithHeading {
             uiView.setUserTrackingMode(userTrackingMode, animated: true)
         }
 

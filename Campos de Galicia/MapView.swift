@@ -674,17 +674,22 @@ struct MapaView: View {
             self.userTrackingMode = .followWithHeading
         }
 
-        // 🔍 ZOOM a ubicación del usuario tipo Google Maps
+        // 🔍 Activar seguimiento tipo Google Maps
         if let mapView = self.mapView, let userLocation = mapView.userLocation.location?.coordinate {
-            let navigationRegion = MKCoordinateRegion(
-                center: userLocation,
-                latitudinalMeters: 400,  // Zoom cercano para navegación
-                longitudinalMeters: 400
+            // Crear cámara 3D con zoom cercano
+            let camera = MKMapCamera(
+                lookingAtCenter: userLocation,
+                fromDistance: 400,  // Altura fija
+                pitch: 45,
+                heading: 0
             )
-            mapView.setRegion(navigationRegion, animated: true)
+            // Aplicar cámara ANTES de activar tracking
+            mapView.setCamera(camera, animated: true)
 
-            // Activar seguimiento con orientación
-            mapView.setUserTrackingMode(.followWithHeading, animated: true)
+            // Después activar el seguimiento con heading (esto mantiene el zoom)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                mapView.setUserTrackingMode(.followWithHeading, animated: true)
+            }
         }
 
         // Pasar el destino al Coordinator para que pueda recalcular rutas
@@ -732,28 +737,20 @@ struct MapaView: View {
 
     private func toggleTracking() {
         if userTrackingMode == .none {
-            // Activar seguimiento simple
+            // Activar seguimiento simple - dejar que MapKit maneje el zoom
             userTrackingMode = .follow
-            // Centrar en ubicación del usuario con zoom
-            if let mapView = mapView, let userLocation = mapView.userLocation.location?.coordinate {
-                let region = MKCoordinateRegion(
-                    center: userLocation,
-                    latitudinalMeters: 1000,
-                    longitudinalMeters: 1000
-                )
-                mapView.setRegion(region, animated: true)
-            }
         } else if userTrackingMode == .follow {
             // Activar seguimiento con orientación (como Google Maps)
             userTrackingMode = .followWithHeading
-            // Zoom más cercano para navegación
+            // Solo en este caso, ajustamos la cámara para navegación
             if let mapView = mapView, let userLocation = mapView.userLocation.location?.coordinate {
-                let region = MKCoordinateRegion(
-                    center: userLocation,
-                    latitudinalMeters: 400,
-                    longitudinalMeters: 400
+                let camera = MKMapCamera(
+                    lookingAtCenter: userLocation,
+                    fromDistance: 400,
+                    pitch: 45,
+                    heading: 0
                 )
-                mapView.setRegion(region, animated: true)
+                mapView.setCamera(camera, animated: true)
             }
         } else {
             // Desactivar seguimiento
@@ -1209,9 +1206,12 @@ struct CustomMapView: UIViewRepresentable {
             view?.markerTintColor = .systemGreen
             view?.glyphImage = UIImage(systemName: "soccerball")
             view?.canShowCallout = true
-            view?.titleVisibility = .hidden  // Ocultamos el título por defecto
             view?.displayPriority = .required
             view?.animatesWhenAdded = true
+
+            // ✅ FIX: Eliminar el título del annotation para evitar espacio vacío
+            campoAnno.title = nil
+            campoAnno.subtitle = nil
 
             // 🎨 NUEVO DISEÑO: Card moderno con glassmorphism
             let calloutContainer = UIView()
@@ -1350,18 +1350,6 @@ struct CustomMapView: UIViewRepresentable {
         @objc private func buttonTouchUp(_ sender: UIButton) {
             UIView.animate(withDuration: 0.1, delay: 0, options: .curveEaseInOut) {
                 sender.transform = .identity
-            }
-        }
-        
-        func mapView(_ mapView: MKMapView, didSelect view: MKAnnotationView) {
-            if let annotation = view.annotation as? MKPointAnnotation {
-                annotation.title = ""
-            }
-        }
-        
-        func mapView(_ mapView: MKMapView, didDeselect view: MKAnnotationView) {
-            if let annotation = view.annotation as? CampoAnnotation {
-                annotation.title = annotation.annotationItem.title
             }
         }
         

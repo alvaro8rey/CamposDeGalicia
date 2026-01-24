@@ -297,13 +297,22 @@ struct MapaView: View {
                     Button {
                         toggleTracking()
                     } label: {
-                        Image(systemName: trackingIcon)
-                            .font(.system(size: 20, weight: .bold))
+                        ZStack {
+                            // Indicador de orientación activa
+                            if userTrackingMode == .followWithHeading {
+                                Circle()
+                                    .fill(Color.blue.opacity(0.2))
+                                    .frame(width: 36, height: 36)
+                                    .animation(.easeInOut(duration: 0.3), value: userTrackingMode)
+                            }
+                            Image(systemName: trackingIcon)
+                                .font(.system(size: 20, weight: .bold))
+                        }
                     }
-                    .liquidGlass(color: userTrackingMode == .none ? .primary : .blue)
+                    .liquidGlass(color: trackingIconColor)
                 }
                 .padding(.trailing, 16)
-                .padding(.bottom, externalIsNavigating ? 40 : (showRouteSummary ? 220 : 40))
+                .padding(.bottom, externalIsNavigating ? 40 : (showRouteSummary ? 280 : 40))
             }
         }
         .navigationBarHidden(true)
@@ -327,24 +336,30 @@ struct MapaView: View {
         if showRouteSummary || externalIsNavigating {
             stopNavigation()
         }
-        
+
         searchText = ""
         isSearching = false
         hideKeyboard()
-        
+
         // Buscamos la chincheta correspondiente al campo seleccionado
         if let annotation = mapView?.annotations.compactMap({ $0 as? CampoAnnotation }).first(where: { $0.annotationItem.campo.id == campo.id }) {
-            withAnimation {
-                let span = MKCoordinateSpan(latitudeDelta: 0.005, longitudeDelta: 0.005)
+            // 🎯 Animación suave de zoom y selección
+            withAnimation(.easeInOut(duration: 0.5)) {
+                let span = MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
                 region = MKCoordinateRegion(center: annotation.coordinate, span: span)
-                // Seleccionamos la chincheta para abrir su globo de información (callout)
-                mapView?.selectAnnotation(annotation, animated: true)
-                mapView?.setRegion(region, animated: true)
+            }
+
+            // Aplicar región primero
+            mapView?.setRegion(region, animated: true)
+
+            // Seleccionar annotation con delay para mejor visual
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                self.mapView?.selectAnnotation(annotation, animated: true)
             }
         } else if let lat = campo.latitud, let lon = campo.longitud {
             let coord = CLLocationCoordinate2D(latitude: lat, longitude: lon)
-            withAnimation {
-                region = MKCoordinateRegion(center: coord, span: MKCoordinateSpan(latitudeDelta: 0.005, longitudeDelta: 0.005))
+            withAnimation(.easeInOut(duration: 0.5)) {
+                region = MKCoordinateRegion(center: coord, span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01))
                 mapView?.setRegion(region, animated: true)
             }
         }
@@ -384,53 +399,85 @@ struct MapaView: View {
     }
 
     private func navigationHeader(route: MKRoute) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            HStack {
-                Image(systemName: "arrow.up.right.circle.fill")
-                    .font(.title)
-                    .foregroundColor(.blue)
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 12) {
+                // 🎯 Icono de dirección más grande y animado
+                ZStack {
+                    Circle()
+                        .fill(Color.blue.opacity(0.15))
+                        .frame(width: 50, height: 50)
 
-                VStack(alignment: .leading) {
+                    Image(systemName: directionIcon(for: route.steps[currentStepIndex]))
+                        .font(.system(size: 24, weight: .bold))
+                        .foregroundColor(.blue)
+                }
+
+                VStack(alignment: .leading, spacing: 4) {
                     let step = route.steps[currentStepIndex]
                     Text(step.instructions.isEmpty ? "Continúa recto" : step.instructions)
-                        .font(.headline)
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(.primary)
                         .lineLimit(2)
 
-                    // Mostrar distancia en tiempo real
+                    // Mostrar distancia en tiempo real con mejor formato
                     let displayDistance = distanceToNextStep > 0 ? distanceToNextStep : step.distance
-                    if displayDistance >= 1000 {
-                        Text("En \(String(format: "%.1f", displayDistance / 1000)) km")
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                    } else {
-                        Text("En \(Int(displayDistance)) metros")
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
+                    HStack(spacing: 4) {
+                        Image(systemName: "location.fill")
+                            .font(.caption)
+                            .foregroundColor(.green)
+
+                        if displayDistance >= 1000 {
+                            Text("\(String(format: "%.1f", displayDistance / 1000)) km")
+                                .font(.system(size: 14, weight: .medium))
+                                .foregroundColor(.secondary)
+                        } else {
+                            Text("\(Int(displayDistance)) m")
+                                .font(.system(size: 14, weight: .medium))
+                                .foregroundColor(.secondary)
+                        }
                     }
                 }
                 Spacer()
 
-                // Mostrar paso actual / total
-                VStack(alignment: .trailing, spacing: 2) {
-                    Text("\(currentStepIndex + 1)/\(route.steps.count)")
-                        .font(.caption)
+                // Contador de pasos
+                VStack(spacing: 4) {
+                    Text("\(currentStepIndex + 1)")
+                        .font(.system(size: 18, weight: .bold))
+                        .foregroundColor(.blue)
+                    Text("de \(route.steps.count)")
+                        .font(.caption2)
                         .foregroundColor(.secondary)
-
-                    Button {
-                        if currentStepIndex < route.steps.count - 1 {
-                            currentStepIndex += 1
-                        }
-                    } label: {
-                        Image(systemName: "chevron.right")
-                    }
                 }
             }
         }
-        .padding()
-        .background(.ultraThinMaterial)
-        .cornerRadius(15)
-        .padding()
-        .shadow(radius: 5)
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: 20)
+                .fill(.ultraThinMaterial)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 20)
+                        .stroke(Color.blue.opacity(0.3), lineWidth: 1)
+                )
+        )
+        .padding(.horizontal, 16)
+        .padding(.top, 10)
+        .shadow(color: .black.opacity(0.15), radius: 12, x: 0, y: 4)
+    }
+
+    // Helper para elegir icono según el tipo de maniobra
+    private func directionIcon(for step: MKRoute.Step) -> String {
+        let instruction = step.instructions.lowercased()
+        if instruction.contains("gira a la derecha") || instruction.contains("derecha") {
+            return "arrow.turn.up.right"
+        } else if instruction.contains("gira a la izquierda") || instruction.contains("izquierda") {
+            return "arrow.turn.up.left"
+        } else if instruction.contains("continúa") || instruction.contains("recto") {
+            return "arrow.up"
+        } else if instruction.contains("rotonda") {
+            return "arrow.triangle.turn.up.right.circle"
+        } else {
+            return "arrow.up.circle.fill"
+        }
     }
     
     private func formatTime(seconds: TimeInterval) -> String {
@@ -445,57 +492,130 @@ struct MapaView: View {
     }
     
     private func routeSummaryCard(route: MKRoute, destination: MapAnnotationItem) -> some View {
-        Button {
-            // Si se pincha en el contenedor de la ruta, abrimos la info
-            selectedCampo = destination.campo
-        } label: {
-            VStack(spacing: 16) {
-                HStack(alignment: .top) {
+        VStack(spacing: 0) {
+            // 📍 Header con nombre del destino
+            Button {
+                selectedCampo = destination.campo
+            } label: {
+                HStack {
                     VStack(alignment: .leading, spacing: 6) {
-                        Text(destination.title ?? "Destino")
-                            .font(.headline)
-                            .foregroundColor(.primary)
-                            .multilineTextAlignment(.leading)
-                        
-                        HStack(spacing: 12) {
-                            Label("\(String(format: "%.1f", route.distance / 1000)) km", systemImage: "point.topleft.down.curvedto.point.bottomright.up")
-                                .font(.subheadline)
-                                .foregroundColor(.secondary)
-                            
-                            Label(formatTime(seconds: route.expectedTravelTime), systemImage: "clock.fill")
-                                .font(.subheadline)
-                                .bold()
+                        HStack(spacing: 8) {
+                            Image(systemName: "mappin.circle.fill")
                                 .foregroundColor(.green)
+                                .font(.title3)
+
+                            Text(destination.title ?? "Destino")
+                                .font(.system(size: 18, weight: .bold))
+                                .foregroundColor(.primary)
                         }
+
+                        Text(destination.campo.localidad ?? "Galicia")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
                     }
-                    
+
                     Spacer()
-                    
-                    Button {
-                        startNavigation()
-                    } label: {
-                        HStack {
-                            Image(systemName: "location.fill")
-                            Text("Ir")
-                                .bold()
-                        }
-                        .padding(.horizontal, 24)
-                        .padding(.vertical, 14)
-                        .background(Color.blue)
-                        .foregroundColor(.white)
-                        .clipShape(Capsule())
-                    }
+
+                    Image(systemName: "chevron.right")
+                        .foregroundColor(.secondary)
+                        .font(.caption)
                 }
+                .padding(20)
             }
-            .padding(24)
-            .background(.ultraThinMaterial)
-            .cornerRadius(24)
-            .padding(.horizontal, 16)
-            .padding(.bottom, 24)
-            .shadow(color: .black.opacity(0.15), radius: 15, x: 0, y: -5)
+            .buttonStyle(PlainButtonStyle())
+
+            Divider()
+                .padding(.horizontal, 20)
+
+            // 📊 Información de la ruta
+            HStack(spacing: 20) {
+                // Distancia
+                VStack(spacing: 6) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "road.lanes")
+                            .foregroundColor(.blue)
+                        Text("\(String(format: "%.1f", route.distance / 1000))")
+                            .font(.system(size: 24, weight: .bold))
+                            .foregroundColor(.primary)
+                    }
+                    Text("kilómetros")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                .frame(maxWidth: .infinity)
+
+                Divider()
+                    .frame(height: 40)
+
+                // Tiempo estimado
+                VStack(spacing: 6) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "clock.fill")
+                            .foregroundColor(.green)
+                        Text(formatTimeShort(seconds: route.expectedTravelTime))
+                            .font(.system(size: 24, weight: .bold))
+                            .foregroundColor(.primary)
+                    }
+                    Text("minutos aprox.")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                .frame(maxWidth: .infinity)
+            }
+            .padding(.vertical, 16)
+            .padding(.horizontal, 20)
+
+            // 🚀 Botón de iniciar
+            Button {
+                startNavigation()
+            } label: {
+                HStack(spacing: 10) {
+                    Image(systemName: "location.fill")
+                        .font(.system(size: 18, weight: .semibold))
+                    Text("Iniciar navegación")
+                        .font(.system(size: 17, weight: .semibold))
+                }
+                .foregroundColor(.white)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 16)
+                .background(
+                    LinearGradient(
+                        gradient: Gradient(colors: [Color.blue, Color.blue.opacity(0.8)]),
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                )
+                .cornerRadius(16)
+            }
+            .padding(.horizontal, 20)
+            .padding(.bottom, 20)
         }
-        .buttonStyle(PlainButtonStyle()) // Evita el efecto de resaltado de botón estándar
+        .background(
+            RoundedRectangle(cornerRadius: 28)
+                .fill(.ultraThinMaterial)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 28)
+                        .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                )
+        )
+        .padding(.horizontal, 16)
+        .padding(.bottom, 24)
+        .shadow(color: .black.opacity(0.2), radius: 20, x: 0, y: -8)
         .transition(.move(edge: .bottom).combined(with: .opacity))
+    }
+
+    private func formatTimeShort(seconds: TimeInterval) -> String {
+        let minutes = Int(seconds / 60)
+        if minutes >= 60 {
+            let hours = minutes / 60
+            let remainingMinutes = minutes % 60
+            if remainingMinutes == 0 {
+                return "\(hours)h"
+            }
+            return "\(hours)h \(remainingMinutes)m"
+        } else {
+            return "\(minutes)"
+        }
     }
 
     private func prepareRouteSummary(for destination: MapAnnotationItem) {
@@ -554,6 +674,19 @@ struct MapaView: View {
             self.userTrackingMode = .followWithHeading
         }
 
+        // 🔍 ZOOM a ubicación del usuario tipo Google Maps
+        if let mapView = self.mapView, let userLocation = mapView.userLocation.location?.coordinate {
+            let navigationRegion = MKCoordinateRegion(
+                center: userLocation,
+                latitudinalMeters: 400,  // Zoom cercano para navegación
+                longitudinalMeters: 400
+            )
+            mapView.setRegion(navigationRegion, animated: true)
+
+            // Activar seguimiento con orientación
+            mapView.setUserTrackingMode(.followWithHeading, animated: true)
+        }
+
         // Pasar el destino al Coordinator para que pueda recalcular rutas
         if let mapView = self.mapView, let destination = pendingDestination {
             print("✅ Configurando destino en Coordinator")
@@ -588,12 +721,42 @@ struct MapaView: View {
         }
     }
 
+    private var trackingIconColor: Color {
+        switch userTrackingMode {
+        case .none: return .primary
+        case .follow: return .blue
+        case .followWithHeading: return .green
+        @unknown default: return .primary
+        }
+    }
+
     private func toggleTracking() {
         if userTrackingMode == .none {
+            // Activar seguimiento simple
             userTrackingMode = .follow
+            // Centrar en ubicación del usuario con zoom
+            if let mapView = mapView, let userLocation = mapView.userLocation.location?.coordinate {
+                let region = MKCoordinateRegion(
+                    center: userLocation,
+                    latitudinalMeters: 1000,
+                    longitudinalMeters: 1000
+                )
+                mapView.setRegion(region, animated: true)
+            }
         } else if userTrackingMode == .follow {
+            // Activar seguimiento con orientación (como Google Maps)
             userTrackingMode = .followWithHeading
+            // Zoom más cercano para navegación
+            if let mapView = mapView, let userLocation = mapView.userLocation.location?.coordinate {
+                let region = MKCoordinateRegion(
+                    center: userLocation,
+                    latitudinalMeters: 400,
+                    longitudinalMeters: 400
+                )
+                mapView.setRegion(region, animated: true)
+            }
         } else {
+            // Desactivar seguimiento
             userTrackingMode = .none
         }
     }
@@ -892,12 +1055,29 @@ struct CustomMapView: UIViewRepresentable {
 
             if parent.isNavigating {
                 print("✅ Navegando - procesando ubicación")
-                // Centrar el mapa en la ubicación del usuario
+
+                // 🎯 Centrar el mapa de forma suave con heading si está disponible
                 DispatchQueue.main.async {
-                    let region = MKCoordinateRegion(center: location.coordinate,
-                                                   latitudinalMeters: 300,
-                                                   longitudinalMeters: 300)
-                    self.parent.mapView?.setRegion(region, animated: true)
+                    guard let mapView = self.parent.mapView else { return }
+
+                    // Si tenemos seguimiento con heading, usamos la cámara 3D tipo Google Maps
+                    if self.parent.userTrackingMode == .followWithHeading {
+                        let camera = MKMapCamera(
+                            lookingAtCenter: location.coordinate,
+                            fromDistance: 400,  // Altura de la cámara
+                            pitch: 45,  // Ángulo de inclinación (0-90)
+                            heading: location.course >= 0 ? location.course : 0
+                        )
+                        mapView.setCamera(camera, animated: true)
+                    } else {
+                        // Modo normal: solo centrar sin inclinación
+                        let region = MKCoordinateRegion(
+                            center: location.coordinate,
+                            latitudinalMeters: 400,
+                            longitudinalMeters: 400
+                        )
+                        mapView.setRegion(region, animated: true)
+                    }
                 }
 
                 // Actualizar paso actual y distancia en tiempo real
@@ -913,25 +1093,8 @@ struct CustomMapView: UIViewRepresentable {
         }
 
         func mapView(_ mapView: MKMapView, didUpdate userLocation: MKUserLocation) {
-            guard let location = userLocation.location else { return }
-
-            // Solo procesar actualizaciones cuando estamos navegando
-            if parent.isNavigating {
-                print("📍 Ubicación actualizada: \(location.coordinate.latitude), \(location.coordinate.longitude)")
-
-                // Centrar el mapa en la ubicación del usuario
-                let region = MKCoordinateRegion(center: location.coordinate,
-                                               latitudinalMeters: 300,
-                                               longitudinalMeters: 300)
-                mapView.setRegion(region, animated: true)
-
-                // Actualizar paso actual y distancia en tiempo real
-                updateCurrentStep(userLocation: location.coordinate)
-
-                // Verificar si necesitamos recalcular la ruta
-                checkIfRecalculationNeeded(userLocation: location.coordinate)
-            }
-            // No hacer nada ni loggear si no estamos navegando
+            // ✅ OPTIMIZACIÓN: Ya no procesamos aquí porque CLLocationManager lo hace mejor
+            // Este método se mantiene para compatibilidad pero no duplica lógica
         }
         
         private func updateCurrentStep(userLocation: CLLocationCoordinate2D) {
@@ -1035,90 +1198,159 @@ struct CustomMapView: UIViewRepresentable {
             guard let campoAnno = annotation as? CampoAnnotation else { return nil }
             let identifier = "CampoAnnotation"
             var view = mapView.dequeueReusableAnnotationView(withIdentifier: identifier) as? MKMarkerAnnotationView
-            
+
             if view == nil {
                 view = MKMarkerAnnotationView(annotation: annotation, reuseIdentifier: identifier)
             } else {
                 view?.annotation = annotation
             }
-            
+
+            // 🎨 Marker personalizado con efecto glow
             view?.markerTintColor = .systemGreen
+            view?.glyphImage = UIImage(systemName: "soccerball")
             view?.canShowCallout = true
-            view?.titleVisibility = .visible
-            view?.displayPriority = .defaultLow
-            
+            view?.titleVisibility = .hidden  // Ocultamos el título por defecto
+            view?.displayPriority = .required
+            view?.animatesWhenAdded = true
+
+            // 🎨 NUEVO DISEÑO: Card moderno con glassmorphism
             let calloutContainer = UIView()
             calloutContainer.translatesAutoresizingMaskIntoConstraints = false
-            calloutContainer.backgroundColor = .clear
-            
-            let stackView = UIStackView()
-            stackView.axis = .vertical
-            stackView.spacing = 14
-            stackView.alignment = .center
-            stackView.distribution = .fill
-            stackView.translatesAutoresizingMaskIntoConstraints = false
-            
+            calloutContainer.layer.cornerRadius = 20
+            calloutContainer.layer.cornerCurve = .continuous
+            calloutContainer.clipsToBounds = true
+
+            // Efecto blur de fondo
+            let blurEffect = UIBlurEffect(style: .systemUltraThinMaterial)
+            let blurView = UIVisualEffectView(effect: blurEffect)
+            blurView.translatesAutoresizingMaskIntoConstraints = false
+            blurView.layer.cornerRadius = 20
+            blurView.layer.cornerCurve = .continuous
+            blurView.clipsToBounds = true
+            calloutContainer.addSubview(blurView)
+
+            // Stack principal vertical
+            let mainStack = UIStackView()
+            mainStack.axis = .vertical
+            mainStack.spacing = 12
+            mainStack.alignment = .fill
+            mainStack.distribution = .fill
+            mainStack.translatesAutoresizingMaskIntoConstraints = false
+
+            // Título del campo
             let titleLabel = UILabel()
-            titleLabel.text = campoAnno.annotationItem.title?.uppercased() ?? "CAMPO SIN NOMBRE"
-            titleLabel.font = .systemFont(ofSize: 14, weight: .black)
+            titleLabel.text = campoAnno.annotationItem.title ?? "Campo sin nombre"
+            titleLabel.font = .systemFont(ofSize: 16, weight: .bold)
             titleLabel.textColor = .label
             titleLabel.textAlignment = .center
             titleLabel.numberOfLines = 2
-            
-            let detailBtn = UIButton(type: .system)
-            var detailConfig = UIButton.Configuration.plain()
-            detailConfig.title = "Detalles"
-            detailConfig.image = UIImage(systemName: "info.circle.fill")
-            detailConfig.imagePadding = 10
-            detailConfig.baseForegroundColor = .systemBlue
-            detailConfig.contentInsets = NSDirectionalEdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16)
-            detailBtn.configuration = detailConfig
-            detailBtn.backgroundColor = UIColor.systemBlue.withAlphaComponent(0.08)
-            detailBtn.layer.cornerRadius = 14
-            detailBtn.layer.borderWidth = 0.5
-            detailBtn.layer.borderColor = UIColor.systemBlue.withAlphaComponent(0.2).cgColor
-            detailBtn.tag = 1
-            detailBtn.addTarget(self, action: #selector(calloutAction(_:)), for: .touchUpInside)
-            
-            let routeBtn = UIButton(type: .system)
-            var routeConfig = UIButton.Configuration.filled()
-            routeConfig.title = "Cómo llegar"
-            routeConfig.image = UIImage(systemName: "location.north.fill")
-            routeConfig.imagePadding = 10
-            routeConfig.baseBackgroundColor = .systemGreen
-            routeConfig.cornerStyle = .capsule
-            routeConfig.contentInsets = NSDirectionalEdgeInsets(top: 10, leading: 20, bottom: 10, trailing: 20)
-            routeBtn.configuration = routeConfig
-            routeBtn.layer.shadowColor = UIColor.systemGreen.cgColor
-            routeBtn.layer.shadowOpacity = 0.2
-            routeBtn.layer.shadowOffset = CGSize(width: 0, height: 4)
-            routeBtn.layer.shadowRadius = 8
-            routeBtn.tag = 2
-            routeBtn.addTarget(self, action: #selector(calloutAction(_:)), for: .touchUpInside)
-            
-            stackView.addArrangedSubview(titleLabel)
-            stackView.addArrangedSubview(detailBtn)
-            stackView.addArrangedSubview(routeBtn)
-            calloutContainer.addSubview(stackView)
-            
+
+            // Stack horizontal para los botones
+            let buttonsStack = UIStackView()
+            buttonsStack.axis = .horizontal
+            buttonsStack.spacing = 10
+            buttonsStack.alignment = .fill
+            buttonsStack.distribution = .fillEqually
+            buttonsStack.translatesAutoresizingMaskIntoConstraints = false
+
+            // 🔵 Botón Info (más compacto)
+            let detailBtn = createCalloutButton(
+                icon: "info.circle.fill",
+                color: .systemBlue,
+                tag: 1
+            )
+
+            // 🟢 Botón Ruta (más compacto)
+            let routeBtn = createCalloutButton(
+                icon: "arrow.triangle.turn.up.right.diamond.fill",
+                color: .systemGreen,
+                tag: 2
+            )
+
+            buttonsStack.addArrangedSubview(detailBtn)
+            buttonsStack.addArrangedSubview(routeBtn)
+
+            mainStack.addArrangedSubview(titleLabel)
+            mainStack.addArrangedSubview(buttonsStack)
+
+            calloutContainer.addSubview(mainStack)
+
+            // Border sutil para profundidad
+            calloutContainer.layer.borderWidth = 1
+            calloutContainer.layer.borderColor = UIColor.separator.withAlphaComponent(0.2).cgColor
+
+            // Sombra elegante
+            calloutContainer.layer.shadowColor = UIColor.black.cgColor
+            calloutContainer.layer.shadowOpacity = 0.12
+            calloutContainer.layer.shadowOffset = CGSize(width: 0, height: 8)
+            calloutContainer.layer.shadowRadius = 16
+
             NSLayoutConstraint.activate([
-                stackView.centerXAnchor.constraint(equalTo: calloutContainer.centerXAnchor),
-                stackView.centerYAnchor.constraint(equalTo: calloutContainer.centerYAnchor),
-                stackView.topAnchor.constraint(equalTo: calloutContainer.topAnchor, constant: 12),
-                stackView.bottomAnchor.constraint(equalTo: calloutContainer.bottomAnchor, constant: -12),
-                stackView.leadingAnchor.constraint(equalTo: calloutContainer.leadingAnchor, constant: 10),
-                stackView.trailingAnchor.constraint(equalTo: calloutContainer.trailingAnchor, constant: -10),
-                
-                titleLabel.widthAnchor.constraint(equalTo: stackView.widthAnchor),
-                detailBtn.widthAnchor.constraint(equalTo: stackView.widthAnchor, multiplier: 1.0),
-                routeBtn.widthAnchor.constraint(equalTo: stackView.widthAnchor, multiplier: 1.0),
-                
-                calloutContainer.widthAnchor.constraint(equalToConstant: 220)
+                // Blur view
+                blurView.topAnchor.constraint(equalTo: calloutContainer.topAnchor),
+                blurView.leadingAnchor.constraint(equalTo: calloutContainer.leadingAnchor),
+                blurView.trailingAnchor.constraint(equalTo: calloutContainer.trailingAnchor),
+                blurView.bottomAnchor.constraint(equalTo: calloutContainer.bottomAnchor),
+
+                // Main stack
+                mainStack.topAnchor.constraint(equalTo: calloutContainer.topAnchor, constant: 14),
+                mainStack.leadingAnchor.constraint(equalTo: calloutContainer.leadingAnchor, constant: 14),
+                mainStack.trailingAnchor.constraint(equalTo: calloutContainer.trailingAnchor, constant: -14),
+                mainStack.bottomAnchor.constraint(equalTo: calloutContainer.bottomAnchor, constant: -14),
+
+                // Botones con altura fija
+                buttonsStack.heightAnchor.constraint(equalToConstant: 44),
+
+                // Ancho del container
+                calloutContainer.widthAnchor.constraint(equalToConstant: 240)
             ])
-            
+
             view?.detailCalloutAccessoryView = calloutContainer
-            
+
             return view
+        }
+
+        // 🎨 Helper para crear botones del callout
+        private func createCalloutButton(icon: String, color: UIColor, tag: Int) -> UIButton {
+            let button = UIButton(type: .system)
+            button.translatesAutoresizingMaskIntoConstraints = false
+
+            // Configuración visual
+            var config = UIButton.Configuration.filled()
+            config.image = UIImage(systemName: icon)
+            config.baseBackgroundColor = color
+            config.baseForegroundColor = .white
+            config.cornerStyle = .medium
+            config.contentInsets = NSDirectionalEdgeInsets(top: 12, leading: 16, bottom: 12, trailing: 16)
+            config.imagePlacement = .all
+
+            button.configuration = config
+            button.tag = tag
+            button.addTarget(self, action: #selector(calloutAction(_:)), for: .touchUpInside)
+
+            // Efecto de sombra
+            button.layer.shadowColor = color.cgColor
+            button.layer.shadowOpacity = 0.3
+            button.layer.shadowOffset = CGSize(width: 0, height: 4)
+            button.layer.shadowRadius = 8
+
+            // Animación al tocar
+            button.addTarget(self, action: #selector(buttonTouchDown(_:)), for: .touchDown)
+            button.addTarget(self, action: #selector(buttonTouchUp(_:)), for: [.touchUpInside, .touchUpOutside, .touchCancel])
+
+            return button
+        }
+
+        @objc private func buttonTouchDown(_ sender: UIButton) {
+            UIView.animate(withDuration: 0.1, delay: 0, options: .curveEaseInOut) {
+                sender.transform = CGAffineTransform(scaleX: 0.95, y: 0.95)
+            }
+        }
+
+        @objc private func buttonTouchUp(_ sender: UIButton) {
+            UIView.animate(withDuration: 0.1, delay: 0, options: .curveEaseInOut) {
+                sender.transform = .identity
+            }
         }
         
         func mapView(_ mapView: MKMapView, didSelect view: MKAnnotationView) {

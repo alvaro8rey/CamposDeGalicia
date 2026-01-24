@@ -48,6 +48,18 @@ struct CampoHeroImage: View {
                 )
                 .frame(height: 220)
 
+                // Gradiente difuminado en la parte inferior para suavizar el corte
+                LinearGradient(
+                    gradient: Gradient(colors: [
+                        Color.clear,
+                        Color(UIColor.systemBackground).opacity(0.3),
+                        Color(UIColor.systemBackground).opacity(0.7)
+                    ]),
+                    startPoint: UnitPoint(x: 0.5, y: 0.85),
+                    endPoint: .bottom
+                )
+                .frame(height: 220)
+
                 // Visit Badge con glassmorphism
                 if isLoggedIn {
                     Button(action: onToggleVisit) {

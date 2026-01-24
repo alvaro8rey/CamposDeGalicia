@@ -9,62 +9,61 @@ struct CampoLocationSection: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
             // Header con icono mejorado - CLICKEABLE
-            Button(action: {
-                withAnimation(.spring(response: 0.4, dampingFraction: 0.75)) {
-                    isExpanded.toggle()
-                }
-            }) {
-                HStack(spacing: 12) {
-                    ZStack {
-                        Circle()
-                            .fill(
+            HStack(spacing: 12) {
+                Button(action: {
+                    withAnimation(.spring(response: 0.4, dampingFraction: 0.75)) {
+                        isExpanded.toggle()
+                    }
+                }) {
+                    HStack(spacing: 12) {
+                        ZStack {
+                            Circle()
+                                .fill(
+                                    LinearGradient(
+                                        colors: [.blue, .blue.opacity(0.7)],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    )
+                                )
+                                .frame(width: 44, height: 44)
+                                .shadow(color: .blue.opacity(0.3), radius: 8, x: 0, y: 4)
+
+                            Image(systemName: "mappin.circle.fill")
+                                .font(.title2)
+                                .foregroundColor(.white)
+                        }
+
+                        Text("Ubicación")
+                            .font(.title3)
+                            .fontWeight(.bold)
+                            .foregroundStyle(
                                 LinearGradient(
-                                    colors: [.blue, .blue.opacity(0.7)],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
+                                    colors: [.primary, .primary.opacity(0.7)],
+                                    startPoint: .leading,
+                                    endPoint: .trailing
                                 )
                             )
-                            .frame(width: 44, height: 44)
-                            .shadow(color: .blue.opacity(0.3), radius: 8, x: 0, y: 4)
 
-                        Image(systemName: "mappin.circle.fill")
-                            .font(.title2)
-                            .foregroundColor(.white)
-                    }
-
-                    Text("Ubicación")
-                        .font(.title3)
-                        .fontWeight(.bold)
-                        .foregroundStyle(
-                            LinearGradient(
-                                colors: [.primary, .primary.opacity(0.7)],
-                                startPoint: .leading,
-                                endPoint: .trailing
-                            )
-                        )
-
-                    Spacer()
-
-                    // Icono de expansión
-                    Image(systemName: isExpanded ? "chevron.up.circle.fill" : "chevron.down.circle.fill")
-                        .font(.title3)
-                        .foregroundColor(.blue)
-                        .rotationEffect(.degrees(isExpanded ? 0 : 0))
-                }
-            }
-            .buttonStyle(.plain)
-
-            // Botón pequeño de "Cómo llegar" cuando está plegado
-            if !isExpanded, let lat = campo.latitud, let lon = campo.longitud {
-                Button(action: {
-                    openDirections(latitude: lat, longitude: lon)
-                }) {
-                    HStack {
                         Spacer()
+
+                        // Icono de expansión
+                        Image(systemName: isExpanded ? "chevron.up.circle.fill" : "chevron.down.circle.fill")
+                            .font(.title3)
+                            .foregroundColor(.blue)
+                            .rotationEffect(.degrees(isExpanded ? 0 : 0))
+                    }
+                }
+                .buttonStyle(.plain)
+
+                // Botón pequeño de "Cómo llegar" cuando está plegado - a la altura del título
+                if !isExpanded, let lat = campo.latitud, let lon = campo.longitud {
+                    Button(action: {
+                        openDirections(latitude: lat, longitude: lon)
+                    }) {
                         Image(systemName: "location.north.circle.fill")
-                            .font(.title2)
+                            .font(.body)
                             .foregroundColor(.white)
-                            .padding(12)
+                            .padding(8)
                             .background(
                                 Circle()
                                     .fill(
@@ -75,8 +74,7 @@ struct CampoLocationSection: View {
                                         )
                                     )
                             )
-                            .shadow(color: .blue.opacity(0.4), radius: 8, x: 0, y: 4)
-                        Spacer()
+                            .shadow(color: .blue.opacity(0.4), radius: 6, x: 0, y: 3)
                     }
                     .transition(.scale.combined(with: .opacity))
                 }

@@ -24,6 +24,9 @@ struct AppMain: App {
     @State private var showExitRouteAlert: Bool = false
     @State private var pendingTab: Int = 0
 
+    // Task de limpieza periódica
+    @State private var cleanupTask: Task<Void, Never>?
+
     init() {
         let viewModel = CamposViewModel()
         _camposViewModel = StateObject(wrappedValue: viewModel)
@@ -132,13 +135,18 @@ struct AppMain: App {
                     geofenceManager.refreshWith(campos: camposViewModel.campos)
                 }
 
-                // Limpiar cache expirado periódicamente para liberar memoria
-                Task {
-                    while true {
-                        try? await Task.sleep(nanoseconds: 5_000_000_000) // 5 minutos
+                // Limpiar cache expirado periódicamente para liberar memoria (cada 5 minutos)
+                cleanupTask = Task {
+                    while !Task.isCancelled {
+                        try? await Task.sleep(nanoseconds: 5 * 60 * 1_000_000_000) // 5 minutos
+                        guard !Task.isCancelled else { break }
                         await camposViewModel.cleanExpiredExtras()
                     }
                 }
+            }
+            .onDisappear {
+                // Cancelar la tarea de limpieza cuando la app se cierra
+                cleanupTask?.cancel()
             }
             .onOpenURL { url in
                 handleDeepLink(url: url)

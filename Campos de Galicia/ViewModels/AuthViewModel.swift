@@ -121,6 +121,9 @@ class AuthViewModel: ObservableObject {
             self.avatarURL = dict["avatar_url"] as? String
             Logger.debug("Perfil cargado: \(self.nombre) \(self.apellidos)")
         }
+
+        // Cargar datos iniciales en ProgressStore
+        await ProgressStore.shared.loadInitialData(for: user.id.uuidString)
     }
 
     /// Guardar cambios del perfil

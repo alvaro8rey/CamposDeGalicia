@@ -12,16 +12,25 @@ struct MapAnnotationItem: Identifiable {
     let subtitle: String?
     let campo: CampoModel
     let isFromManualCoordinates: Bool
+    let isVisited: Bool
 }
 
 class CampoAnnotation: MKPointAnnotation {
     let annotationItem: MapAnnotationItem
-    
+
     init(annotationItem: MapAnnotationItem) {
         self.annotationItem = annotationItem
         super.init()
         self.coordinate = annotationItem.coordinate
         self.title = annotationItem.title
+    }
+}
+
+// Identificador de cluster para agrupar anotaciones
+extension CampoAnnotation {
+    override var clusteringIdentifier: String? {
+        get { "CampoCluster" }
+        set { }
     }
 }
 
@@ -65,20 +74,21 @@ extension View {
 
 struct MapaView: View {
     @EnvironmentObject var camposViewModel: CamposViewModel
-    
+    @EnvironmentObject var authViewModel: AuthViewModel
+
     @Binding var externalIsNavigating: Bool
-    
+
     @State private var region: MKCoordinateRegion
     @State private var isSatelliteView: Bool = false
     @State private var selectedCampo: CampoModel? = nil
     @State private var annotationItems: [MapAnnotationItem] = []
     @State private var showFiltros: Bool = false
     @State private var filtros: Filtros = Filtros()
-    
+
     // Propiedades de búsqueda
     @State private var searchText: String = ""
     @State private var isSearching: Bool = false
-    
+
     // Propiedades para Rutas e Indicaciones
     @State private var route: MKRoute?
     @State private var currentStepIndex: Int = 0
@@ -88,6 +98,9 @@ struct MapaView: View {
 
     @State private var userTrackingMode: MKUserTrackingMode = .none
     @State private var mapView: MKMapView?
+
+    // Campos visitados por el usuario
+    @State private var visitedCampoIds: Set<UUID> = []
 
     init(externalIsNavigating: Binding<Bool>) {
         self._externalIsNavigating = externalIsNavigating
@@ -107,42 +120,101 @@ struct MapaView: View {
         return annotationItems
     }
 
-    // Filtro para el buscador con fuzzy search (Tolerante a errores, acentos y mayúsculas)
+    // Filtro para el buscador optimizado (Tolerante a errores, acentos y mayúsculas)
     var searchResults: [CampoModel] {
         if searchText.isEmpty { return [] }
+
+        // No buscar si el texto es muy corto (menos de 2 caracteres)
+        guard searchText.count >= 2 else { return [] }
 
         // Normalizar texto de búsqueda
         let normalizedSearch = searchText
             .folding(options: [.diacriticInsensitive, .caseInsensitive], locale: .current)
 
-        // Calcular similitud para cada campo y filtrar
-        let camposConSimilitud = camposViewModel.campos.compactMap { campo -> (campo: CampoModel, score: Double)? in
-            // Normalizar nombre y localidad del campo
+        // 1. Búsqueda rápida: coincidencia exacta en nombre o localidad
+        let exactMatches = camposViewModel.campos.filter { campo in
             let normalizedNombre = campo.nombre
                 .folding(options: [.diacriticInsensitive, .caseInsensitive], locale: .current)
             let normalizedLocalidad = (campo.localidad ?? "")
                 .folding(options: [.diacriticInsensitive, .caseInsensitive], locale: .current)
 
-            // Calcular score de similitud (0.0 a 1.0)
-            let scoreNombre = calculateMatchScore(search: normalizedSearch, target: normalizedNombre)
-            let scoreLocalidad = calculateMatchScore(search: normalizedSearch, target: normalizedLocalidad)
+            return normalizedNombre.contains(normalizedSearch) || normalizedLocalidad.contains(normalizedSearch)
+        }
 
-            // Usar el score más alto entre nombre y localidad
-            let bestScore = max(scoreNombre, scoreLocalidad)
+        // Si tenemos suficientes resultados exactos, devolver solo esos (ordenados por relevancia)
+        if exactMatches.count >= 5 {
+            return exactMatches.sorted { campo1, campo2 in
+                let nombre1 = campo1.nombre.folding(options: [.diacriticInsensitive, .caseInsensitive], locale: .current)
+                let nombre2 = campo2.nombre.folding(options: [.diacriticInsensitive, .caseInsensitive], locale: .current)
 
-            // Filtrar los que tienen al menos 50% de similitud
-            if bestScore >= 0.5 {
-                return (campo, bestScore)
+                // Priorizar si el nombre empieza con la búsqueda
+                let starts1 = nombre1.hasPrefix(normalizedSearch)
+                let starts2 = nombre2.hasPrefix(normalizedSearch)
+                if starts1 != starts2 { return starts1 }
+
+                // Si no, ordenar por longitud (más cortos primero)
+                return nombre1.count < nombre2.count
+            }
+        }
+
+        // 2. Si no hay suficientes resultados exactos, hacer búsqueda fuzzy solo en los primeros 100 campos
+        let camposToSearch = Array(camposViewModel.campos.prefix(100))
+        let fuzzyMatches = camposToSearch.compactMap { campo -> (campo: CampoModel, score: Double)? in
+            let normalizedNombre = campo.nombre
+                .folding(options: [.diacriticInsensitive, .caseInsensitive], locale: .current)
+            let normalizedLocalidad = (campo.localidad ?? "")
+                .folding(options: [.diacriticInsensitive, .caseInsensitive], locale: .current)
+
+            // Usar solo fuzzyMatch simplificado (sin Levenshtein completo)
+            let matchesNombre = simpleFuzzyMatch(search: normalizedSearch, target: normalizedNombre)
+            let matchesLocalidad = simpleFuzzyMatch(search: normalizedSearch, target: normalizedLocalidad)
+
+            if matchesNombre || matchesLocalidad {
+                // Score simple basado en si empieza con el texto de búsqueda
+                let score: Double
+                if normalizedNombre.hasPrefix(normalizedSearch) {
+                    score = 1.0
+                } else if normalizedLocalidad.hasPrefix(normalizedSearch) {
+                    score = 0.9
+                } else if normalizedNombre.contains(normalizedSearch) {
+                    score = 0.8
+                } else if normalizedLocalidad.contains(normalizedSearch) {
+                    score = 0.7
+                } else {
+                    score = 0.6
+                }
+                return (campo, score)
             }
             return nil
         }
 
-        // Ordenar por score descendente (más similares primero)
-        let sortedCampos = camposConSimilitud
-            .sorted { $0.score > $1.score }
-            .map { $0.campo }
+        // Combinar resultados y ordenar
+        let allMatches = (exactMatches.map { ($0, 1.0) } + fuzzyMatches)
+            .sorted { $0.1 > $1.1 }
+            .map { $0.0 }
 
-        return sortedCampos
+        // Eliminar duplicados manteniendo el orden
+        var seen = Set<UUID>()
+        return allMatches.filter { campo in
+            if seen.contains(campo.id) {
+                return false
+            } else {
+                seen.insert(campo.id)
+                return true
+            }
+        }
+    }
+
+    // Búsqueda fuzzy simplificada (sin Levenshtein)
+    private func simpleFuzzyMatch(search: String, target: String) -> Bool {
+        if search.isEmpty { return true }
+        if target.isEmpty { return false }
+
+        // Verificar si todas las palabras de búsqueda están en el target
+        let searchWords = search.split(separator: " ").map(String.init)
+        return searchWords.allSatisfy { word in
+            target.contains(word)
+        }
     }
 
     var body: some View {
@@ -320,6 +392,7 @@ struct MapaView: View {
         }
         .onAppear {
             applyFiltros()
+            loadVisitedCampos()
         }
         .onChange(of: externalIsNavigating) { wasNavigating, navigating in
             if !navigating {
@@ -736,179 +809,44 @@ struct MapaView: View {
         for campo in filteredCampos {
             if let lat = campo.latitud, let lon = campo.longitud {
                 let coordinate = CLLocationCoordinate2D(latitude: lat, longitude: lon)
+                let isVisited = visitedCampoIds.contains(campo.id)
                 newAnnotations.append(MapAnnotationItem(
                     coordinate: coordinate,
                     title: campo.nombre,
                     subtitle: "Campo de fútbol",
                     campo: campo,
-                    isFromManualCoordinates: true
+                    isFromManualCoordinates: true,
+                    isVisited: isVisited
                 ))
             }
         }
         self.annotationItems = newAnnotations
     }
 
-    // MARK: - Fuzzy Search Functions
+    private func loadVisitedCampos() {
+        guard let userId = authViewModel.user?.id.uuidString else { return }
 
-    /// Calcula un score de similitud entre el texto de búsqueda y el objetivo
-    /// - Parameters:
-    ///   - search: Texto de búsqueda
-    ///   - target: Texto objetivo donde buscar
-    /// - Returns: Score entre 0.0 (sin similitud) y 1.0 (coincidencia perfecta)
-    private func calculateMatchScore(search: String, target: String) -> Double {
-        if search.isEmpty || target.isEmpty { return 0.0 }
+        Task {
+            do {
+                let response = try await supabase.from("visitas")
+                    .select("id_campo")
+                    .eq("id_usuario", value: userId)
+                    .execute()
 
-        let searchNoSpaces = search.replacingOccurrences(of: " ", with: "")
-        let targetNoSpaces = target.replacingOccurrences(of: " ", with: "")
-
-        // 1. Coincidencia exacta (sin espacios) = 1.0
-        if targetNoSpaces == searchNoSpaces {
-            return 1.0
-        }
-
-        // 2. Coincidencia exacta con espacios = 0.98
-        if target == search {
-            return 0.98
-        }
-
-        // 3. Target contiene search completo (sin espacios) = 0.95
-        if targetNoSpaces.contains(searchNoSpaces) {
-            return 0.95
-        }
-
-        // 4. Target contiene search con espacios = 0.90
-        if target.contains(search) {
-            return 0.90
-        }
-
-        // 5. Coincidencia de palabras individuales = 0.70-0.85
-        let searchWords = search.split(separator: " ").map(String.init)
-        let targetWords = target.split(separator: " ").map(String.init)
-
-        if !searchWords.isEmpty {
-            var wordMatchCount = 0
-            var totalWordSimilarity = 0.0
-
-            for searchWord in searchWords {
-                var bestWordMatch = 0.0
-                for targetWord in targetWords {
-                    if targetWord.contains(searchWord) {
-                        bestWordMatch = 0.85
-                        break
-                    } else {
-                        let similarity = stringSimilarity(searchWord, targetWord)
-                        bestWordMatch = max(bestWordMatch, similarity)
+                if let jsonData = try? JSONSerialization.jsonObject(with: response.data) as? [[String: Any]] {
+                    let ids = jsonData.compactMap { dict -> UUID? in
+                        guard let idString = dict["id_campo"] as? String else { return nil }
+                        return UUID(uuidString: idString)
                     }
+                    visitedCampoIds = Set(ids)
+                    updateAnnotations()
                 }
-                if bestWordMatch >= 0.5 {
-                    wordMatchCount += 1
-                    totalWordSimilarity += bestWordMatch
-                }
-            }
-
-            if wordMatchCount == searchWords.count && wordMatchCount > 0 {
-                let avgSimilarity = totalWordSimilarity / Double(searchWords.count)
-                return avgSimilarity * 0.85 // Reducir un poco el score de palabras
+            } catch {
+                Logger.error("Error loading visited campos: \(error.localizedDescription)")
             }
         }
-
-        // 6. Similitud por Levenshtein Distance = 0.0-0.70
-        let similarity = stringSimilarity(searchNoSpaces, targetNoSpaces)
-        return similarity * 0.70 // Reducir el peso de similitud pura
     }
 
-    /// Búsqueda difusa que tolera errores de escritura, espacios, etc.
-    /// - Parameters:
-    ///   - search: Texto de búsqueda
-    ///   - target: Texto objetivo donde buscar
-    ///   - threshold: Umbral de similitud (0.0 a 1.0). Por defecto 0.5 (50%)
-    /// - Returns: true si hay coincidencia o similitud suficiente
-    private func fuzzyMatch(search: String, target: String, threshold: Double = 0.5) -> Bool {
-        // Si está vacío, no filtramos
-        if search.isEmpty { return true }
-
-        // 1. Coincidencia exacta (sin espacios)
-        let searchNoSpaces = search.replacingOccurrences(of: " ", with: "")
-        let targetNoSpaces = target.replacingOccurrences(of: " ", with: "")
-
-        if targetNoSpaces.contains(searchNoSpaces) {
-            return true
-        }
-
-        // 2. Coincidencia con espacios
-        if target.contains(search) {
-            return true
-        }
-
-        // 3. Coincidencia de palabras individuales
-        let searchWords = search.split(separator: " ").map(String.init)
-        let targetWords = target.split(separator: " ").map(String.init)
-
-        // Si todas las palabras de búsqueda están en el target
-        let allWordsMatch = searchWords.allSatisfy { searchWord in
-            targetWords.contains { targetWord in
-                targetWord.contains(searchWord) || stringSimilarity(searchWord, targetWord) >= threshold
-            }
-        }
-
-        if allWordsMatch && !searchWords.isEmpty {
-            return true
-        }
-
-        // 4. Similitud global usando Levenshtein
-        let similarity = stringSimilarity(searchNoSpaces, targetNoSpaces)
-        return similarity >= threshold
-    }
-
-    /// Calcula la similitud entre dos strings usando Levenshtein Distance
-    /// - Returns: Valor entre 0.0 (sin similitud) y 1.0 (idénticos)
-    private func stringSimilarity(_ s1: String, _ s2: String) -> Double {
-        // Si alguno está vacío
-        if s1.isEmpty || s2.isEmpty {
-            return s1.isEmpty && s2.isEmpty ? 1.0 : 0.0
-        }
-
-        let distance = levenshteinDistance(s1, s2)
-        let maxLength = max(s1.count, s2.count)
-
-        // Convertir distancia a similitud (1.0 = idénticos, 0.0 = muy diferentes)
-        return 1.0 - (Double(distance) / Double(maxLength))
-    }
-
-    /// Algoritmo de Levenshtein Distance - calcula el número mínimo de ediciones
-    /// (inserciones, eliminaciones o sustituciones) para transformar s1 en s2
-    private func levenshteinDistance(_ s1: String, _ s2: String) -> Int {
-        let s1Array = Array(s1)
-        let s2Array = Array(s2)
-
-        let m = s1Array.count
-        let n = s2Array.count
-
-        // Crear matriz de distancias
-        var dp = Array(repeating: Array(repeating: 0, count: n + 1), count: m + 1)
-
-        // Inicializar primera fila y columna
-        for i in 0...m {
-            dp[i][0] = i
-        }
-        for j in 0...n {
-            dp[0][j] = j
-        }
-
-        // Calcular distancias
-        for i in 1...m {
-            for j in 1...n {
-                let cost = s1Array[i - 1] == s2Array[j - 1] ? 0 : 1
-                dp[i][j] = min(
-                    dp[i - 1][j] + 1,      // Eliminación
-                    dp[i][j - 1] + 1,      // Inserción
-                    dp[i - 1][j - 1] + cost // Sustitución
-                )
-            }
-        }
-
-        return dp[m][n]
-    }
 }
 
 // MARK: - CustomMapView
@@ -1138,6 +1076,27 @@ struct CustomMapView: UIViewRepresentable {
 
         func mapView(_ mapView: MKMapView, viewFor annotation: MKAnnotation) -> MKAnnotationView? {
             if annotation is MKUserLocation { return nil }
+
+            // Manejar cluster annotations
+            if let cluster = annotation as? MKClusterAnnotation {
+                let identifier = "ClusterAnnotation"
+                var view = mapView.dequeueReusableAnnotationView(withIdentifier: identifier) as? MKMarkerAnnotationView
+
+                if view == nil {
+                    view = MKMarkerAnnotationView(annotation: annotation, reuseIdentifier: identifier)
+                } else {
+                    view?.annotation = annotation
+                }
+
+                view?.markerTintColor = .systemBlue
+                view?.glyphText = "\(cluster.memberAnnotations.count)"
+                view?.displayPriority = .required
+                view?.titleVisibility = .hidden
+                view?.subtitleVisibility = .hidden
+
+                return view
+            }
+
             guard let campoAnno = annotation as? CampoAnnotation else { return nil }
             let identifier = "CampoAnnotation"
             var view = mapView.dequeueReusableAnnotationView(withIdentifier: identifier) as? MKMarkerAnnotationView
@@ -1149,11 +1108,18 @@ struct CustomMapView: UIViewRepresentable {
             }
 
             // 🎨 Marker personalizado con efecto glow
-            view?.markerTintColor = .systemGreen
-            view?.glyphImage = UIImage(systemName: "soccerball")
+            // Color diferente si ya está visitado
+            if campoAnno.annotationItem.isVisited {
+                view?.markerTintColor = .systemOrange
+                view?.glyphImage = UIImage(systemName: "checkmark.circle.fill")
+            } else {
+                view?.markerTintColor = .systemGreen
+                view?.glyphImage = UIImage(systemName: "soccerball")
+            }
             view?.canShowCallout = true
             view?.displayPriority = .required
             view?.animatesWhenAdded = true
+            view?.clusteringIdentifier = "CampoCluster"
 
             // ✅ FIX: Eliminar el título del annotation para evitar espacio vacío
             campoAnno.title = nil

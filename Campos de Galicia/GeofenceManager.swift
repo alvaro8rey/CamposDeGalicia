@@ -17,7 +17,7 @@ final class GeofenceManager: NSObject, ObservableObject, CLLocationManagerDelega
     private let locationManager = CLLocationManager()
 
     // Config
-    private let regionRadius: CLLocationDistance = 50
+    private let regionRadius: CLLocationDistance = 500
     private let dwellSeconds: TimeInterval = 120
     private let maxRegions: Int = 20
 

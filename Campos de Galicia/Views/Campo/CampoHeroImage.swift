@@ -1,57 +1,103 @@
 import SwiftUI
 import CoreLocation
 
-/// Vista del hero image con badge de visita
+/// Vista del hero image con badge de visita mejorada
 struct CampoHeroImage: View {
     let imageURL: String
     let isVisited: Bool
     let isLoggedIn: Bool
+    let isCheckingLocation: Bool
     let onToggleVisit: () -> Void
 
     var body: some View {
         GeometryReader { geometry in
             ZStack(alignment: .bottomLeading) {
+                // Background Image
                 if let url = URL(string: imageURL) {
                     CachedAsyncImage(
                         url: url,
-                        targetSize: CGSize(width: 1200, height: 700)
+                        targetSize: CGSize(width: 1200, height: 800)
                     ) { image in
                         image
                             .resizable()
                             .scaledToFill()
-                            .frame(width: geometry.size.width, height: 220)
+                            .frame(width: geometry.size.width, height: 300)
                             .clipped()
                     } placeholder: {
                         ZStack {
-                            Color.gray.opacity(0.1)
+                            LinearGradient(
+                                colors: [Color.blue.opacity(0.3), Color.green.opacity(0.3)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
                             ProgressView()
+                                .tint(.white)
                         }
-                        .frame(width: geometry.size.width, height: 220)
+                        .frame(width: geometry.size.width, height: 300)
                     }
                 }
 
-                // Visit Badge
+                // Gradiente oscuro inferior para mejor legibilidad
+                LinearGradient(
+                    gradient: Gradient(colors: [
+                        Color.black.opacity(0),
+                        Color.black.opacity(0.6)
+                    ]),
+                    startPoint: .center,
+                    endPoint: .bottom
+                )
+                .frame(height: 300)
+
+                // Visit Badge con glassmorphism
                 if isLoggedIn {
                     Button(action: onToggleVisit) {
-                        HStack(spacing: 6) {
-                            Image(systemName: isVisited ? "checkmark.circle.fill" : "mappin.circle.fill")
-                                .font(.caption)
-                            Text(isVisited ? "Visitado" : "Marcar visita")
-                                .font(.caption2)
+                        HStack(spacing: 8) {
+                            if isCheckingLocation {
+                                ProgressView()
+                                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                    .scaleEffect(0.8)
+                            } else {
+                                Image(systemName: isVisited ? "checkmark.circle.fill" : "mappin.circle.fill")
+                                    .font(.body)
+                                    .imageScale(.medium)
+                            }
+
+                            Text(isCheckingLocation ? "Verificando..." : (isVisited ? "Visitado" : "Marcar visita"))
+                                .font(.subheadline)
                                 .fontWeight(.semibold)
                         }
                         .foregroundColor(.white)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 8)
-                        .background((isVisited ? Color.green : Color.blue).opacity(0.92))
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 10)
+                        .background(
+                            ZStack {
+                                // Glassmorphism effect
+                                RoundedRectangle(cornerRadius: 20)
+                                    .fill(
+                                        (isVisited ? Color.green : Color.blue)
+                                            .opacity(0.8)
+                                    )
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 20)
+                                            .fill(.ultraThinMaterial)
+                                    )
+                            }
+                        )
                         .clipShape(Capsule())
-                        .shadow(color: Color.black.opacity(0.25), radius: 4)
+                        .shadow(color: Color.black.opacity(0.3), radius: 8, x: 0, y: 4)
+                        .overlay(
+                            Capsule()
+                                .strokeBorder(Color.white.opacity(0.2), lineWidth: 1)
+                        )
                     }
-                    .padding(16)
+                    .disabled(isCheckingLocation)
+                    .padding(20)
+                    .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isVisited)
+                    .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isCheckingLocation)
                 }
             }
             .frame(maxWidth: .infinity)
         }
-        .frame(height: 220)
+        .frame(height: 300)
     }
 }

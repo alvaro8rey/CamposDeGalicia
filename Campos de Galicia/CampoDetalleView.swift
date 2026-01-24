@@ -15,6 +15,7 @@ struct CampoDetalleView: View {
     @State private var campo: CampoModel?
     @State private var errorMessage: String? = nil
     @State private var isVisited: Bool = false
+    @State private var isCheckingLocation: Bool = false
     @State private var showingContribucionForm: Bool = false
     @State private var contribucionesAprobadas: [ContribucionAprobada] = []
     @State private var userNames: [String: String] = [:]
@@ -54,6 +55,7 @@ struct CampoDetalleView: View {
                             imageURL: (campo.foto_url?.isEmpty == false ? campo.foto_url : nil) ?? defaultImageURL,
                             isVisited: isVisited,
                             isLoggedIn: supabase.auth.currentUser != nil,
+                            isCheckingLocation: isCheckingLocation,
                             onToggleVisit: {
                                 Task {
                                     if isVisited {
@@ -65,33 +67,13 @@ struct CampoDetalleView: View {
                             }
                         )
 
-                        // Header Section
-                        VStack(alignment: .leading, spacing: 12) {
-                            Text(campo.nombre)
-                                .font(.title2)
-                                .fontWeight(.bold)
-                                .foregroundColor(.primary)
-                                .lineLimit(3)
-                                .fixedSize(horizontal: false, vertical: true)
-
-                            if supabase.auth.currentUser != nil {
-                                Button(action: { showingContribucionForm = true }) {
-                                    HStack(spacing: 6) {
-                                        Image(systemName: "plus.circle")
-                                            .font(.caption)
-                                        Text("Contribuir")
-                                            .font(.subheadline)
-                                            .fontWeight(.medium)
-                                    }
-                                    .foregroundColor(.blue)
-                                    .padding(.horizontal, 14)
-                                    .padding(.vertical, 8)
-                                    .background(Color.blue.opacity(0.12))
-                                    .clipShape(RoundedRectangle(cornerRadius: 10))
-                                }
-                            }
-                        }
-                        .padding(.horizontal, 16)
+                        // Card de información principal
+                        CampoInfoCard(
+                            campo: campo,
+                            isLoggedIn: supabase.auth.currentUser != nil,
+                            onContribute: { showingContribucionForm = true }
+                        )
+                        .padding(.top, -40) // Overlap con la imagen hero
 
                         // Location Section
                         CampoLocationSection(campo: campo)
@@ -206,6 +188,18 @@ struct CampoDetalleView: View {
 
     // MARK: - Visit Methods
     private func markVisitWithProximityCheck() async {
+        // Activar loading inmediatamente
+        await MainActor.run {
+            isCheckingLocation = true
+        }
+
+        // Defer para asegurar que siempre se desactiva el loading
+        defer {
+            Task { @MainActor in
+                isCheckingLocation = false
+            }
+        }
+
         guard let campo = campoValue, let lat = campo.latitud, let lon = campo.longitud else {
             await MainActor.run {
                 ToastManager.shared.error("Este campo no tiene coordenadas válidas")
@@ -287,6 +281,18 @@ struct CampoDetalleView: View {
     }
 
     private func unmarkAsVisited() async {
+        // Activar loading inmediatamente
+        await MainActor.run {
+            isCheckingLocation = true
+        }
+
+        // Defer para asegurar que siempre se desactiva el loading
+        defer {
+            Task { @MainActor in
+                isCheckingLocation = false
+            }
+        }
+
         guard let currentUser = supabase.auth.currentUser,
               let campo = campoValue else { return }
 

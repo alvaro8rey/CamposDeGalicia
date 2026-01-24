@@ -1,116 +1,170 @@
 import SwiftUI
 import CoreLocation
 
-/// Vista de la sección de ubicación del campo con diseño mejorado
+/// Vista de la sección de ubicación del campo con diseño mejorado y funcionalidad desplegable
 struct CampoLocationSection: View {
     let campo: CampoModel
+    @State private var isExpanded: Bool = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
-            // Header con icono mejorado
-            HStack(spacing: 12) {
-                ZStack {
-                    Circle()
-                        .fill(
+            // Header con icono mejorado - CLICKEABLE
+            Button(action: {
+                withAnimation(.spring(response: 0.4, dampingFraction: 0.75)) {
+                    isExpanded.toggle()
+                }
+            }) {
+                HStack(spacing: 12) {
+                    ZStack {
+                        Circle()
+                            .fill(
+                                LinearGradient(
+                                    colors: [.blue, .blue.opacity(0.7)],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                            .frame(width: 44, height: 44)
+                            .shadow(color: .blue.opacity(0.3), radius: 8, x: 0, y: 4)
+
+                        Image(systemName: "mappin.circle.fill")
+                            .font(.title2)
+                            .foregroundColor(.white)
+                    }
+
+                    Text("Ubicación")
+                        .font(.title3)
+                        .fontWeight(.bold)
+                        .foregroundStyle(
                             LinearGradient(
-                                colors: [.blue, .blue.opacity(0.7)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
+                                colors: [.primary, .primary.opacity(0.7)],
+                                startPoint: .leading,
+                                endPoint: .trailing
                             )
                         )
-                        .frame(width: 44, height: 44)
-                        .shadow(color: .blue.opacity(0.3), radius: 8, x: 0, y: 4)
 
-                    Image(systemName: "mappin.circle.fill")
-                        .font(.title2)
-                        .foregroundColor(.white)
+                    Spacer()
+
+                    // Icono de expansión
+                    Image(systemName: isExpanded ? "chevron.up.circle.fill" : "chevron.down.circle.fill")
+                        .font(.title3)
+                        .foregroundColor(.blue)
+                        .rotationEffect(.degrees(isExpanded ? 0 : 0))
                 }
-
-                Text("Ubicación")
-                    .font(.title3)
-                    .fontWeight(.bold)
-                    .foregroundStyle(
-                        LinearGradient(
-                            colors: [.primary, .primary.opacity(0.7)],
-                            startPoint: .leading,
-                            endPoint: .trailing
-                        )
-                    )
             }
+            .buttonStyle(.plain)
 
-            // Detalles de ubicación
-            VStack(alignment: .leading, spacing: 14) {
-                ModernDetailRow(
-                    icon: "house.fill",
-                    label: "Localidad",
-                    value: campo.localidad,
-                    accentColor: .blue
-                )
-
-                Divider()
-                    .background(Color.blue.opacity(0.2))
-
-                ModernDetailRow(
-                    icon: "map.fill",
-                    label: "Provincia",
-                    value: campo.provincia,
-                    accentColor: .blue
-                )
-
-                Divider()
-                    .background(Color.blue.opacity(0.2))
-
-                ModernDetailRow(
-                    icon: "signpost.right.fill",
-                    label: "Dirección",
-                    value: campo.direccion,
-                    accentColor: .blue
-                )
-
-                Divider()
-                    .background(Color.blue.opacity(0.2))
-
-                ModernDetailRow(
-                    icon: "envelope.fill",
-                    label: "Código Postal",
-                    value: campo.codigo_postal,
-                    accentColor: .blue
-                )
-            }
-            .padding(16)
-            .background(
-                RoundedRectangle(cornerRadius: 14)
-                    .fill(Color.blue.opacity(0.05))
-            )
-
-            // Botón de direcciones
-            if let lat = campo.latitud, let lon = campo.longitud {
+            // Botón pequeño de "Cómo llegar" cuando está plegado
+            if !isExpanded, let lat = campo.latitud, let lon = campo.longitud {
                 Button(action: {
                     openDirections(latitude: lat, longitude: lon)
                 }) {
-                    HStack(spacing: 10) {
-                        Image(systemName: "location.north.circle.fill")
-                            .font(.title3)
-                        Text("Cómo llegar")
-                            .font(.subheadline)
-                            .fontWeight(.semibold)
+                    HStack {
                         Spacer()
-                        Image(systemName: "arrow.right")
-                            .font(.caption)
-                            .fontWeight(.bold)
+                        Image(systemName: "location.north.circle.fill")
+                            .font(.title2)
+                            .foregroundColor(.white)
+                            .padding(12)
+                            .background(
+                                Circle()
+                                    .fill(
+                                        LinearGradient(
+                                            colors: [.blue, .blue.opacity(0.8)],
+                                            startPoint: .topLeading,
+                                            endPoint: .bottomTrailing
+                                        )
+                                    )
+                            )
+                            .shadow(color: .blue.opacity(0.4), radius: 8, x: 0, y: 4)
+                        Spacer()
                     }
-                    .foregroundColor(.white)
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 14)
-                    .background(
-                        LinearGradient(
-                            colors: [.blue, .blue.opacity(0.8)],
-                            startPoint: .leading,
-                            endPoint: .trailing
-                        )
+                    .transition(.scale.combined(with: .opacity))
+                }
+            }
+
+            // Detalles de ubicación (solo visible cuando está expandido)
+            if isExpanded {
+                VStack(alignment: .leading, spacing: 14) {
+                    ModernDetailRow(
+                        icon: "house.fill",
+                        label: "Localidad",
+                        value: campo.localidad,
+                        accentColor: .blue
                     )
-                    .clipShape(RoundedRectangle(cornerRadius: 14))
-                    .shadow(color: .blue.opacity(0.4), radius: 10, x: 0, y: 5)
+
+                    Divider()
+                        .background(Color.blue.opacity(0.2))
+
+                    ModernDetailRow(
+                        icon: "map.fill",
+                        label: "Provincia",
+                        value: campo.provincia,
+                        accentColor: .blue
+                    )
+
+                    Divider()
+                        .background(Color.blue.opacity(0.2))
+
+                    ModernDetailRow(
+                        icon: "signpost.right.fill",
+                        label: "Dirección",
+                        value: campo.direccion,
+                        accentColor: .blue
+                    )
+
+                    Divider()
+                        .background(Color.blue.opacity(0.2))
+
+                    ModernDetailRow(
+                        icon: "envelope.fill",
+                        label: "Código Postal",
+                        value: campo.codigo_postal,
+                        accentColor: .blue
+                    )
+                }
+                .padding(16)
+                .background(
+                    RoundedRectangle(cornerRadius: 14)
+                        .fill(Color.blue.opacity(0.05))
+                )
+                .transition(.asymmetric(
+                    insertion: .scale(scale: 0.95).combined(with: .opacity),
+                    removal: .scale(scale: 0.95).combined(with: .opacity)
+                ))
+
+                // Botón grande de direcciones (solo visible cuando está expandido)
+                if let lat = campo.latitud, let lon = campo.longitud {
+                    Button(action: {
+                        openDirections(latitude: lat, longitude: lon)
+                    }) {
+                        HStack(spacing: 10) {
+                            Image(systemName: "location.north.circle.fill")
+                                .font(.title3)
+                            Text("Cómo llegar")
+                                .font(.subheadline)
+                                .fontWeight(.semibold)
+                            Spacer()
+                            Image(systemName: "arrow.right")
+                                .font(.caption)
+                                .fontWeight(.bold)
+                        }
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 14)
+                        .background(
+                            LinearGradient(
+                                colors: [.blue, .blue.opacity(0.8)],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
+                        .clipShape(RoundedRectangle(cornerRadius: 14))
+                        .shadow(color: .blue.opacity(0.4), radius: 10, x: 0, y: 5)
+                    }
+                    .transition(.asymmetric(
+                        insertion: .move(edge: .bottom).combined(with: .opacity),
+                        removal: .move(edge: .bottom).combined(with: .opacity)
+                    ))
                 }
             }
         }

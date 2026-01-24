@@ -99,5 +99,7 @@ struct CampoHeroImage: View {
             .frame(maxWidth: .infinity)
         }
         .frame(height: 220)
+        .clipped()
+        .background(Color(UIColor.systemBackground))
     }
 }

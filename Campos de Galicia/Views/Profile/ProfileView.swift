@@ -20,47 +20,8 @@ struct ProfileView: View {
 
     // MARK: - Body
     var body: some View {
-        ScrollView {
-            VStack(spacing: 20) {
-                // Welcome Section
-                welcomeSection
-
-                // XP Progress Bar
-                progressBarView
-
-                // Auto Check-in Toggle
-                autoCheckinSection
-
-                // Statistics
-                ProfileStatsView(
-                    camposVisitados: $profileVM.camposVisitados,
-                    level: $profileVM.level,
-                    totalAchievementsCount: $profileVM.totalAchievementsCount
-                )
-                .padding(.horizontal)
-
-                // Personal Data Section
-                personalDataSection
-
-                // Visit History
-                VisitHistoryView(profileVM: profileVM, onShowDetails: {
-                    showVisitDetails = true
-                })
-                .padding(.horizontal)
-
-                // Preferences
-                PreferencesView(
-                    profileVM: profileVM,
-                    userId: authViewModel.user?.id.uuidString ?? ""
-                )
-                .padding(.horizontal)
-
-                // Action Buttons
-                actionButtonsSection
-            }
-            .padding(.vertical)
-        }
-        .background(
+        ZStack {
+            // Fondo que se extiende por completo
             LinearGradient(
                 gradient: Gradient(colors: [
                     Color.blue.opacity(colorScheme == .dark ? 0.1 : 0.05),
@@ -68,8 +29,50 @@ struct ProfileView: View {
                 ]),
                 startPoint: .top, endPoint: .bottom
             )
-            .ignoresSafeArea()
-        )
+            .edgesIgnoringSafeArea(.all)
+
+            // Contenido
+            ScrollView {
+                VStack(spacing: 20) {
+                    // Welcome Section
+                    welcomeSection
+
+                    // XP Progress Bar
+                    progressBarView
+
+                    // Auto Check-in Toggle
+                    autoCheckinSection
+
+                    // Statistics
+                    ProfileStatsView(
+                        camposVisitados: $profileVM.camposVisitados,
+                        level: $profileVM.level,
+                        totalAchievementsCount: $profileVM.totalAchievementsCount
+                    )
+                    .padding(.horizontal)
+
+                    // Personal Data Section
+                    personalDataSection
+
+                    // Visit History
+                    VisitHistoryView(profileVM: profileVM, onShowDetails: {
+                        showVisitDetails = true
+                    })
+                    .padding(.horizontal)
+
+                    // Preferences
+                    PreferencesView(
+                        profileVM: profileVM,
+                        userId: authViewModel.user?.id.uuidString ?? ""
+                    )
+                    .padding(.horizontal)
+
+                    // Action Buttons
+                    actionButtonsSection
+                }
+                .padding(.vertical)
+            }
+        }
         .navigationTitle("Perfil")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {

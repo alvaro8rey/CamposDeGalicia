@@ -131,7 +131,7 @@ class ProfileViewModel: ObservableObject {
             let visitasResponse = try await supabase.from("visitas")
                 .select("id_campo, created_at")
                 .eq("id_usuario", value: userId)
-                .order("created_at", ascending: true)
+                .order("created_at", ascending: false)
                 .execute()
 
             let jsonObject = try JSONSerialization.jsonObject(with: visitasResponse.data, options: [])
@@ -151,7 +151,7 @@ class ProfileViewModel: ObservableObject {
                           let date = df.date(from: dateString) else { return nil }
                     guard let campo = campos.first(where: { $0.id.uuidString.lowercased() == idCampo.lowercased() }) else { return nil }
                     return (campo, date)
-                }.reversed()
+                }
 
                 historialCampos = Array(allVisits.map { $0.campo }.prefix(3))
 

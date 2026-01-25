@@ -32,52 +32,65 @@ struct ContentView: View {
     @State private var showOnboarding: Bool = false
 
     var body: some View {
-        VStack(spacing: 0) {
-            if camposViewModel.isLoading && filteredCampos.isEmpty {
-                // Usar skeleton loading para mejor UX
-                if isGridView {
-                    SkeletonGridView()
-                } else {
-                    LoadingView(message: "Cargando campos de Galicia...", style: .skeleton)
-                }
-            } else {
-                // Barra de botones y filtros
-                FilterBarView(
-                    isGridView: $isGridView,
-                    isFilterExpanded: $isFilterExpanded
-                )
+        ZStack {
+            // Fondo que se extiende por completo
+            LinearGradient(
+                gradient: Gradient(colors: [
+                    Color.blue.opacity(colorScheme == .dark ? 0.1 : 0.05),
+                    Color.green.opacity(colorScheme == .dark ? 0.1 : 0.05)
+                ]),
+                startPoint: .top, endPoint: .bottom
+            )
+            .edgesIgnoringSafeArea(.all)
 
-                // Contenedor de filtros colapsable
-                if isFilterExpanded {
-                    FiltersView(
-                        searchNombre: $searchNombre,
-                        searchLocalidad: $searchLocalidad,
-                        selectedProvincia: $selectedProvincia,
-                        provincias: provincias,
-                        applyAction: applyFilters,
-                        resetAction: resetFilters
-                    )
-                }
-
-                // Texto con el conteo de campos mostrados
-                Text("Mostrados \(camposMostrados) campos")
-                    .font(.caption)
-                    .foregroundColor(.gray)
-                    .padding(.horizontal)
-                    .padding(.top, 8) // Aumentamos la separación superior
-                    .padding(.bottom, 4)
-
-                // Lista de campos filtrada
-                CampoListView(
-                    filteredCampos: filteredCampos,
-                    isGridView: isGridView,
-                    onRefresh: {
-                        await camposViewModel.refreshCampos()
+            // Contenido
+            VStack(spacing: 0) {
+                if camposViewModel.isLoading && filteredCampos.isEmpty {
+                    // Usar skeleton loading para mejor UX
+                    if isGridView {
+                        SkeletonGridView()
+                    } else {
+                        LoadingView(message: "Cargando campos de Galicia...", style: .skeleton)
                     }
-                )
-                .environmentObject(authViewModel)
+                } else {
+                    // Barra de botones y filtros
+                    FilterBarView(
+                        isGridView: $isGridView,
+                        isFilterExpanded: $isFilterExpanded
+                    )
+
+                    // Contenedor de filtros colapsable
+                    if isFilterExpanded {
+                        FiltersView(
+                            searchNombre: $searchNombre,
+                            searchLocalidad: $searchLocalidad,
+                            selectedProvincia: $selectedProvincia,
+                            provincias: provincias,
+                            applyAction: applyFilters,
+                            resetAction: resetFilters
+                        )
+                    }
+
+                    // Texto con el conteo de campos mostrados
+                    Text("Mostrados \(camposMostrados) campos")
+                        .font(.caption)
+                        .foregroundColor(.gray)
+                        .padding(.horizontal)
+                        .padding(.top, 8) // Aumentamos la separación superior
+                        .padding(.bottom, 4)
+
+                    // Lista de campos filtrada
+                    CampoListView(
+                        filteredCampos: filteredCampos,
+                        isGridView: isGridView,
+                        onRefresh: {
+                            await camposViewModel.refreshCampos()
+                        }
+                    )
+                    .environmentObject(authViewModel)
+                }
+                Spacer()
             }
-            Spacer()
         }
         .navigationTitle("Inicio")
         .navigationBarTitleDisplayMode(.inline)
@@ -100,16 +113,6 @@ struct ContentView: View {
                 .disabled(camposViewModel.isLoading)
             }
         }
-        .background(
-            LinearGradient(
-                gradient: Gradient(colors: [
-                    Color.blue.opacity(colorScheme == .dark ? 0.1 : 0.05),
-                    Color.green.opacity(colorScheme == .dark ? 0.1 : 0.05)
-                ]),
-                startPoint: .top, endPoint: .bottom
-            )
-            .ignoresSafeArea()
-        )
         .onChange(of: camposViewModel.campos) { oldCampos, newCampos in
             print("Campos cambió, actualizando filteredCampos: \(newCampos.count) campos")
             filteredCampos = newCampos

@@ -41,6 +41,17 @@ struct CamposCercanosView: View {
 
     var body: some View {
         ZStack {
+            // Fondo que se extiende por completo
+            LinearGradient(
+                gradient: Gradient(colors: [
+                    Color.blue.opacity(colorScheme == .dark ? 0.1 : 0.05),
+                    Color.green.opacity(colorScheme == .dark ? 0.1 : 0.05)
+                ]),
+                startPoint: .top, endPoint: .bottom
+            )
+            .edgesIgnoringSafeArea(.all)
+
+            // Contenido
             VStack(spacing: 12) {
                 // ✅ Contenedor fijo arriba con el selector
                 DistancePickerCard(selectedDistance: $selectedDistance, distanciaPredeterminada: distanciaPredeterminada)
@@ -92,16 +103,6 @@ struct CamposCercanosView: View {
                         .foregroundColor(.primary)
                 }
             }
-            .background(
-                LinearGradient(
-                    gradient: Gradient(colors: [
-                        Color.blue.opacity(colorScheme == .dark ? 0.1 : 0.05),
-                        Color.green.opacity(colorScheme == .dark ? 0.1 : 0.05)
-                    ]),
-                    startPoint: .top, endPoint: .bottom
-                )
-                .ignoresSafeArea()
-            )
             .onAppear {
                 updateNearbyCampos()
                 if userLocation == nil { requestLocation() }

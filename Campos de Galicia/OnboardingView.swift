@@ -41,6 +41,7 @@ final class LocationPermissionManager: NSObject, ObservableObject, CLLocationMan
 struct OnboardingView: View {
     @Environment(\.dismiss) private var dismiss
     @AppStorage("hasSeenOnboarding") private var hasSeenOnboarding: Bool = false
+    @EnvironmentObject var localization: LocalizationManager
 
     @StateObject private var locationPerm = LocationPermissionManager()
     @State private var notifStatus: UNAuthorizationStatus = .notDetermined
@@ -90,9 +91,9 @@ struct OnboardingView: View {
             Image(systemName: "figure.walk.circle.fill")
                 .font(.system(size: 72))
                 .foregroundColor(.blue)
-            Text("¡Bienvenido a Campos de Galicia!")
+            Text(L(.onboardingWelcomeTitle))
                 .font(.title2).fontWeight(.bold)
-            Text("Descubre los campos de fútbol de toda Galicia. Visita, explora y colecciona ubicaciones reales mientras ganas XP.")
+            Text(L(.onboardingWelcomeMessage))
                 .font(.subheadline)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
@@ -108,12 +109,12 @@ struct OnboardingView: View {
             Image(systemName: "trophy.fill")
                 .font(.system(size: 64))
                 .foregroundColor(.orange)
-            Text("Misiones y XP")
+            Text(L(.onboardingMissionsTitle))
                 .font(.title3).fontWeight(.bold)
             VStack(alignment: .leading, spacing: 10) {
-                bullet("Marca campos como visitados cuando estés **cerca del campo** (500m).")
-                bullet("Completa misiones visitando campos y manteniendo **rachas diarias**.")
-                bullet("Gana XP y sube de nivel. ¡Explora Galicia y progresa!")
+                bullet(L(.onboardingMissionsBullet1))
+                bullet(L(.onboardingMissionsBullet2))
+                bullet(L(.onboardingMissionsBullet3))
             }
             .padding(.horizontal, 24)
             Spacer()
@@ -128,20 +129,20 @@ struct OnboardingView: View {
                 .font(.system(size: 64))
                 .foregroundColor(.green)
 
-            Text("Auto Check-in")
+            Text(L(.onboardingAutoCheckinTitle))
                 .font(.title3).fontWeight(.bold)
 
-            Text("El auto check-in registra tu visita automáticamente cuando estés **cerca de un campo (500m)** y permanezcas allí **2 minutos**.")
+            Text(LocalizedStringKey(L(.onboardingAutoCheckinMessage)))
                 .font(.subheadline)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 24)
 
             VStack(alignment: .leading, spacing: 10) {
-                bullet("Funciona en segundo plano con muy bajo consumo de batería.")
-                bullet("No rastrea tu ubicación constantemente.")
-                bullet("Requiere permanencia de 2 minutos en el área.")
-                bullet("Solo se registra una vez por campo.")
+                bullet(L(.onboardingAutoCheckinBullet1))
+                bullet(L(.onboardingAutoCheckinBullet2))
+                bullet(L(.onboardingAutoCheckinBullet3))
+                bullet(L(.onboardingAutoCheckinBullet4))
             }
             .padding(.horizontal, 24)
 
@@ -156,9 +157,9 @@ struct OnboardingView: View {
             Image(systemName: "bell.badge.fill")
                 .font(.system(size: 64))
                 .foregroundColor(.purple)
-            Text("Notificaciones")
+            Text(L(.onboardingNotificationsTitle))
                 .font(.title3).fontWeight(.bold)
-            Text("Te avisaremos cuando tu **recompensa diaria** esté lista y cuando visites un campo automáticamente.")
+            Text(LocalizedStringKey(L(.onboardingNotificationsMessage)))
                 .font(.subheadline)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
@@ -173,7 +174,7 @@ struct OnboardingView: View {
                 }) {
                     HStack {
                         Image(systemName: "bell.badge")
-                        Text("Permitir Notificaciones")
+                        Text(L(.onboardingNotificationsButton))
                     }
                     .frame(maxWidth: .infinity)
                     .padding()
@@ -197,9 +198,9 @@ struct OnboardingView: View {
             Image(systemName: "location.fill.viewfinder")
                 .font(.system(size: 64))
                 .foregroundColor(.pink)
-            Text("Permitir ubicación")
+            Text(L(.onboardingLocationTitle))
                 .font(.title3).fontWeight(.bold)
-            Text("Necesitamos tu ubicación **solo** para verificar que visitas los campos de verdad y registrar tus logros.")
+            Text(LocalizedStringKey(L(.onboardingLocationMessage)))
                 .font(.subheadline)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
@@ -214,7 +215,7 @@ struct OnboardingView: View {
                 }) {
                     HStack {
                         Image(systemName: "location.fill")
-                        Text("Permitir Ubicación")
+                        Text(L(.onboardingLocationButton))
                     }
                     .frame(maxWidth: .infinity)
                     .padding()
@@ -235,7 +236,7 @@ struct OnboardingView: View {
     // MARK: Bottom bar
     private var bottomBar: some View {
         HStack {
-            Button("Saltar") {
+            Button(L(.skip)) {
                 hasSeenOnboarding = true
                 dismiss()
             }
@@ -244,12 +245,12 @@ struct OnboardingView: View {
             Spacer()
 
             if page < totalPages - 1 {
-                Button("Siguiente") {
+                Button(L(.next)) {
                     withAnimation { page += 1 }
                 }
                 .fontWeight(.semibold)
             } else {
-                Button("Empezar") {
+                Button(L(.start)) {
                     hasSeenOnboarding = true
                     dismiss()
                 }
@@ -292,23 +293,23 @@ struct OnboardingView: View {
             switch type {
             case .location:
                 if !locationPerm.servicesEnabled {
-                    Text("Servicios de localización desactivados")
+                    Text(L(.onboardingLocationServicesDisabled))
                         .font(.footnote)
                         .foregroundColor(.orange)
                 }
 
                 switch locationPerm.status {
                 case .authorizedAlways, .authorizedWhenInUse:
-                    Label("Permisos otorgados", systemImage: "checkmark.seal.fill")
+                    Label(L(.onboardingPermissionsGranted), systemImage: "checkmark.seal.fill")
                         .foregroundColor(.green)
                         .font(.footnote).bold()
 
                 case .denied, .restricted:
                     VStack(spacing: 6) {
-                        Label("Permisos denegados", systemImage: "xmark.seal.fill")
+                        Label(L(.onboardingPermissionsDenied), systemImage: "xmark.seal.fill")
                             .foregroundColor(.red)
                             .font(.footnote).bold()
-                        Button("Abrir Ajustes") {
+                        Button(L(.onboardingOpenSettings)) {
                             locationPerm.openSettings()
                         }
                         .font(.caption).bold()
@@ -319,12 +320,12 @@ struct OnboardingView: View {
                     }
 
                 case .notDetermined:
-                    Label("Permiso no determinado", systemImage: "questionmark.circle")
+                    Label(L(.onboardingPermissionsNotDetermined), systemImage: "questionmark.circle")
                         .foregroundColor(.secondary)
                         .font(.footnote)
 
                 @unknown default:
-                    Label("Estado desconocido", systemImage: "exclamationmark.triangle")
+                    Label(L(.onboardingPermissionsUnknown), systemImage: "exclamationmark.triangle")
                         .foregroundColor(.secondary)
                         .font(.footnote)
                 }
@@ -332,15 +333,15 @@ struct OnboardingView: View {
             case .notifications:
                 switch notifStatus {
                 case .authorized, .provisional, .ephemeral:
-                    Label("Permisos otorgados", systemImage: "checkmark.seal.fill")
+                    Label(L(.onboardingPermissionsGranted), systemImage: "checkmark.seal.fill")
                         .foregroundColor(.green)
                         .font(.footnote).bold()
                 case .denied:
                     VStack(spacing: 6) {
-                        Label("Permisos denegados", systemImage: "xmark.seal.fill")
+                        Label(L(.onboardingPermissionsDenied), systemImage: "xmark.seal.fill")
                             .foregroundColor(.red)
                             .font(.footnote).bold()
-                        Button("Abrir Ajustes") {
+                        Button(L(.onboardingOpenSettings)) {
                             if let url = URL(string: UIApplication.openSettingsURLString) {
                                 UIApplication.shared.open(url)
                             }
@@ -352,11 +353,11 @@ struct OnboardingView: View {
                         .cornerRadius(8)
                     }
                 case .notDetermined:
-                    Label("Permiso no determinado", systemImage: "questionmark.circle")
+                    Label(L(.onboardingPermissionsNotDetermined), systemImage: "questionmark.circle")
                         .foregroundColor(.secondary)
                         .font(.footnote)
                 @unknown default:
-                    Label("Estado desconocido", systemImage: "exclamationmark.triangle")
+                    Label(L(.onboardingPermissionsUnknown), systemImage: "exclamationmark.triangle")
                         .foregroundColor(.secondary)
                         .font(.footnote)
                 }
@@ -370,13 +371,16 @@ struct OnboardingView: View {
 // MARK: - Preview
 #Preview {
     OnboardingView()
+        .environmentObject(LocalizationManager.shared)
 }
 
 #Preview("Página de Bienvenida") {
     OnboardingView()
+        .environmentObject(LocalizationManager.shared)
 }
 
 #Preview("Modo Oscuro") {
     OnboardingView()
+        .environmentObject(LocalizationManager.shared)
         .preferredColorScheme(.dark)
 }

@@ -36,7 +36,8 @@ final class GeofenceManager: NSObject, ObservableObject, CLLocationManagerDelega
         super.init()
         locationManager.delegate = self
         // No activamos GPS continuo -> optimiza batería
-        locationManager.desiredAccuracy = kCLLocationAccuracyHundredMeters
+        // Usamos precisión de 10m para mejor detección de geovallas (balance consumo/precisión)
+        locationManager.desiredAccuracy = kCLLocationAccuracyNearestTenMeters
         locationManager.pausesLocationUpdatesAutomatically = true
         locationManager.allowsBackgroundLocationUpdates = true
 

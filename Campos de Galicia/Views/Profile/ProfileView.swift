@@ -368,7 +368,7 @@ struct InfoSheetView: View {
                     VStack(alignment: .leading, spacing: 8) {
                         Label("Permisos de ubicación 'Siempre'", systemImage: "location.fill")
                         Label("Mantener la app en segundo plano", systemImage: "app.badge")
-                        Label("Estar dentro de 100m del campo", systemImage: "circle.circle")
+                        Label("Estar dentro de 500m del campo", systemImage: "circle.circle")
                     }
                     .font(.subheadline)
 

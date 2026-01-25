@@ -130,7 +130,7 @@ struct OnboardingView: View {
                 .foregroundColor(.green)
             Text("Auto Check-in")
                 .font(.title3).fontWeight(.bold)
-            Text("El auto check-in registra automáticamente tu visita cuando estás **a menos de 250 m** de un campo y permaneces allí unos minutos.")
+            Text("El auto check-in registra automáticamente tu visita cuando estás **a menos de 500 m** de un campo y permaneces allí unos minutos.")
                 .font(.subheadline)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)

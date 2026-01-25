@@ -91,6 +91,16 @@ final class GeofenceManager: NSObject, ObservableObject, CLLocationManagerDelega
         registerGeofences()
     }
 
+    /// Cancela el temporizador de dwell para un campo (llamar cuando se marca manualmente)
+    func cancelPendingDwell(for campoId: UUID) {
+        if let timer = pendingDwells.removeValue(forKey: campoId) {
+            timer.invalidate()
+            print("🛑 Dwell cancelado para campo \(campoId) (marca manual)")
+        }
+        // Marcar como recientemente visitado para evitar que se reactive
+        recentlyCheckedIn.insert(campoId)
+    }
+
     // MARK: - CoreLocation: autorización y registro
 
     private func startMonitoringIfAuthorized() {
@@ -242,6 +252,8 @@ final class GeofenceManager: NSObject, ObservableObject, CLLocationManagerDelega
                 }
             } catch {
                 print("❌ Error al completar dwell: \(error.localizedDescription)")
+                // Notificar al usuario del error
+                await self.notifyAutoCheckinError(name: campo.nombre, error: error)
             }
         }
     }
@@ -249,46 +261,40 @@ final class GeofenceManager: NSObject, ObservableObject, CLLocationManagerDelega
     // MARK: - Supabase helpers
 
     /// Comprueba si existe ya una visita **hoy** para (usuario, campo).
+    /// Usa calendario local para evitar problemas con cambios de zona horaria.
     private func hasVisitToday(userId: String, campoId: String) async throws -> Bool {
-        // Comienzo del día local -> ISO8601 en UTC para comparar con `created_at` (que suele guardarse en UTC)
-        let startOfDayLocal = Calendar.current.startOfDay(for: Date())
-        let isoUTC = iso8601UTCString(from: startOfDayLocal)
+        let now = Date()
+        let calendar = Calendar.current
+
+        // Buscar visitas de los últimos 2 días para cubrir cambios de zona horaria
+        let twoDaysAgo = calendar.date(byAdding: .day, value: -2, to: now) ?? now
+        let isoTwoDaysAgo = ISO8601DateFormatter().string(from: twoDaysAgo)
 
         let resp = try await supabase
             .from("visitas")
             .select("id, created_at", head: false, count: .exact)
             .eq("id_usuario", value: userId)
             .eq("id_campo", value: campoId)
-            .gte("created_at", value: isoUTC)
-            .limit(1)
+            .gte("created_at", value: isoTwoDaysAgo)
             .execute()
 
-        if let json = try? JSONSerialization.jsonObject(with: resp.data) as? [[String: Any]] {
-            return !json.isEmpty
+        guard let json = try? JSONSerialization.jsonObject(with: resp.data) as? [[String: Any]] else {
+            return false
         }
-        return false
-    }
 
-    /// Convierte fecha local a string ISO8601 en UTC (ej. "2025-01-08T00:00:00Z")
-    private func iso8601UTCString(from date: Date) -> String {
-        guard let utc = TimeZone(secondsFromGMT: 0) else {
-            // Fallback: usar la fecha original si no se puede crear la timezone UTC
-            let formatter = ISO8601DateFormatter()
-            return formatter.string(from: date)
-        }
-        var cal = Calendar(identifier: .gregorian)
-        cal.timeZone = utc
-        let comps = cal.dateComponents([.year, .month, .day, .hour, .minute, .second], from: date)
-
+        // Filtrar visitas que sean del día de hoy según calendario local
         let formatter = ISO8601DateFormatter()
-        formatter.timeZone = utc
-        formatter.formatOptions = [.withInternetDateTime, .withColonSeparatorInTime]
-
-        guard let reconstructedDate = cal.date(from: comps) else {
-            // Fallback: usar la fecha original si no se puede reconstruir
-            return formatter.string(from: date)
+        for visit in json {
+            if let createdAtString = visit["created_at"] as? String,
+               let createdAtDate = formatter.date(from: createdAtString) {
+                // Comparar si es el mismo día en el calendario local
+                if calendar.isDate(createdAtDate, inSameDayAs: now) {
+                    return true
+                }
+            }
         }
-        return formatter.string(from: reconstructedDate)
+
+        return false
     }
 
     @MainActor
@@ -302,6 +308,20 @@ final class GeofenceManager: NSObject, ObservableObject, CLLocationManagerDelega
         let req = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: trigger)
         UNUserNotificationCenter.current().add(req) { err in
             if let err { print("❌ Notif auto-checkin: \(err.localizedDescription)") }
+        }
+    }
+
+    @MainActor
+    private func notifyAutoCheckinError(name: String, error: Error) async {
+        let content = UNMutableNotificationContent()
+        content.title = "Error en auto check-in"
+        content.body = "No se pudo registrar la visita a \(name). Verifica tu conexión."
+        content.sound = .default
+
+        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false)
+        let req = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: trigger)
+        UNUserNotificationCenter.current().add(req) { err in
+            if let err { print("❌ Notif error auto-checkin: \(err.localizedDescription)") }
         }
     }
 

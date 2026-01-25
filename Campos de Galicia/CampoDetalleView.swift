@@ -9,6 +9,7 @@ struct CampoDetalleView: View {
     // MARK: - Environment
     @EnvironmentObject var camposViewModel: CamposViewModel
     @EnvironmentObject var authViewModel: AuthViewModel
+    @EnvironmentObject var geofenceManager: GeofenceManager
     @Environment(\.colorScheme) var colorScheme
 
     // MARK: - State
@@ -281,6 +282,8 @@ struct CampoDetalleView: View {
             await MainActor.run {
                 isVisited = true
                 ToastManager.shared.success("✅ ¡Visitado! \(campo.nombre)")
+                // Cancelar temporizador de auto check-in si estaba pendiente
+                geofenceManager.cancelPendingDwell(for: campo.id)
             }
             NotificationCenter.default.post(name: .didUpdateVisits, object: nil)
         } catch {

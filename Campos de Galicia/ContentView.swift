@@ -539,61 +539,77 @@ struct CampoListView: View {
 
     var body: some View {
         ScrollView {
-            LazyVStack(spacing: 0) {
-                ForEach(filteredCampos, id: \.id) { campo in
-                    if isGridView {
-                        // Vista en cuadrados (tarjetas)
+            if isGridView {
+                // Vista en cuadrados (2 columnas)
+                let columns = [
+                    GridItem(.flexible(), spacing: 12),
+                    GridItem(.flexible(), spacing: 12)
+                ]
+
+                LazyVGrid(columns: columns, spacing: 12) {
+                    ForEach(filteredCampos, id: \.id) { campo in
                         NavigationLink(destination: CampoDetalleView(campoID: campo.id)
                             .environmentObject(authViewModel)) {
                             ZStack(alignment: .topTrailing) {
-                                VStack(alignment: .leading, spacing: 8) {
+                                VStack(alignment: .leading, spacing: 6) {
                                     let imageURL = (campo.foto_url?.isEmpty == false ? campo.foto_url : nil) ?? defaultImageURL
                                     if let url = URL(string: imageURL) {
                                         CachedAsyncImage(
                                             url: url,
-                                            targetSize: CGSize(width: 1200, height: 600)
+                                            targetSize: CGSize(width: 400, height: 400)
                                         ) { image in
                                             image
                                                 .resizable()
                                                 .scaledToFill()
-                                                .frame(width: UIScreen.main.bounds.width - 40, height: 180)
-                                                .cornerRadius(12)
+                                                .frame(height: 120)
+                                                .cornerRadius(10)
                                                 .clipped()
                                         } placeholder: {
                                             Color.gray.opacity(0.3)
-                                                .frame(width: UIScreen.main.bounds.width - 40, height: 180)
-                                                .cornerRadius(12)
+                                                .frame(height: 120)
+                                                .cornerRadius(10)
                                         }
                                     }
 
                                     Text(campo.nombre)
-                                        .font(.title3)
-                                        .fontWeight(.bold)
+                                        .font(.subheadline)
+                                        .fontWeight(.semibold)
                                         .foregroundColor(.primary)
+                                        .lineLimit(2)
+                                        .multilineTextAlignment(.leading)
 
-                                    Text("\(campo.localidad), \(campo.provincia)")
-                                        .font(.caption)
+                                    Text("\(campo.localidad ?? ""), \(campo.provincia)")
+                                        .font(.caption2)
                                         .foregroundColor(.secondary)
+                                        .lineLimit(1)
                                 }
+                                .padding(8)
+                                .background(Color(UIColor.secondarySystemBackground))
+                                .cornerRadius(12)
 
                                 // Indicador de campo visitado
                                 if visitedCampoIds.contains(campo.id) {
                                     Image(systemName: "checkmark.circle.fill")
-                                        .font(.system(size: 28))
+                                        .font(.system(size: 22))
                                         .foregroundColor(.orange)
                                         .background(
                                             Circle()
                                                 .fill(Color.white)
-                                                .frame(width: 24, height: 24)
+                                                .frame(width: 18, height: 18)
                                         )
-                                        .padding(12)
+                                        .padding(8)
                                 }
                             }
-                            .padding()
                         }
                         .buttonStyle(PlainButtonStyle())
-                    } else {
-                        // Vista en lista
+                    }
+                }
+                .padding(.horizontal)
+                .padding(.top, 8)
+            } else {
+                // Vista en lista
+                LazyVStack(spacing: 0) {
+                    ForEach(filteredCampos, id: \.id) { campo in
                         NavigationLink(destination: CampoDetalleView(campoID: campo.id)
                             .environmentObject(authViewModel)) {
                             HStack(spacing: 12) {

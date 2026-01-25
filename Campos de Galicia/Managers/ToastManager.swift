@@ -39,13 +39,13 @@ class ToastManager: ObservableObject {
 
     /// Muestra un toast de XP ganado
     func xpGained(_ amount: Int, reason: String, duration: Double = 3.0) {
-        let message = "+\(amount) XP - \(reason)"
+        let message = LocalizationManager.shared.localized(.toastXPGained, amount, reason)
         show(Toast(type: .xp, message: message, duration: duration))
     }
 
     /// Muestra un toast de subida de nivel
     func levelUp(_ level: Int, duration: Double = 4.0) {
-        let message = "⬆️ ¡Nivel \(level) alcanzado!"
+        let message = LocalizationManager.shared.localized(.toastLevelUp, level)
         show(Toast(type: .levelUp, message: message, duration: duration))
     }
 

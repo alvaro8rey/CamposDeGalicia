@@ -562,10 +562,12 @@ struct CampoListView: View {
                                             image
                                                 .resizable()
                                                 .aspectRatio(contentMode: .fill)
+                                                .frame(maxWidth: .infinity)
                                                 .frame(height: 100)
                                                 .clipped()
                                         } placeholder: {
                                             Color.gray.opacity(0.3)
+                                                .frame(maxWidth: .infinity)
                                                 .frame(height: 100)
                                         }
                                     }

@@ -128,18 +128,21 @@ struct OnboardingView: View {
             Image(systemName: "location.circle.fill")
                 .font(.system(size: 64))
                 .foregroundColor(.green)
+
             Text("Auto Check-in")
                 .font(.title3).fontWeight(.bold)
-            Text("El auto check-in registra automáticamente tu visita cuando estás **a menos de 500 m** de un campo y permaneces allí unos minutos.")
+
+            Text("El auto check-in registra automáticamente tu visita cuando estás **dentro de 500 m** de un campo y permaneces allí **2 minutos**.")
                 .font(.subheadline)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 24)
 
-            VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .leading, spacing: 10) {
                 bullet("Funciona con geovallas del sistema (muy bajo consumo).")
                 bullet("No usa tu ubicación constantemente.")
-                bullet("Si ya habías visitado ese campo, no se repite.")
+                bullet("Requiere permanencia de 2 minutos en el área.")
+                bullet("Solo se registra una vez por campo.")
             }
             .padding(.horizontal, 24)
 

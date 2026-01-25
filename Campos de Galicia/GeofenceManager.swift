@@ -227,10 +227,10 @@ final class GeofenceManager: NSObject, ObservableObject, CLLocationManagerDelega
                 let userId = user.id.uuidString
                 let campoId = campo.id.uuidString
 
-                // 1) ¿Ya hay visita HOY?
-                let alreadyToday = try await self.hasVisitToday(userId: userId, campoId: campoId)
-                if alreadyToday {
-                    print("ℹ️ Ya existía visita HOY para \(campo.nombre); no se duplica.")
+                // 1) ¿Ya hay visita registrada?
+                let alreadyVisited = try await self.hasVisit(userId: userId, campoId: campoId)
+                if alreadyVisited {
+                    print("ℹ️ Ya existía visita para \(campo.nombre); no se duplica.")
                     self.recentlyCheckedIn.insert(campo.id)
                     return
                 }
@@ -260,40 +260,19 @@ final class GeofenceManager: NSObject, ObservableObject, CLLocationManagerDelega
 
     // MARK: - Supabase helpers
 
-    /// Comprueba si existe ya una visita **hoy** para (usuario, campo).
-    /// Usa calendario local para evitar problemas con cambios de zona horaria.
-    private func hasVisitToday(userId: String, campoId: String) async throws -> Bool {
-        let now = Date()
-        let calendar = Calendar.current
-
-        // Buscar visitas de los últimos 2 días para cubrir cambios de zona horaria
-        let twoDaysAgo = calendar.date(byAdding: .day, value: -2, to: now) ?? now
-        let isoTwoDaysAgo = ISO8601DateFormatter().string(from: twoDaysAgo)
-
+    /// Comprueba si existe ya una visita para (usuario, campo) sin importar la fecha.
+    private func hasVisit(userId: String, campoId: String) async throws -> Bool {
         let resp = try await supabase
             .from("visitas")
-            .select("id, created_at", head: false, count: .exact)
+            .select("id", head: false, count: .exact)
             .eq("id_usuario", value: userId)
             .eq("id_campo", value: campoId)
-            .gte("created_at", value: isoTwoDaysAgo)
+            .limit(1)
             .execute()
 
-        guard let json = try? JSONSerialization.jsonObject(with: resp.data) as? [[String: Any]] else {
-            return false
+        if let json = try? JSONSerialization.jsonObject(with: resp.data) as? [[String: Any]] {
+            return !json.isEmpty
         }
-
-        // Filtrar visitas que sean del día de hoy según calendario local
-        let formatter = ISO8601DateFormatter()
-        for visit in json {
-            if let createdAtString = visit["created_at"] as? String,
-               let createdAtDate = formatter.date(from: createdAtString) {
-                // Comparar si es el mismo día en el calendario local
-                if calendar.isDate(createdAtDate, inSameDayAs: now) {
-                    return true
-                }
-            }
-        }
-
         return false
     }
 

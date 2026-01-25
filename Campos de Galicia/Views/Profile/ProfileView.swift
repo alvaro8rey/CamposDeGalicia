@@ -358,17 +358,30 @@ struct InfoSheetView: View {
                         .font(.title2)
                         .fontWeight(.bold)
 
-                    Text("El auto check-in te permite registrar visitas a campos automáticamente cuando permaneces cerca de ellos durante al menos 2 minutos.")
+                    Text("El auto check-in registra automáticamente tu visita cuando estás dentro de 500m de un campo y permaneces allí durante 2 minutos.")
                         .font(.body)
+
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Cómo funciona:")
+                            .font(.headline)
+                            .padding(.top, 8)
+
+                        Label("Detecta cuando entras en 500m de un campo", systemImage: "location.circle")
+                        Label("Espera 2 minutos de permanencia en el área", systemImage: "clock")
+                        Label("Registra la visita automáticamente", systemImage: "checkmark.circle.fill")
+                        Label("No se repite si ya visitaste el campo", systemImage: "shield.checkered")
+                    }
+                    .font(.subheadline)
+                    .padding(.vertical, 8)
 
                     Text("Requisitos:")
                         .font(.headline)
-                        .padding(.top)
+                        .padding(.top, 8)
 
                     VStack(alignment: .leading, spacing: 8) {
                         Label("Permisos de ubicación 'Siempre'", systemImage: "location.fill")
                         Label("Mantener la app en segundo plano", systemImage: "app.badge")
-                        Label("Estar dentro de 500m del campo", systemImage: "circle.circle")
+                        Label("Conexión a internet para guardar", systemImage: "wifi")
                     }
                     .font(.subheadline)
 

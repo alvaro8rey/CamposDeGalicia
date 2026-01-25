@@ -10,6 +10,7 @@ struct CampoDetalleView: View {
     @EnvironmentObject var camposViewModel: CamposViewModel
     @EnvironmentObject var authViewModel: AuthViewModel
     @EnvironmentObject var geofenceManager: GeofenceManager
+    @EnvironmentObject var localizationManager: LocalizationManager
     @Environment(\.colorScheme) var colorScheme
 
     // MARK: - State
@@ -121,7 +122,7 @@ struct CampoDetalleView: View {
                 }
                 .background(Color(UIColor.systemBackground))
             } else {
-                LoadingView(message: "Cargando información del campo...", style: .shimmer)
+                LoadingView(message: L(.campoLoading), style: .shimmer)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .padding()
             }
@@ -136,7 +137,7 @@ struct CampoDetalleView: View {
             )
             .ignoresSafeArea()
         )
-        .navigationTitle(campo?.nombre ?? "Campo")
+        .navigationTitle(campo?.nombre ?? L(.campoDefaultName))
         .navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $showingContribucionForm) {
             if let campo = campoValue {
@@ -166,16 +167,16 @@ struct CampoDetalleView: View {
         }
         .alert(isPresented: $showLocationAlert) {
             Alert(
-                title: Text("No se pudo marcar la visita"),
+                title: Text(L(.campoVisitErrorTitle)),
                 message: Text(locationAlertMessage),
-                dismissButton: .default(Text("OK"))
+                dismissButton: .default(Text(L(.ok)))
             )
         }
         .alert(isPresented: $showVisitSuccessAlert) {
             Alert(
-                title: Text("✅ ¡Éxito!"),
+                title: Text(L(.campoVisitSuccessTitle)),
                 message: Text(visitSuccessMessage),
-                dismissButton: .default(Text("OK")) {
+                dismissButton: .default(Text(L(.ok))) {
                     errorMessage = nil
                 }
             )

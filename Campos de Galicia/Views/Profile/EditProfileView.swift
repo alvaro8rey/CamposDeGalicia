@@ -8,6 +8,7 @@ struct EditProfileView: View {
     // MARK: - Environment
     @Environment(\.dismiss) var dismiss
     @EnvironmentObject var authViewModel: AuthViewModel
+    @EnvironmentObject var localizationManager: LocalizationManager
 
     // MARK: - State
     @State private var nombre: String
@@ -62,7 +63,7 @@ struct EditProfileView: View {
                         // Photo Picker Button
                         PhotosPicker(selection: $selectedPhotoItem, matching: .images) {
                             Label(
-                                authViewModel.avatarURL == nil && selectedPhotoData == nil ? "Añadir foto" : "Cambiar foto",
+                                authViewModel.avatarURL == nil && selectedPhotoData == nil ? L(.editProfileAddPhoto) : L(.editProfileChangePhoto),
                                 systemImage: "camera.fill"
                             )
                             .font(.subheadline)
@@ -87,7 +88,7 @@ struct EditProfileView: View {
                                     showDeletePhotoConfirmation = true
                                 }
                             } label: {
-                                Label("Eliminar foto", systemImage: "trash.fill")
+                                Label(L(.editProfileDeletePhoto), systemImage: "trash.fill")
                                     .font(.subheadline)
                                     .fontWeight(.medium)
                             }
@@ -96,26 +97,26 @@ struct EditProfileView: View {
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 8)
                 } header: {
-                    Label("Foto de Perfil", systemImage: "person.crop.circle.fill")
+                    Label(L(.editProfilePhotoSection), systemImage: "person.crop.circle.fill")
                 }
 
                 // MARK: - Personal Info Section
                 Section {
-                    TextField("Nombre", text: $nombre)
+                    TextField(L(.editProfileNamePlaceholder), text: $nombre)
                         .textContentType(.givenName)
                         .autocapitalization(.words)
 
-                    TextField("Apellidos", text: $apellidos)
+                    TextField(L(.editProfileSurnamePlaceholder), text: $apellidos)
                         .textContentType(.familyName)
                         .autocapitalization(.words)
                 } header: {
-                    Label("Información Personal", systemImage: "person.fill")
+                    Label(L(.editProfilePersonalInfo), systemImage: "person.fill")
                 }
 
                 // MARK: - Email Section
                 Section {
                     HStack {
-                        TextField("Email", text: $email)
+                        TextField(L(.editProfileEmailPlaceholder), text: $email)
                             .textContentType(.emailAddress)
                             .keyboardType(.emailAddress)
                             .autocapitalization(.none)
@@ -127,19 +128,19 @@ struct EditProfileView: View {
                     }
 
                     Button(action: {
-                        errorMessage = "⚠️ El cambio de email con verificación estará disponible próximamente"
+                        errorMessage = L(.editProfileEmailChangeWarning)
                     }) {
                         HStack {
                             Image(systemName: "envelope.badge.shield.half.filled")
                                 .foregroundColor(.blue)
-                            Text("Solicitar cambio de email")
+                            Text(L(.editProfileRequestEmailChange))
                                 .foregroundColor(.blue)
                         }
                     }
                 } header: {
-                    Label("Email", systemImage: "envelope.fill")
+                    Label(L(.editProfileEmailSection), systemImage: "envelope.fill")
                 } footer: {
-                    Text("El cambio de email requiere verificación mediante código enviado a tu nuevo correo. Esta funcionalidad estará disponible próximamente.")
+                    Text(L(.editProfileEmailChangeFooter))
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
@@ -147,14 +148,14 @@ struct EditProfileView: View {
                 // MARK: - Password Section
                 Section {
                     Toggle(isOn: $showPasswordFields) {
-                        Label("Cambiar contraseña", systemImage: "key.fill")
+                        Label(L(.editProfileChangePassword), systemImage: "key.fill")
                     }
 
                     if showPasswordFields {
-                        SecureField("Nueva contraseña", text: $newPassword)
+                        SecureField(L(.editProfileNewPassword), text: $newPassword)
                             .textContentType(.newPassword)
 
-                        SecureField("Confirmar contraseña", text: $confirmPassword)
+                        SecureField(L(.editProfileConfirmPassword), text: $confirmPassword)
                             .textContentType(.newPassword)
 
                         if !newPassword.isEmpty {
@@ -162,10 +163,10 @@ struct EditProfileView: View {
                         }
                     }
                 } header: {
-                    Label("Seguridad", systemImage: "lock.shield.fill")
+                    Label(L(.editProfilePasswordSection), systemImage: "lock.shield.fill")
                 } footer: {
                     if showPasswordFields {
-                        Text("La contraseña debe tener al menos 8 caracteres, una mayúscula, una minúscula y un número.")
+                        Text(L(.editProfilePasswordFooter))
                             .font(.caption)
                     }
                 }
@@ -203,32 +204,32 @@ struct EditProfileView: View {
                     }
                 }
             }
-            .navigationTitle("Editar Perfil")
+            .navigationTitle(L(.editProfileTitle))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancelar") {
+                    Button(L(.cancel)) {
                         dismiss()
                     }
                 }
 
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Guardar") {
+                    Button(L(.save)) {
                         Task { await saveChanges() }
                     }
                     .disabled(isLoading || !isValid)
                 }
             }
             .disabled(isLoading)
-            .alert("¿Eliminar foto de perfil?", isPresented: $showDeletePhotoConfirmation) {
-                Button("Cancelar", role: .cancel) {}
-                Button("Eliminar", role: .destructive) {
+            .alert(L(.editProfileDeletePhoto) + "?", isPresented: $showDeletePhotoConfirmation) {
+                Button(L(.cancel), role: .cancel) {}
+                Button(L(.registerDeletePhoto), role: .destructive) {
                     Task {
                         await deletePhoto()
                     }
                 }
             } message: {
-                Text("Esta acción no se puede deshacer.")
+                Text(L(.editProfileDeletePhotoConfirm))
             }
             .overlay {
                 if isLoading {
@@ -239,7 +240,7 @@ struct EditProfileView: View {
                         VStack(spacing: 12) {
                             ProgressView()
                                 .scaleEffect(1.5)
-                            Text("Guardando cambios...")
+                            Text(L(.editProfileSavingChanges))
                                 .foregroundColor(.white)
                         }
                         .padding()
@@ -257,7 +258,7 @@ struct EditProfileView: View {
             let strength = passwordStrength(newPassword)
 
             HStack {
-                Text("Fortaleza:")
+                Text(L(.editProfilePasswordStrength))
                     .font(.caption)
                     .foregroundColor(.secondary)
 

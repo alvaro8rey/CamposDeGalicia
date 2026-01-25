@@ -115,8 +115,10 @@ enum LocalizedKey: String {
     case campoVisitSuccess = "campo.visit.success"
     case campoVisitSuccessTitle = "campo.visit.success.title"
     case campoVisitError = "campo.visit.error"
+    case campoVisitErrorTitle = "campo.visit.error.title"
     case campoUnvisitSuccess = "campo.unvisit.success"
     case campoUnvisitError = "campo.unvisit.error"
+    case campoDefaultName = "campo.default.name"
 
     // MARK: - Logros
     case logrosTitle = "logros.title"
@@ -306,6 +308,30 @@ enum LocalizedKey: String {
     case levelsBenefitsDesc = "levels.benefits.desc"
     case levelsTotal = "levels.total"
 
+    // MARK: - Edit Profile
+    case editProfileTitle = "edit.profile.title"
+    case editProfileAddPhoto = "edit.profile.add.photo"
+    case editProfileChangePhoto = "edit.profile.change.photo"
+    case editProfileDeletePhoto = "edit.profile.delete.photo"
+    case editProfilePhotoSection = "edit.profile.photo.section"
+    case editProfilePersonalInfo = "edit.profile.personal.info"
+    case editProfileNamePlaceholder = "edit.profile.name.placeholder"
+    case editProfileSurnamePlaceholder = "edit.profile.surname.placeholder"
+    case editProfileEmailSection = "edit.profile.email.section"
+    case editProfileEmailPlaceholder = "edit.profile.email.placeholder"
+    case editProfileRequestEmailChange = "edit.profile.request.email.change"
+    case editProfileEmailChangeFooter = "edit.profile.email.change.footer"
+    case editProfileEmailChangeWarning = "edit.profile.email.change.warning"
+    case editProfilePasswordSection = "edit.profile.password.section"
+    case editProfileChangePassword = "edit.profile.change.password"
+    case editProfilePasswordFooter = "edit.profile.password.footer"
+    case editProfileNewPassword = "edit.profile.new.password"
+    case editProfileConfirmPassword = "edit.profile.confirm.password"
+    case editProfileSavingChanges = "edit.profile.saving.changes"
+    case editProfileSaveChanges = "edit.profile.save.changes"
+    case editProfileDeletePhotoConfirm = "edit.profile.delete.photo.confirm"
+    case editProfilePasswordStrength = "edit.profile.password.strength"
+
     // MARK: - Password Reset
     case passwordResetTitle = "password.reset.title"
     case passwordResetDesc = "password.reset.desc"
@@ -445,8 +471,10 @@ class LocalizationManager: ObservableObject {
             .campoVisitSuccess: "Has visitado %@",
             .campoVisitSuccessTitle: "✅ ¡Éxito!",
             .campoVisitError: "Error al registrar visita",
+            .campoVisitErrorTitle: "No se pudo marcar la visita",
             .campoUnvisitSuccess: "Visita desmarcada",
             .campoUnvisitError: "Error al desmarcar visita",
+            .campoDefaultName: "Campo",
 
             // Logros
             .logrosTitle: "Logros y Recompensas",
@@ -636,6 +664,30 @@ class LocalizationManager: ObservableObject {
             .levelsBenefitsDesc: "A medida que subes de nivel, tus reseñas aparecerán primero en la lista destacada de cada campo, dándote mayor visibilidad ante otros usuarios.",
             .levelsTotal: "Total: %d XP",
 
+            // Edit Profile
+            .editProfileTitle: "Editar Perfil",
+            .editProfileAddPhoto: "Añadir foto",
+            .editProfileChangePhoto: "Cambiar foto",
+            .editProfileDeletePhoto: "Eliminar foto",
+            .editProfilePhotoSection: "Foto de Perfil",
+            .editProfilePersonalInfo: "Información Personal",
+            .editProfileNamePlaceholder: "Nombre",
+            .editProfileSurnamePlaceholder: "Apellidos",
+            .editProfileEmailSection: "Email",
+            .editProfileEmailPlaceholder: "Email",
+            .editProfileRequestEmailChange: "Solicitar cambio de email",
+            .editProfileEmailChangeFooter: "El cambio de email requiere verificación mediante código enviado a tu nuevo correo. Esta funcionalidad estará disponible próximamente.",
+            .editProfileEmailChangeWarning: "⚠️ El cambio de email con verificación estará disponible próximamente",
+            .editProfilePasswordSection: "Seguridad",
+            .editProfileChangePassword: "Cambiar contraseña",
+            .editProfilePasswordFooter: "La contraseña debe tener al menos 8 caracteres, una mayúscula, una minúscula y un número.",
+            .editProfileNewPassword: "Nueva contraseña",
+            .editProfileConfirmPassword: "Confirmar contraseña",
+            .editProfileSavingChanges: "Guardando cambios...",
+            .editProfileSaveChanges: "Guardar cambios",
+            .editProfileDeletePhotoConfirm: "Esta acción no se puede deshacer.",
+            .editProfilePasswordStrength: "Fortaleza:",
+
             // Password Reset
             .passwordResetTitle: "Restablecer Contraseña",
             .passwordResetDesc: "Ingresa tu correo electrónico y te enviaremos un enlace para restablecer tu contraseña.",
@@ -743,8 +795,10 @@ class LocalizationManager: ObservableObject {
             .campoVisitSuccess: "Visitaches %@",
             .campoVisitSuccessTitle: "✅ Éxito!",
             .campoVisitError: "Erro ao rexistrar visita",
+            .campoVisitErrorTitle: "Non se puido marcar a visita",
             .campoUnvisitSuccess: "Visita desmarcada",
             .campoUnvisitError: "Erro ao desmarcar visita",
+            .campoDefaultName: "Campo",
 
             // Logros
             .logrosTitle: "Logros e Recompensas",
@@ -933,6 +987,30 @@ class LocalizationManager: ObservableObject {
             .levelsBenefitsTitle: "Beneficios por nivel",
             .levelsBenefitsDesc: "A medida que sobes de nivel, as túas recensións aparecerán primeiro na lista destacada de cada campo, dándoche maior visibilidade ante outros usuarios.",
             .levelsTotal: "Total: %d XP",
+
+            // Edit Profile
+            .editProfileTitle: "Editar Perfil",
+            .editProfileAddPhoto: "Engadir foto",
+            .editProfileChangePhoto: "Cambiar foto",
+            .editProfileDeletePhoto: "Eliminar foto",
+            .editProfilePhotoSection: "Foto de Perfil",
+            .editProfilePersonalInfo: "Información Persoal",
+            .editProfileNamePlaceholder: "Nome",
+            .editProfileSurnamePlaceholder: "Apelidos",
+            .editProfileEmailSection: "Email",
+            .editProfileEmailPlaceholder: "Email",
+            .editProfileRequestEmailChange: "Solicitar cambio de email",
+            .editProfileEmailChangeFooter: "O cambio de email require verificación mediante código enviado ao teu novo correo. Esta funcionalidade estará dispoñible proximamente.",
+            .editProfileEmailChangeWarning: "⚠️ O cambio de email con verificación estará dispoñible proximamente",
+            .editProfilePasswordSection: "Seguridade",
+            .editProfileChangePassword: "Cambiar contrasinal",
+            .editProfilePasswordFooter: "O contrasinal debe ter polo menos 8 caracteres, unha maiúscula, unha minúscula e un número.",
+            .editProfileNewPassword: "Novo contrasinal",
+            .editProfileConfirmPassword: "Confirmar contrasinal",
+            .editProfileSavingChanges: "Gardando cambios...",
+            .editProfileSaveChanges: "Gardar cambios",
+            .editProfileDeletePhotoConfirm: "Esta acción non se pode desfacer.",
+            .editProfilePasswordStrength: "Fortaleza:",
 
             // Password Reset
             .passwordResetTitle: "Restablecer Contrasinal",

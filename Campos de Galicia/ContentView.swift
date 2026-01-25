@@ -541,9 +541,14 @@ struct CampoListView: View {
         ScrollView {
             if isGridView {
                 // Vista en cuadrados (2 columnas)
+                let screenWidth = UIScreen.main.bounds.width
+                let horizontalPadding: CGFloat = 12 * 2
+                let gridSpacing: CGFloat = 16
+                let itemWidth = (screenWidth - horizontalPadding - gridSpacing) / 2
+
                 let columns = [
-                    GridItem(.flexible(), spacing: 16),
-                    GridItem(.flexible(), spacing: 16)
+                    GridItem(.fixed(itemWidth), spacing: gridSpacing),
+                    GridItem(.fixed(itemWidth), spacing: gridSpacing)
                 ]
 
                 LazyVGrid(columns: columns, spacing: 16) {
@@ -562,13 +567,11 @@ struct CampoListView: View {
                                             image
                                                 .resizable()
                                                 .aspectRatio(contentMode: .fill)
-                                                .frame(maxWidth: .infinity)
-                                                .frame(height: 100)
+                                                .frame(width: itemWidth, height: 100)
                                                 .clipped()
                                         } placeholder: {
                                             Color.gray.opacity(0.3)
-                                                .frame(maxWidth: .infinity)
-                                                .frame(height: 100)
+                                                .frame(width: itemWidth, height: 100)
                                         }
                                     }
 
@@ -591,8 +594,7 @@ struct CampoListView: View {
                                     .padding(.horizontal, 8)
                                     .padding(.vertical, 6)
                                 }
-                                .frame(maxWidth: .infinity)
-                                .frame(height: 148)
+                                .frame(width: itemWidth, height: 148)
                                 .background(Color(UIColor.secondarySystemBackground))
                                 .cornerRadius(10)
                                 .shadow(color: Color.black.opacity(0.1), radius: 2, x: 0, y: 1)
@@ -610,7 +612,6 @@ struct CampoListView: View {
                                         .padding(6)
                                 }
                             }
-                            .frame(maxWidth: .infinity)
                         }
                         .buttonStyle(PlainButtonStyle())
                     }

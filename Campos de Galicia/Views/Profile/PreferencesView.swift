@@ -8,25 +8,84 @@ struct PreferencesView: View {
     var userId: String
     @State private var isSaving: Bool = false
     @State private var successMessage: String? = nil
+    @EnvironmentObject var localization: LocalizationManager
+    @State private var showLanguageAlert: Bool = false
 
     // MARK: - Body
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 16) {
             Text("Preferencias")
                 .font(.title3)
                 .fontWeight(.bold)
 
-            Text("Distancia predeterminada para búsqueda de campos cercanos:")
-                .font(.subheadline)
-                .foregroundColor(.secondary)
+            // Language Selector
+            VStack(alignment: .leading, spacing: 8) {
+                Label {
+                    Text(L(.profileLanguage))
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                } icon: {
+                    Image(systemName: "globe")
+                        .foregroundColor(.blue)
+                }
 
-            Picker("Distancia", selection: $profileVM.distanciaPredeterminada) {
-                Text("5 km").tag(5.0)
-                Text("10 km").tag(10.0)
-                Text("20 km").tag(20.0)
+                HStack(spacing: 12) {
+                    ForEach(Language.allCases, id: \.self) { language in
+                        Button(action: {
+                            if localization.currentLanguage != language {
+                                localization.currentLanguage = language
+                                showLanguageAlert = true
+                            }
+                        }) {
+                            HStack(spacing: 8) {
+                                Text(language.flag)
+                                    .font(.title3)
+                                Text(language.displayName)
+                                    .font(.subheadline)
+                                    .fontWeight(localization.currentLanguage == language ? .bold : .regular)
+                            }
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 10)
+                            .frame(maxWidth: .infinity)
+                            .background(
+                                localization.currentLanguage == language
+                                    ? Color.blue
+                                    : Color(UIColor.tertiarySystemBackground)
+                            )
+                            .foregroundColor(
+                                localization.currentLanguage == language
+                                    ? .white
+                                    : .primary
+                            )
+                            .cornerRadius(10)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
             }
-            .pickerStyle(SegmentedPickerStyle())
-            .disabled(isSaving)
+            .padding(.bottom, 8)
+
+            Divider()
+
+            // Distance Preference
+            VStack(alignment: .leading, spacing: 8) {
+                Label {
+                    Text("Distancia predeterminada para búsqueda de campos cercanos:")
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                } icon: {
+                    Image(systemName: "location.circle")
+                        .foregroundColor(.green)
+                }
+
+                Picker("Distancia", selection: $profileVM.distanciaPredeterminada) {
+                    Text("5 km").tag(5.0)
+                    Text("10 km").tag(10.0)
+                    Text("20 km").tag(20.0)
+                }
+                .pickerStyle(SegmentedPickerStyle())
+                .disabled(isSaving)
+            }
 
             // Save button
             Button(action: { Task { await savePreferences() } }) {
@@ -56,6 +115,13 @@ struct PreferencesView: View {
         .padding()
         .background(Color(UIColor.secondarySystemBackground))
         .cornerRadius(12)
+        .alert(isPresented: $showLanguageAlert) {
+            Alert(
+                title: Text(L(.profileLanguageTitle)),
+                message: Text(L(.profileLanguageMessage)),
+                dismissButton: .default(Text(L(.ok)))
+            )
+        }
     }
 
     // MARK: - Methods
@@ -86,6 +152,7 @@ struct PreferencesView_Previews: PreviewProvider {
     static var previews: some View {
         let vm = ProfileViewModel()
         PreferencesView(profileVM: vm, userId: "test-user-id")
+            .environmentObject(LocalizationManager.shared)
             .padding()
     }
 }

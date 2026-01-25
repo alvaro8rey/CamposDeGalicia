@@ -561,43 +561,49 @@ struct CampoListView: View {
                                             image
                                                 .resizable()
                                                 .scaledToFill()
-                                                .frame(height: 120)
-                                                .cornerRadius(10)
+                                                .frame(maxWidth: .infinity)
+                                                .frame(height: 110)
                                                 .clipped()
                                         } placeholder: {
                                             Color.gray.opacity(0.3)
-                                                .frame(height: 120)
-                                                .cornerRadius(10)
+                                                .frame(maxWidth: .infinity)
+                                                .frame(height: 110)
                                         }
                                     }
 
-                                    Text(campo.nombre)
-                                        .font(.subheadline)
-                                        .fontWeight(.semibold)
-                                        .foregroundColor(.primary)
-                                        .lineLimit(2)
-                                        .multilineTextAlignment(.leading)
+                                    VStack(alignment: .leading, spacing: 3) {
+                                        Text(campo.nombre)
+                                            .font(.caption)
+                                            .fontWeight(.semibold)
+                                            .foregroundColor(.primary)
+                                            .lineLimit(2)
+                                            .multilineTextAlignment(.leading)
+                                            .frame(maxWidth: .infinity, alignment: .leading)
 
-                                    Text("\(campo.localidad ?? ""), \(campo.provincia)")
-                                        .font(.caption2)
-                                        .foregroundColor(.secondary)
-                                        .lineLimit(1)
+                                        Text("\(campo.localidad ?? ""), \(campo.provincia)")
+                                            .font(.caption2)
+                                            .foregroundColor(.secondary)
+                                            .lineLimit(1)
+                                            .frame(maxWidth: .infinity, alignment: .leading)
+                                    }
+                                    .padding(.horizontal, 6)
+                                    .padding(.bottom, 6)
                                 }
-                                .padding(8)
+                                .frame(maxWidth: .infinity)
                                 .background(Color(UIColor.secondarySystemBackground))
-                                .cornerRadius(12)
+                                .cornerRadius(10)
 
                                 // Indicador de campo visitado
                                 if visitedCampoIds.contains(campo.id) {
                                     Image(systemName: "checkmark.circle.fill")
-                                        .font(.system(size: 22))
+                                        .font(.system(size: 20))
                                         .foregroundColor(.orange)
                                         .background(
                                             Circle()
                                                 .fill(Color.white)
-                                                .frame(width: 18, height: 18)
+                                                .frame(width: 16, height: 16)
                                         )
-                                        .padding(8)
+                                        .padding(6)
                                 }
                             }
                         }

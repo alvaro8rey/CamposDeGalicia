@@ -591,6 +591,7 @@ struct CampoListView: View {
                                     .padding(.horizontal, 8)
                                     .padding(.vertical, 6)
                                 }
+                                .frame(maxWidth: .infinity)
                                 .frame(height: 148)
                                 .background(Color(UIColor.secondarySystemBackground))
                                 .cornerRadius(10)
@@ -609,6 +610,7 @@ struct CampoListView: View {
                                         .padding(6)
                                 }
                             }
+                            .frame(maxWidth: .infinity)
                         }
                         .buttonStyle(PlainButtonStyle())
                     }

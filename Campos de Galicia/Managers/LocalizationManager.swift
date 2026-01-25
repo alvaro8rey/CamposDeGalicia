@@ -219,7 +219,7 @@ class LocalizationManager: ObservableObject {
     }
 
     /// Obtiene la traducción para una key
-    func localized(_ key: LocalizedKey, _ args: CVarArg...) -> String {
+    nonisolated func localized(_ key: LocalizedKey, _ args: CVarArg...) -> String {
         let format = translations[currentLanguage]?[key] ?? key.rawValue
         if args.isEmpty {
             return format
@@ -228,7 +228,7 @@ class LocalizationManager: ObservableObject {
     }
 
     /// Diccionario de traducciones
-    private let translations: [Language: [LocalizedKey: String]] = [
+    let translations: [Language: [LocalizedKey: String]] = [
         // MARK: - Español
         .spanish: [
             // General
@@ -602,5 +602,9 @@ extension View {
 
 /// Helper para acceder a traducciones fácilmente
 func L(_ key: LocalizedKey, _ args: CVarArg...) -> String {
-    return LocalizationManager.shared.localized(key, args)
+    let format = LocalizationManager.shared.translations[LocalizationManager.shared.currentLanguage]?[key] ?? key.rawValue
+    if args.isEmpty {
+        return format
+    }
+    return String(format: format, arguments: args)
 }

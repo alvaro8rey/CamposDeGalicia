@@ -75,7 +75,7 @@ struct LogrosView: View {
         .alert(isPresented: $showPermissionAlert) {
             Alert(
                 title: Text("Notificaciones desactivadas"),
-                message: Text("Para recibir recordatorios de la recompensa diaria, habilita las notificaciones en Ajustes."),
+                message: Text("Activa las notificaciones para recibir avisos cuando tu recompensa diaria esté lista y no perderte ningún día."),
                 primaryButton: .default(Text("Ir a Ajustes")) { openSettings() },
                 secondaryButton: .cancel()
             )
@@ -178,8 +178,8 @@ struct LogrosView: View {
             if grouped.isEmpty {
                 EmptyStateView(
                     icon: "checkmark.seal.fill",
-                    title: "¡Felicidades!",
-                    message: "Has completado todos los logros disponibles"
+                    title: "¡Enhorabuena!",
+                    message: "Has completado todos los logros. ¡Eres un auténtico explorador de Galicia!"
                 )
             } else {
                 ForEach(grouped, id: \.title) { group in
@@ -212,8 +212,8 @@ struct LogrosView: View {
             if grouped.isEmpty {
                 EmptyStateView(
                     icon: "trophy",
-                    title: "Sin logros completados",
-                    message: "Completa desafíos para desbloquear logros"
+                    title: "Aún no tienes logros",
+                    message: "Visita campos, escribe reseñas y mantén rachas para desbloquear logros"
                 )
             } else {
                 ForEach(grouped, id: \.title) { group in
@@ -672,7 +672,7 @@ struct LogrosView: View {
 
         let content = UNMutableNotificationContent()
         content.title = "Campos de Galicia"
-        content.body  = "¡Tu recompensa diaria está lista! Pásate por la sección de Logros para reclamarla."
+        content.body  = "¡Tu recompensa diaria te espera! Reclámala ahora en la sección de Logros 🎁"
         content.sound = .default
 
         let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents, repeats: true)

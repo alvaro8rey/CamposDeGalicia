@@ -21,7 +21,7 @@ struct ContribucionFormView: View {
     var body: some View {
         NavigationView {
             Form {
-                Section(header: Text("Información adicional para \(campo.nombre)")) {
+                Section(header: Text("Ayuda a completar los datos de \(campo.nombre)")) {
                     PhotosPicker(
                         selection: $selectedPhotos,
                         maxSelectionCount: 5,

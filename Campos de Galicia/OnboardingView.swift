@@ -92,7 +92,7 @@ struct OnboardingView: View {
                 .foregroundColor(.blue)
             Text("¡Bienvenido a Campos de Galicia!")
                 .font(.title2).fontWeight(.bold)
-            Text("Descubre, visita y marca campos reales. Completa misiones y gana XP por tu actividad.")
+            Text("Descubre los campos de fútbol de toda Galicia. Visita, explora y colecciona ubicaciones reales mientras ganas XP.")
                 .font(.subheadline)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
@@ -111,9 +111,9 @@ struct OnboardingView: View {
             Text("Misiones y XP")
                 .font(.title3).fontWeight(.bold)
             VStack(alignment: .leading, spacing: 10) {
-                bullet("Marca campos como visitados cuando estés **a 500 m** del campo.")
-                bullet("Completa misiones por número de campos y **rachas de días**.")
-                bullet("La XP sube por niveles. ¡Explora y progresa!")
+                bullet("Marca campos como visitados cuando estés **cerca del campo** (500m).")
+                bullet("Completa misiones visitando campos y manteniendo **rachas diarias**.")
+                bullet("Gana XP y sube de nivel. ¡Explora Galicia y progresa!")
             }
             .padding(.horizontal, 24)
             Spacer()
@@ -131,15 +131,15 @@ struct OnboardingView: View {
             Text("Auto Check-in")
                 .font(.title3).fontWeight(.bold)
 
-            Text("El auto check-in registra automáticamente tu visita cuando estás **dentro de 500 m** de un campo y permaneces allí **2 minutos**.")
+            Text("El auto check-in registra tu visita automáticamente cuando estés **cerca de un campo (500m)** y permanezcas allí **2 minutos**.")
                 .font(.subheadline)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 24)
 
             VStack(alignment: .leading, spacing: 10) {
-                bullet("Funciona con geovallas del sistema (muy bajo consumo).")
-                bullet("No usa tu ubicación constantemente.")
+                bullet("Funciona en segundo plano con muy bajo consumo de batería.")
+                bullet("No rastrea tu ubicación constantemente.")
                 bullet("Requiere permanencia de 2 minutos en el área.")
                 bullet("Solo se registra una vez por campo.")
             }
@@ -158,7 +158,7 @@ struct OnboardingView: View {
                 .foregroundColor(.purple)
             Text("Notificaciones")
                 .font(.title3).fontWeight(.bold)
-            Text("Te avisaremos cuando tu **recompensa diaria** esté lista y cuando se registre automáticamente una visita.")
+            Text("Te avisaremos cuando tu **recompensa diaria** esté lista y cuando visites un campo automáticamente.")
                 .font(.subheadline)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
@@ -199,7 +199,7 @@ struct OnboardingView: View {
                 .foregroundColor(.pink)
             Text("Permitir ubicación")
                 .font(.title3).fontWeight(.bold)
-            Text("Usamos tu ubicación **solo** para verificar que estás cerca del campo y así registrar visitas reales.")
+            Text("Necesitamos tu ubicación **solo** para verificar que visitas los campos de verdad y registrar tus logros.")
                 .font(.subheadline)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)

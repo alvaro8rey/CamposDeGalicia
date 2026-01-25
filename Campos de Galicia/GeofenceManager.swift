@@ -279,8 +279,8 @@ final class GeofenceManager: NSObject, ObservableObject, CLLocationManagerDelega
     @MainActor
     private func notifyAutoCheckin(name: String) async {
         let content = UNMutableNotificationContent()
-        content.title = "Visita registrada"
-        content.body = "Has estado 2 minutos en \(name). ¡Visita confirmada! ✅"
+        content.title = "¡Campo visitado!"
+        content.body = "Has visitado \(name). ¡Un campo más para tu colección! ⚽"
         content.sound = .default
 
         let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false)
@@ -293,8 +293,8 @@ final class GeofenceManager: NSObject, ObservableObject, CLLocationManagerDelega
     @MainActor
     private func notifyAutoCheckinError(name: String, error: Error) async {
         let content = UNMutableNotificationContent()
-        content.title = "Error en auto check-in"
-        content.body = "No se pudo registrar la visita a \(name). Verifica tu conexión."
+        content.title = "No se pudo registrar la visita"
+        content.body = "No pudimos registrar tu visita a \(name). Revisa tu conexión e inténtalo de nuevo."
         content.sound = .default
 
         let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false)

@@ -195,7 +195,7 @@ struct AddReviewView: View {
                     } header: {
                         Label("Fotos (opcional)", systemImage: "photo")
                     } footer: {
-                        Text("Añade hasta \(maxPhotos) fotos para compartir tu experiencia.")
+                        Text("Sube fotos del campo para ayudar a otros visitantes (máximo \(maxPhotos)).")
                             .font(.caption)
                     }
 

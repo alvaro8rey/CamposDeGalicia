@@ -203,7 +203,7 @@ struct CampoDetalleView: View {
 
         guard let campo = campoValue, let lat = campo.latitud, let lon = campo.longitud else {
             await MainActor.run {
-                ToastManager.shared.error("Este campo no tiene coordenadas válidas")
+                ToastManager.shared.error("Este campo aún no tiene coordenadas. Ayúdanos a añadirlas")
             }
             return
         }
@@ -216,11 +216,11 @@ struct CampoDetalleView: View {
                 // Mensaje específico según el estado de permisos
                 switch authStatus {
                 case .denied, .restricted:
-                    ToastManager.shared.error("Permisos de ubicación denegados. Ve a Ajustes → Campos de Galicia → Ubicación")
+                    ToastManager.shared.error("Activa la ubicación en: Ajustes → Privacidad y Seguridad → Ubicación → Campos de Galicia")
                 case .notDetermined:
-                    ToastManager.shared.error("Debes permitir el acceso a tu ubicación")
+                    ToastManager.shared.error("Necesitamos permiso para acceder a tu ubicación")
                 default:
-                    ToastManager.shared.error("No se pudo obtener tu ubicación. Revisa tu conexión GPS")
+                    ToastManager.shared.error("No pudimos obtener tu ubicación. Asegúrate de estar en un lugar con buena señal GPS")
                 }
             }
             return
@@ -228,7 +228,7 @@ struct CampoDetalleView: View {
 
         if userLoc.horizontalAccuracy < 0 || userLoc.horizontalAccuracy > maxAllowedAccuracy {
             await MainActor.run {
-                ToastManager.shared.warning("La señal de GPS es poco precisa (\(Int(userLoc.horizontalAccuracy))m). Inténtalo al aire libre")
+                ToastManager.shared.warning("La señal GPS es débil (\(Int(userLoc.horizontalAccuracy))m de precisión). Sal al exterior para mejor precisión")
             }
             return
         }
@@ -242,7 +242,7 @@ struct CampoDetalleView: View {
             let pretty = formatDistance(distance)
             let radiusPretty = formatDistance(visitRadiusMeters)
             await MainActor.run {
-                ToastManager.shared.warning("Estás a ~\(pretty) del campo. Acércate (≤ \(radiusPretty))")
+                ToastManager.shared.warning("Estás a ~\(pretty) del campo. Acércate más (necesitas estar a \(radiusPretty) o menos)")
             }
         }
     }

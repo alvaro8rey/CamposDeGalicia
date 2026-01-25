@@ -203,7 +203,7 @@ struct CampoDetalleView: View {
 
         guard let campo = campoValue, let lat = campo.latitud, let lon = campo.longitud else {
             await MainActor.run {
-                ToastManager.shared.error("Este campo aún no tiene coordenadas. Ayúdanos a añadirlas")
+                ToastManager.shared.error(L(.campoNoCoordinates))
             }
             return
         }
@@ -216,11 +216,11 @@ struct CampoDetalleView: View {
                 // Mensaje específico según el estado de permisos
                 switch authStatus {
                 case .denied, .restricted:
-                    ToastManager.shared.error("Activa la ubicación en: Ajustes → Privacidad y Seguridad → Ubicación → Campos de Galicia")
+                    ToastManager.shared.error(L(.campoLocationDenied))
                 case .notDetermined:
-                    ToastManager.shared.error("Necesitamos permiso para acceder a tu ubicación")
+                    ToastManager.shared.error(L(.campoLocationNeeded))
                 default:
-                    ToastManager.shared.error("No pudimos obtener tu ubicación. Asegúrate de estar en un lugar con buena señal GPS")
+                    ToastManager.shared.error(L(.campoLocationError))
                 }
             }
             return
@@ -228,7 +228,7 @@ struct CampoDetalleView: View {
 
         if userLoc.horizontalAccuracy < 0 || userLoc.horizontalAccuracy > maxAllowedAccuracy {
             await MainActor.run {
-                ToastManager.shared.warning("La señal GPS es débil (\(Int(userLoc.horizontalAccuracy))m de precisión). Sal al exterior para mejor precisión")
+                ToastManager.shared.warning(L(.campoGPSWeak, Int(userLoc.horizontalAccuracy)))
             }
             return
         }
@@ -242,7 +242,7 @@ struct CampoDetalleView: View {
             let pretty = formatDistance(distance)
             let radiusPretty = formatDistance(visitRadiusMeters)
             await MainActor.run {
-                ToastManager.shared.warning("Estás a ~\(pretty) del campo. Acércate más (necesitas estar a \(radiusPretty) o menos)")
+                ToastManager.shared.warning(L(.campoTooFar, pretty, radiusPretty))
             }
         }
     }
@@ -281,14 +281,14 @@ struct CampoDetalleView: View {
             _ = try await supabase.from("visitas").insert(visita).execute()
             await MainActor.run {
                 isVisited = true
-                ToastManager.shared.success("✅ ¡Visitado! \(campo.nombre)")
+                ToastManager.shared.success(L(.toastVisited, campo.nombre))
                 // Cancelar temporizador de auto check-in si estaba pendiente
                 geofenceManager.cancelPendingDwell(for: campo.id)
             }
             NotificationCenter.default.post(name: .didUpdateVisits, object: nil)
         } catch {
             await MainActor.run {
-                ToastManager.shared.error("Error al registrar visita")
+                ToastManager.shared.error(L(.campoVisitError))
             }
             print(error)
         }
@@ -318,12 +318,12 @@ struct CampoDetalleView: View {
                 .execute()
             await MainActor.run {
                 isVisited = false
-                ToastManager.shared.info("Visita desmarcada")
+                ToastManager.shared.info(L(.campoUnvisitSuccess))
             }
             NotificationCenter.default.post(name: .didUpdateVisits, object: nil)
         } catch {
             await MainActor.run {
-                ToastManager.shared.error("Error al desmarcar visita")
+                ToastManager.shared.error(L(.campoUnvisitError))
             }
             print(error)
         }
@@ -372,13 +372,13 @@ struct CampoDetalleView: View {
             _ = try await supabase.from("campo_contribuciones").insert(contribucion).execute()
             await MainActor.run {
                 showingContribucionForm = false
-                ToastManager.shared.success("✅ Contribución enviada. ¡Gracias!")
+                ToastManager.shared.success(L(.contribucionSuccess))
             }
             camposViewModel.invalidateExtras(for: campoID)
             await fetchContribucionesAprobadas(forceRefresh: true)
         } catch {
             await MainActor.run {
-                ToastManager.shared.error("Error al enviar contribución")
+                ToastManager.shared.error(L(.contribucionError))
             }
             print(error)
         }

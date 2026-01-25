@@ -542,16 +542,17 @@ struct CampoListView: View {
             if isGridView {
                 // Vista en cuadrados (2 columnas)
                 let columns = [
-                    GridItem(.flexible(), spacing: 12),
-                    GridItem(.flexible(), spacing: 12)
+                    GridItem(.flexible(), spacing: 16),
+                    GridItem(.flexible(), spacing: 16)
                 ]
 
-                LazyVGrid(columns: columns, spacing: 12) {
+                LazyVGrid(columns: columns, spacing: 16) {
                     ForEach(filteredCampos, id: \.id) { campo in
                         NavigationLink(destination: CampoDetalleView(campoID: campo.id)
                             .environmentObject(authViewModel)) {
                             ZStack(alignment: .topTrailing) {
-                                VStack(alignment: .leading, spacing: 6) {
+                                VStack(alignment: .leading, spacing: 0) {
+                                    // Imagen con tamaño fijo
                                     let imageURL = (campo.foto_url?.isEmpty == false ? campo.foto_url : nil) ?? defaultImageURL
                                     if let url = URL(string: imageURL) {
                                         CachedAsyncImage(
@@ -560,38 +561,38 @@ struct CampoListView: View {
                                         ) { image in
                                             image
                                                 .resizable()
-                                                .scaledToFill()
-                                                .frame(maxWidth: .infinity)
-                                                .frame(height: 110)
+                                                .aspectRatio(contentMode: .fill)
+                                                .frame(height: 100)
                                                 .clipped()
                                         } placeholder: {
                                             Color.gray.opacity(0.3)
-                                                .frame(maxWidth: .infinity)
-                                                .frame(height: 110)
+                                                .frame(height: 100)
                                         }
                                     }
 
-                                    VStack(alignment: .leading, spacing: 3) {
+                                    // Textos con altura fija
+                                    VStack(alignment: .leading, spacing: 2) {
                                         Text(campo.nombre)
                                             .font(.caption)
                                             .fontWeight(.semibold)
                                             .foregroundColor(.primary)
                                             .lineLimit(2)
                                             .multilineTextAlignment(.leading)
-                                            .frame(maxWidth: .infinity, alignment: .leading)
+                                            .fixedSize(horizontal: false, vertical: true)
 
                                         Text("\(campo.localidad ?? ""), \(campo.provincia)")
                                             .font(.caption2)
                                             .foregroundColor(.secondary)
                                             .lineLimit(1)
-                                            .frame(maxWidth: .infinity, alignment: .leading)
                                     }
-                                    .padding(.horizontal, 6)
-                                    .padding(.bottom, 6)
+                                    .frame(height: 42, alignment: .top)
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 6)
                                 }
-                                .frame(maxWidth: .infinity)
+                                .frame(height: 148)
                                 .background(Color(UIColor.secondarySystemBackground))
                                 .cornerRadius(10)
+                                .shadow(color: Color.black.opacity(0.1), radius: 2, x: 0, y: 1)
 
                                 // Indicador de campo visitado
                                 if visitedCampoIds.contains(campo.id) {
@@ -610,7 +611,7 @@ struct CampoListView: View {
                         .buttonStyle(PlainButtonStyle())
                     }
                 }
-                .padding(.horizontal)
+                .padding(.horizontal, 12)
                 .padding(.top, 8)
             } else {
                 // Vista en lista

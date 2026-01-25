@@ -128,6 +128,7 @@ struct AppMain: App {
             .accentColor(.blue)
             .environmentObject(geofenceManager)
             .environmentObject(camposViewModel)
+            .environmentObject(LocalizationManager.shared)
             .withToast()
             .onAppear {
                 locationManager.requestLocation()

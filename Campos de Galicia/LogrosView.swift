@@ -4,6 +4,7 @@ import UserNotifications
 
 struct LogrosView: View {
     @Environment(\.colorScheme) var colorScheme
+    @EnvironmentObject var localizationManager: LocalizationManager
 
     // Estado de usuario y progreso
     @State private var userId: String?
@@ -36,8 +37,15 @@ struct LogrosView: View {
     private let DAILY_MIN  = 0
 
     enum AchievementTab: String, CaseIterable {
-        case pending = "Pendientes"
-        case completed = "Completados"
+        case pending
+        case completed
+
+        var localizedTitle: String {
+            switch self {
+            case .pending: return L(.logrosPending)
+            case .completed: return L(.logrosCompleted)
+            }
+        }
     }
 
     var body: some View {
@@ -64,7 +72,7 @@ struct LogrosView: View {
             )
             .ignoresSafeArea()
         )
-        .navigationTitle("Logros y Recompensas")
+        .navigationTitle(L(.logrosTitle))
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
             Task { await boot() }
@@ -74,9 +82,9 @@ struct LogrosView: View {
         }
         .alert(isPresented: $showPermissionAlert) {
             Alert(
-                title: Text("Notificaciones desactivadas"),
-                message: Text("Activa las notificaciones para recibir avisos cuando tu recompensa diaria esté lista y no perderte ningún día."),
-                primaryButton: .default(Text("Ir a Ajustes")) { openSettings() },
+                title: Text(L(.notifDisabledTitle)),
+                message: Text(L(.notifDisabledMessage)),
+                primaryButton: .default(Text(L(.notifGoToSettings))) { openSettings() },
                 secondaryButton: .cancel()
             )
         }
@@ -121,16 +129,16 @@ struct LogrosView: View {
                 Image(systemName: "chart.bar.fill")
                     .foregroundColor(.blue)
                     .font(.title3)
-                Text("Tu Progreso")
+                Text(L(.logrosProgressTitle))
                     .font(.system(size: 20, weight: .bold, design: .rounded))
                 Spacer()
             }
 
             HStack(spacing: 12) {
-                StatCard(icon: "map.fill", value: "\(camposVisitados)", label: "Campos", color: .green)
-                StatCard(icon: "mappin.and.ellipse", value: "\(provinciasVisitadas)", label: "Provincias", color: .orange)
-                StatCard(icon: "flame.fill", value: "\(diasConsecutivos)", label: "Racha", color: .red)
-                StatCard(icon: "star.bubble.fill", value: "\(reseñasEscritas)", label: "Reseñas", color: .purple)
+                StatCard(icon: "map.fill", value: "\(camposVisitados)", label: L(.logrosProgressCampos), color: .green)
+                StatCard(icon: "mappin.and.ellipse", value: "\(provinciasVisitadas)", label: L(.logrosProgressProvincias), color: .orange)
+                StatCard(icon: "flame.fill", value: "\(diasConsecutivos)", label: L(.logrosProgressRacha), color: .red)
+                StatCard(icon: "star.bubble.fill", value: "\(reseñasEscritas)", label: L(.logrosProgressReviews), color: .purple)
             }
         }
         .padding(16)
@@ -142,9 +150,9 @@ struct LogrosView: View {
     private var achievementsTabSection: some View {
         VStack(alignment: .leading, spacing: 16) {
             // Tab picker
-            Picker("Logros", selection: $selectedTab) {
+            Picker(L(.logrosTitle), selection: $selectedTab) {
                 ForEach(AchievementTab.allCases, id: \.self) { tab in
-                    Text(tab.rawValue).tag(tab)
+                    Text(tab.localizedTitle).tag(tab)
                 }
             }
             .pickerStyle(SegmentedPickerStyle())
@@ -157,7 +165,7 @@ struct LogrosView: View {
             }
 
             if isLoadingLogros {
-                LoadingView(message: "Cargando logros...", style: .skeleton)
+                LoadingView(message: L(.logrosLoading), style: .skeleton)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 30)
             } else {
@@ -178,8 +186,8 @@ struct LogrosView: View {
             if grouped.isEmpty {
                 EmptyStateView(
                     icon: "checkmark.seal.fill",
-                    title: "¡Enhorabuena!",
-                    message: "Has completado todos los logros. ¡Eres un auténtico explorador de Galicia!"
+                    title: L(.logrosAllCompleted),
+                    message: L(.logrosAllCompletedMessage)
                 )
             } else {
                 ForEach(grouped, id: \.title) { group in
@@ -212,8 +220,8 @@ struct LogrosView: View {
             if grouped.isEmpty {
                 EmptyStateView(
                     icon: "trophy",
-                    title: "Aún no tienes logros",
-                    message: "Visita campos, escribe reseñas y mantén rachas para desbloquear logros"
+                    title: L(.logrosNone),
+                    message: L(.logrosNoneMessage)
                 )
             } else {
                 ForEach(grouped, id: \.title) { group in
@@ -260,10 +268,10 @@ struct LogrosView: View {
 
         var title: String {
             switch self {
-            case .camposVisitados: return "Campos visitados"
-            case .rachas:          return "Rachas diarias"
-            case .reseñas:         return "Reseñas"
-            case .otros:           return "Otros"
+            case .camposVisitados: return L(.logrosCamposVisitados)
+            case .rachas:          return L(.logrosRachasDiarias)
+            case .reseñas:         return L(.logrosReseñas)
+            case .otros:           return L(.logrosOtros)
             }
         }
 

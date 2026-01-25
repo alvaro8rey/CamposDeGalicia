@@ -6,6 +6,7 @@ struct RegisterView: View {
 
     // MARK: - Environment
     @EnvironmentObject var authViewModel: AuthViewModel
+    @EnvironmentObject var localizationManager: LocalizationManager
     @Environment(\.dismiss) var dismiss
     @Environment(\.colorScheme) var colorScheme
 
@@ -59,11 +60,11 @@ struct RegisterView: View {
                             }
                             .padding(.top, 20)
 
-                            Text("Crear Cuenta")
+                            Text(L(.registerTitle))
                                 .font(.system(size: 28, weight: .bold, design: .rounded))
                                 .foregroundColor(.primary)
 
-                            Text("Únete a la comunidad de Campos de Galicia")
+                            Text(L(.registerSubtitle))
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
                                 .multilineTextAlignment(.center)
@@ -73,7 +74,7 @@ struct RegisterView: View {
                         VStack(spacing: 24) {
                             // Profile Photo Section
                             VStack(spacing: 12) {
-                                Text("Foto de perfil (opcional)")
+                                Text(L(.registerProfilePhoto))
                                     .font(.subheadline)
                                     .fontWeight(.medium)
                                     .foregroundColor(.secondary)
@@ -104,7 +105,7 @@ struct RegisterView: View {
                                         PhotosPicker(selection: $selectedPhotoItem, matching: .images) {
                                             HStack {
                                                 Image(systemName: "camera.fill")
-                                                Text(selectedPhotoData == nil ? "Seleccionar foto" : "Cambiar foto")
+                                                Text(selectedPhotoData == nil ? L(.registerSelectPhoto) : L(.registerChangePhoto))
                                             }
                                             .font(.subheadline)
                                             .fontWeight(.medium)
@@ -129,7 +130,7 @@ struct RegisterView: View {
                                             }) {
                                                 HStack {
                                                     Image(systemName: "trash.fill")
-                                                    Text("Eliminar")
+                                                    Text(L(.registerDeletePhoto))
                                                 }
                                                 .font(.caption)
                                                 .foregroundColor(.red)
@@ -148,12 +149,12 @@ struct RegisterView: View {
                             VStack(spacing: 16) {
                                 // Nombre
                                 VStack(alignment: .leading, spacing: 8) {
-                                    Label("Nombre", systemImage: "person.fill")
+                                    Label(L(.registerName), systemImage: "person.fill")
                                         .font(.subheadline)
                                         .fontWeight(.medium)
                                         .foregroundColor(.secondary)
 
-                                    TextField("Tu nombre", text: $nombre)
+                                    TextField(L(.registerNamePlaceholder), text: $nombre)
                                         .padding()
                                         .background(Color(UIColor.secondarySystemBackground))
                                         .cornerRadius(12)
@@ -163,12 +164,12 @@ struct RegisterView: View {
 
                                 // Apellidos
                                 VStack(alignment: .leading, spacing: 8) {
-                                    Label("Apellidos", systemImage: "person.fill")
+                                    Label(L(.registerSurname), systemImage: "person.fill")
                                         .font(.subheadline)
                                         .fontWeight(.medium)
                                         .foregroundColor(.secondary)
 
-                                    TextField("Tus apellidos", text: $apellidos)
+                                    TextField(L(.registerSurnamePlaceholder), text: $apellidos)
                                         .padding()
                                         .background(Color(UIColor.secondarySystemBackground))
                                         .cornerRadius(12)
@@ -178,12 +179,12 @@ struct RegisterView: View {
 
                                 // Email
                                 VStack(alignment: .leading, spacing: 8) {
-                                    Label("Correo Electrónico", systemImage: "envelope.fill")
+                                    Label(L(.loginEmail), systemImage: "envelope.fill")
                                         .font(.subheadline)
                                         .fontWeight(.medium)
                                         .foregroundColor(.secondary)
 
-                                    TextField("tu@email.com", text: $email)
+                                    TextField(L(.loginEmailPlaceholder), text: $email)
                                         .padding()
                                         .background(Color(UIColor.secondarySystemBackground))
                                         .cornerRadius(12)
@@ -194,7 +195,7 @@ struct RegisterView: View {
 
                                 // Password
                                 VStack(alignment: .leading, spacing: 8) {
-                                    Label("Contraseña", systemImage: "lock.fill")
+                                    Label(L(.loginPassword), systemImage: "lock.fill")
                                         .font(.subheadline)
                                         .fontWeight(.medium)
                                         .foregroundColor(.secondary)
@@ -209,7 +210,7 @@ struct RegisterView: View {
                                         Image(systemName: "info.circle.fill")
                                             .font(.caption2)
                                             .foregroundColor(.secondary)
-                                        Text("Mínimo 8 caracteres, con mayúscula, minúscula y número")
+                                        Text(L(.registerPasswordHint))
                                             .font(.caption2)
                                             .foregroundColor(.secondary)
                                     }
@@ -238,7 +239,7 @@ struct RegisterView: View {
                                         ProgressView()
                                             .progressViewStyle(CircularProgressViewStyle(tint: .white))
                                     }
-                                    Text(isLoading ? "Creando cuenta..." : "Crear Cuenta")
+                                    Text(isLoading ? L(.registerLoading) : L(.registerButton))
                                         .font(.headline)
                                         .fontWeight(.semibold)
                                 }
@@ -268,18 +269,18 @@ struct RegisterView: View {
                     }
                 }
             }
-            .navigationTitle("Registro")
+            .navigationTitle(L(.registerNavTitle))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancelar") {
+                    Button(L(.cancel)) {
                         dismiss()
                     }
                     .disabled(isLoading)
                 }
             }
-            .alert("¡Registro Exitoso!", isPresented: $showSuccessAlert) {
-                Button("OK") {
+            .alert(L(.registerSuccessTitle), isPresented: $showSuccessAlert) {
+                Button(L(.ok)) {
                     dismiss()
                 }
             } message: {
@@ -302,7 +303,7 @@ struct RegisterView: View {
 
         // Validaciones
         guard !nombre.isEmpty, !apellidos.isEmpty, !email.isEmpty, !password.isEmpty else {
-            errorMessage = "Todos los campos son obligatorios."
+            errorMessage = L(.registerErrorAllFields)
             return
         }
 
@@ -313,7 +314,7 @@ struct RegisterView: View {
         }
 
         guard email.contains("@"), email.contains(".") else {
-            errorMessage = "Introduce un correo electrónico válido."
+            errorMessage = L(.registerErrorInvalidEmail)
             return
         }
 
@@ -340,7 +341,7 @@ struct RegisterView: View {
                 }
             }
 
-            successMessage = "Tu cuenta ha sido creada. Por favor revisa tu correo para verificar tu cuenta."
+            successMessage = L(.registerSuccessMessage)
             showSuccessAlert = true
 
             Logger.success("✅ Registro exitoso: \(userId)")
@@ -358,7 +359,7 @@ struct RegisterView: View {
 
     private func validatePassword(_ password: String) -> (isValid: Bool, message: String?) {
         guard password.count >= 8 else {
-            return (false, "La contraseña debe tener al menos 8 caracteres.")
+            return (false, L(.registerErrorPasswordShort))
         }
 
         let hasUppercase = password.range(of: "[A-Z]", options: .regularExpression) != nil
@@ -366,13 +367,13 @@ struct RegisterView: View {
         let hasNumber = password.range(of: "[0-9]", options: .regularExpression) != nil
 
         guard hasUppercase else {
-            return (false, "La contraseña debe contener al menos una letra mayúscula.")
+            return (false, L(.registerErrorPasswordUppercase))
         }
         guard hasLowercase else {
-            return (false, "La contraseña debe contener al menos una letra minúscula.")
+            return (false, L(.registerErrorPasswordLowercase))
         }
         guard hasNumber else {
-            return (false, "La contraseña debe contener al menos un número.")
+            return (false, L(.registerErrorPasswordNumber))
         }
 
         return (true, nil)
@@ -383,30 +384,30 @@ struct RegisterView: View {
 
         if msg.contains("user already registered") || msg.contains("already registered") ||
            (msg.contains("email") && msg.contains("exists")) {
-            return "Ese correo ya está registrado. Inicia sesión o usa '¿Olvidaste tu contraseña?'."
+            return L(.registerErrorAlreadyExists)
         }
 
         if msg.contains("invalid email") || (msg.contains("email") && msg.contains("invalid")) {
-            return "El correo no es válido. Revisa el formato (ej. usuario@dominio.com)."
+            return L(.registerErrorInvalidEmailFormat)
         }
 
         if msg.contains("password") && (msg.contains("short") || msg.contains("length")) {
-            return "La contraseña es demasiado corta (mínimo 8 caracteres)."
+            return L(.registerErrorPasswordShort)
         }
 
         if msg.contains("rate limit") || msg.contains("too many requests") {
-            return "Has hecho demasiadas solicitudes. Inténtalo de nuevo en unos minutos."
+            return L(.registerErrorRateLimit)
         }
 
         if msg.contains("foreign key") || msg.contains("perfiles_id_fkey") {
-            return "Se produjo un problema al crear tu perfil. Vuelve a intentarlo en unos segundos."
+            return L(.registerErrorProfile)
         }
 
         if msg.contains("duplicate key") || msg.contains("conflict") {
-            return "Ya existía un perfil asociado a este usuario. Inicia sesión con tu correo."
+            return L(.registerErrorDuplicate)
         }
 
-        return "No hemos podido crear tu cuenta ahora mismo. Inténtalo de nuevo en unos minutos."
+        return L(.registerErrorGeneral)
     }
 }
 

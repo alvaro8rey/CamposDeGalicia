@@ -66,6 +66,7 @@ enum LocalizedKey: String {
     case loginTitle = "auth.login.title"
     case loginSubtitle = "auth.login.subtitle"
     case loginEmail = "auth.login.email"
+    case loginEmailPlaceholder = "auth.login.email.placeholder"
     case loginPassword = "auth.login.password"
     case loginButton = "auth.login.button"
     case loginLoading = "auth.login.loading"
@@ -77,12 +78,31 @@ enum LocalizedKey: String {
     case registerTitle = "auth.register.title"
     case registerSubtitle = "auth.register.subtitle"
     case registerName = "auth.register.name"
+    case registerNamePlaceholder = "auth.register.name.placeholder"
     case registerSurname = "auth.register.surname"
+    case registerSurnamePlaceholder = "auth.register.surname.placeholder"
     case registerProfilePhoto = "auth.register.photo"
     case registerSelectPhoto = "auth.register.selectphoto"
     case registerChangePhoto = "auth.register.changephoto"
+    case registerDeletePhoto = "auth.register.deletephoto"
     case registerButton = "auth.register.button"
     case registerLoading = "auth.register.loading"
+    case registerPasswordHint = "auth.register.password.hint"
+    case registerNavTitle = "auth.register.navtitle"
+    case registerSuccessTitle = "auth.register.success.title"
+    case registerSuccessMessage = "auth.register.success.message"
+    case registerErrorAllFields = "auth.register.error.allfields"
+    case registerErrorInvalidEmail = "auth.register.error.invalidemail"
+    case registerErrorPasswordShort = "auth.register.error.password.short"
+    case registerErrorPasswordUppercase = "auth.register.error.password.uppercase"
+    case registerErrorPasswordLowercase = "auth.register.error.password.lowercase"
+    case registerErrorPasswordNumber = "auth.register.error.password.number"
+    case registerErrorAlreadyExists = "auth.register.error.exists"
+    case registerErrorInvalidEmailFormat = "auth.register.error.invalidemail.format"
+    case registerErrorRateLimit = "auth.register.error.ratelimit"
+    case registerErrorProfile = "auth.register.error.profile"
+    case registerErrorDuplicate = "auth.register.error.duplicate"
+    case registerErrorGeneral = "auth.register.error.general"
 
     // MARK: - Campo Detail
     case campoLoading = "campo.loading"
@@ -196,6 +216,17 @@ enum LocalizedKey: String {
 
     // MARK: - Loading Messages
     case loadingCampos = "loading.campos"
+
+    // MARK: - ContentView
+    case contentHome = "content.home"
+    case contentShownFields = "content.shown.fields"
+    case contentAllProvinces = "content.all.provinces"
+    case contentFilterLabel = "content.filter.label"
+    case contentSearchByName = "content.search.name"
+    case contentSearchByLocation = "content.search.location"
+    case contentProvince = "content.province"
+    case contentApply = "content.apply"
+    case contentReset = "content.reset"
     case loadingCampoInfo = "loading.campo.info"
     case loadingLogros = "loading.logros"
     case loadingLocation = "loading.location"
@@ -283,6 +314,9 @@ enum LocalizedKey: String {
     case passwordResetSending = "password.reset.sending"
     case passwordResetSuccess = "password.reset.success"
     case passwordResetBackToLogin = "password.reset.back.to.login"
+    case passwordResetResendIn = "password.reset.resend.in"
+    case passwordResetInvalidEmail = "password.reset.invalid.email"
+    case passwordResetError = "password.reset.error"
 }
 
 /// Manager de localización centralizado
@@ -362,6 +396,7 @@ class LocalizationManager: ObservableObject {
             .loginTitle: "Campos de Galicia",
             .loginSubtitle: "Descubre los campos de fútbol de Galicia",
             .loginEmail: "Correo Electrónico",
+            .loginEmailPlaceholder: "tu@email.com",
             .loginPassword: "Contraseña",
             .loginButton: "Iniciar Sesión",
             .loginLoading: "Iniciando sesión...",
@@ -373,12 +408,31 @@ class LocalizationManager: ObservableObject {
             .registerTitle: "Crear Cuenta",
             .registerSubtitle: "Únete a la comunidad de Campos de Galicia",
             .registerName: "Nombre",
+            .registerNamePlaceholder: "Tu nombre",
             .registerSurname: "Apellidos",
+            .registerSurnamePlaceholder: "Tus apellidos",
             .registerProfilePhoto: "Foto de perfil (opcional)",
             .registerSelectPhoto: "Seleccionar foto",
             .registerChangePhoto: "Cambiar foto",
+            .registerDeletePhoto: "Eliminar",
             .registerButton: "Crear cuenta",
             .registerLoading: "Creando cuenta...",
+            .registerPasswordHint: "Mínimo 8 caracteres, con mayúscula, minúscula y número",
+            .registerNavTitle: "Registro",
+            .registerSuccessTitle: "¡Registro Exitoso!",
+            .registerSuccessMessage: "Tu cuenta ha sido creada. Por favor revisa tu correo para verificar tu cuenta.",
+            .registerErrorAllFields: "Todos los campos son obligatorios.",
+            .registerErrorInvalidEmail: "Introduce un correo electrónico válido.",
+            .registerErrorPasswordShort: "La contraseña debe tener al menos 8 caracteres.",
+            .registerErrorPasswordUppercase: "La contraseña debe contener al menos una letra mayúscula.",
+            .registerErrorPasswordLowercase: "La contraseña debe contener al menos una letra minúscula.",
+            .registerErrorPasswordNumber: "La contraseña debe contener al menos un número.",
+            .registerErrorAlreadyExists: "Ese correo ya está registrado. Inicia sesión o usa '¿Olvidaste tu contraseña?'.",
+            .registerErrorInvalidEmailFormat: "El correo no es válido. Revisa el formato (ej. usuario@dominio.com).",
+            .registerErrorRateLimit: "Has hecho demasiadas solicitudes. Inténtalo de nuevo en unos minutos.",
+            .registerErrorProfile: "Se produjo un problema al crear tu perfil. Vuelve a intentarlo en unos segundos.",
+            .registerErrorDuplicate: "Ya existía un perfil asociado a este usuario. Inicia sesión con tu correo.",
+            .registerErrorGeneral: "No hemos podido crear tu cuenta ahora mismo. Inténtalo de nuevo en unos minutos.",
 
             // Campo Detail
             .campoLoading: "Cargando información del campo...",
@@ -496,6 +550,17 @@ class LocalizationManager: ObservableObject {
             .loadingLogros: "Cargando logros...",
             .loadingLocation: "Obteniendo tu ubicación...",
 
+            // ContentView
+            .contentHome: "Inicio",
+            .contentShownFields: "Mostrados %d campos",
+            .contentAllProvinces: "Todas",
+            .contentFilterLabel: "Filtrar:",
+            .contentSearchByName: "Buscar por nombre",
+            .contentSearchByLocation: "Buscar por localidad",
+            .contentProvince: "Provincia:",
+            .contentApply: "Aplicar",
+            .contentReset: "Resetear",
+
             // Map View
             .mapSearchPlaceholder: "Buscar campo...",
             .mapContinueStraight: "Continúa recto",
@@ -579,6 +644,9 @@ class LocalizationManager: ObservableObject {
             .passwordResetSending: "Enviando...",
             .passwordResetSuccess: "Enlace enviado. Revisa tu correo electrónico.",
             .passwordResetBackToLogin: "Volver al inicio de sesión",
+            .passwordResetResendIn: "Reenviar en %ds",
+            .passwordResetInvalidEmail: "Introduce un correo electrónico válido.",
+            .passwordResetError: "Error al enviar el correo: %@",
         ],
 
         // MARK: - Galego
@@ -626,6 +694,7 @@ class LocalizationManager: ObservableObject {
             .loginTitle: "Campos de Galicia",
             .loginSubtitle: "Descobre os campos de fútbol de Galicia",
             .loginEmail: "Correo Electrónico",
+            .loginEmailPlaceholder: "teu@email.com",
             .loginPassword: "Contrasinal",
             .loginButton: "Iniciar Sesión",
             .loginLoading: "Iniciando sesión...",
@@ -637,12 +706,31 @@ class LocalizationManager: ObservableObject {
             .registerTitle: "Crear Conta",
             .registerSubtitle: "Únete á comunidade de Campos de Galicia",
             .registerName: "Nome",
+            .registerNamePlaceholder: "O teu nome",
             .registerSurname: "Apelidos",
+            .registerSurnamePlaceholder: "Os teus apelidos",
             .registerProfilePhoto: "Foto de perfil (opcional)",
             .registerSelectPhoto: "Seleccionar foto",
             .registerChangePhoto: "Cambiar foto",
+            .registerDeletePhoto: "Eliminar",
             .registerButton: "Crear conta",
             .registerLoading: "Creando conta...",
+            .registerPasswordHint: "Mínimo 8 caracteres, con maiúscula, minúscula e número",
+            .registerNavTitle: "Rexistro",
+            .registerSuccessTitle: "Rexistro Exitoso!",
+            .registerSuccessMessage: "A túa conta foi creada. Por favor revisa o teu correo para verificar a túa conta.",
+            .registerErrorAllFields: "Todos os campos son obrigatorios.",
+            .registerErrorInvalidEmail: "Introduce un correo electrónico válido.",
+            .registerErrorPasswordShort: "O contrasinal debe ter polo menos 8 caracteres.",
+            .registerErrorPasswordUppercase: "O contrasinal debe conter polo menos unha letra maiúscula.",
+            .registerErrorPasswordLowercase: "O contrasinal debe conter polo menos unha letra minúscula.",
+            .registerErrorPasswordNumber: "O contrasinal debe conter polo menos un número.",
+            .registerErrorAlreadyExists: "Ese correo xa está rexistrado. Inicia sesión ou usa 'Esqueciches o contrasinal?'.",
+            .registerErrorInvalidEmailFormat: "O correo non é válido. Revisa o formato (ex. usuario@dominio.com).",
+            .registerErrorRateLimit: "Fixeches demasiadas solicitudes. Inténtao de novo nuns minutos.",
+            .registerErrorProfile: "Produciuse un problema ao crear o teu perfil. Volve tentalo nuns segundos.",
+            .registerErrorDuplicate: "Xa existía un perfil asociado a este usuario. Inicia sesión co teu correo.",
+            .registerErrorGeneral: "Non puidemos crear a túa conta agora mesmo. Inténtao de novo nuns minutos.",
 
             // Campo Detail
             .campoLoading: "Cargando información do campo...",
@@ -760,6 +848,17 @@ class LocalizationManager: ObservableObject {
             .loadingLogros: "Cargando logros...",
             .loadingLocation: "Obtendo a túa ubicación...",
 
+            // ContentView
+            .contentHome: "Inicio",
+            .contentShownFields: "Mostrados %d campos",
+            .contentAllProvinces: "Todas",
+            .contentFilterLabel: "Filtrar:",
+            .contentSearchByName: "Buscar por nome",
+            .contentSearchByLocation: "Buscar por localidade",
+            .contentProvince: "Provincia:",
+            .contentApply: "Aplicar",
+            .contentReset: "Resetear",
+
             // Map View
             .mapSearchPlaceholder: "Buscar campo...",
             .mapContinueStraight: "Continúa recto",
@@ -843,6 +942,9 @@ class LocalizationManager: ObservableObject {
             .passwordResetSending: "Enviando...",
             .passwordResetSuccess: "Enlace enviado. Revisa o teu correo electrónico.",
             .passwordResetBackToLogin: "Volver ao inicio de sesión",
+            .passwordResetResendIn: "Reenviar en %ds",
+            .passwordResetInvalidEmail: "Introduce un correo electrónico válido.",
+            .passwordResetError: "Erro ao enviar o correo: %@",
         ]
     ]
 }

@@ -4,16 +4,19 @@ import Supabase
 struct ContentView: View {
     @EnvironmentObject var camposViewModel: CamposViewModel
     @EnvironmentObject var authViewModel: AuthViewModel
+    @EnvironmentObject var localizationManager: LocalizationManager
     @Environment(\.colorScheme) var colorScheme
 
     // Estados para los filtros
     @State private var searchNombre: String = ""
     @State private var searchLocalidad: String = ""
-    @State private var selectedProvincia: String = "Todas"
+    @State private var selectedProvincia: String = ""
     @State private var isFilterExpanded: Bool = false // Controla si el contenedor de filtros está abierto
-    
+
     // Lista de provincias disponibles
-    let provincias = ["Todas", "A Coruña", "Ourense", "Lugo", "Pontevedra"]
+    var provincias: [String] {
+        [L(.contentAllProvinces), "A Coruña", "Ourense", "Lugo", "Pontevedra"]
+    }
     
     // Lista de campos y estado de carga gestionados por el view model
     @Binding var distanciaPredeterminada: Double // Añadimos el binding
@@ -50,7 +53,7 @@ struct ContentView: View {
                     if isGridView {
                         SkeletonGridView()
                     } else {
-                        LoadingView(message: "Cargando campos de Galicia...", style: .skeleton)
+                        LoadingView(message: L(.loadingCampos), style: .skeleton)
                     }
                 } else {
                     // Barra de botones y filtros
@@ -72,7 +75,7 @@ struct ContentView: View {
                     }
 
                     // Texto con el conteo de campos mostrados
-                    Text("Mostrados \(camposMostrados) campos")
+                    Text(L(.contentShownFields, camposMostrados))
                         .font(.caption)
                         .foregroundColor(.gray)
                         .padding(.horizontal)
@@ -92,11 +95,11 @@ struct ContentView: View {
                 Spacer()
             }
         }
-        .navigationTitle("Inicio")
+        .navigationTitle(L(.contentHome))
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .principal) {
-                Text("Campos de Galicia")
+                Text(L(.appName))
                     .font(.title3)
                     .foregroundColor(.primary)
             }
@@ -124,6 +127,10 @@ struct ContentView: View {
             }
         }
         .onAppear {
+            // Inicializar provincia predeterminada
+            if selectedProvincia.isEmpty {
+                selectedProvincia = L(.contentAllProvinces)
+            }
             filteredCampos = camposViewModel.campos
             camposMostrados = filteredCampos.count
             showOnboarding = !hasSeenOnboarding
@@ -152,7 +159,7 @@ struct ContentView: View {
                 .folding(options: [.diacriticInsensitive, .caseInsensitive], locale: .current)
 
             // Verificar provincia primero
-            let matchesProvincia = selectedProvincia == "Todas" || campo.provincia == selectedProvincia
+            let matchesProvincia = selectedProvincia == L(.contentAllProvinces) || campo.provincia == selectedProvincia
             if !matchesProvincia {
                 return nil
             }
@@ -353,7 +360,7 @@ struct ContentView: View {
     func resetFilters() {
         searchNombre = ""
         searchLocalidad = ""
-        selectedProvincia = "Todas"
+        selectedProvincia = L(.contentAllProvinces)
         filteredCampos = camposViewModel.campos
         camposMostrados = filteredCampos.count
     }
@@ -433,13 +440,13 @@ struct FiltersView: View {
 
     var body: some View {
         VStack(spacing: 12) {
-            Text("Filtrar:")
+            Text(L(.contentFilterLabel))
                 .fontWeight(.bold)
                 .foregroundColor(.primary)
                 .frame(maxWidth: .infinity, alignment: .leading)
-            
+
             // Filtro por nombre
-            TextField("Buscar por nombre", text: $searchNombre)
+            TextField(L(.contentSearchByName), text: $searchNombre)
                 .padding()
                 .background(Color(.secondarySystemFill))
                 .cornerRadius(12)
@@ -449,7 +456,7 @@ struct FiltersView: View {
                 )
 
             // Filtro por localidad
-            TextField("Buscar por localidad", text: $searchLocalidad)
+            TextField(L(.contentSearchByLocation), text: $searchLocalidad)
                 .padding()
                 .background(Color(.secondarySystemFill))
                 .cornerRadius(12)
@@ -459,7 +466,7 @@ struct FiltersView: View {
                 )
 
             // Filtro por provincia
-            Text("Provincia:")
+            Text(L(.contentProvince))
                 .fontWeight(.bold)
                 .foregroundColor(.primary)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -471,8 +478,8 @@ struct FiltersView: View {
                         RoundedRectangle(cornerRadius: 12)
                             .stroke(Color.gray.opacity(0.4), lineWidth: 1)
                     )
-                
-                Picker("Provincia", selection: $selectedProvincia) {
+
+                Picker(L(.contentProvince), selection: $selectedProvincia) {
                     ForEach(provincias, id: \.self) { provincia in
                         Text(provincia).tag(provincia)
                     }
@@ -488,7 +495,7 @@ struct FiltersView: View {
             // Botones de aplicar y resetear
             HStack(spacing: 10) {
                 Button(action: applyAction) {
-                    Text("Aplicar")
+                    Text(L(.contentApply))
                         .fontWeight(.bold)
                         .frame(maxWidth: .infinity)
                         .padding()
@@ -499,7 +506,7 @@ struct FiltersView: View {
                 }
 
                 Button(action: resetAction) {
-                    Text("Resetear")
+                    Text(L(.contentReset))
                         .fontWeight(.bold)
                         .frame(maxWidth: .infinity)
                         .padding()

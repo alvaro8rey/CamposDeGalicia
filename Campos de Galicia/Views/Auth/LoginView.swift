@@ -5,6 +5,7 @@ struct LoginView: View {
 
     // MARK: - Environment
     @EnvironmentObject var authViewModel: AuthViewModel
+    @EnvironmentObject var localizationManager: LocalizationManager
     @Environment(\.colorScheme) var colorScheme
 
     // MARK: - State
@@ -55,11 +56,11 @@ struct LoginView: View {
                         }
                         .padding(.top, 60)
 
-                        Text("Campos de Galicia")
+                        Text(L(.loginTitle))
                             .font(.system(size: 28, weight: .bold, design: .rounded))
                             .foregroundColor(.primary)
 
-                        Text("Descubre los campos de fútbol de Galicia")
+                        Text(L(.loginSubtitle))
                             .font(.subheadline)
                             .foregroundColor(.secondary)
                             .multilineTextAlignment(.center)
@@ -70,12 +71,12 @@ struct LoginView: View {
                     VStack(spacing: 20) {
                         // Email field
                         VStack(alignment: .leading, spacing: 8) {
-                            Label("Correo Electrónico", systemImage: "envelope.fill")
+                            Label(L(.loginEmail), systemImage: "envelope.fill")
                                 .font(.subheadline)
                                 .fontWeight(.medium)
                                 .foregroundColor(.secondary)
 
-                            TextField("tu@email.com", text: $email)
+                            TextField(L(.loginEmailPlaceholder), text: $email)
                                 .padding()
                                 .background(Color(UIColor.secondarySystemBackground))
                                 .cornerRadius(12)
@@ -86,7 +87,7 @@ struct LoginView: View {
 
                         // Password field
                         VStack(alignment: .leading, spacing: 8) {
-                            Label("Contraseña", systemImage: "lock.fill")
+                            Label(L(.loginPassword), systemImage: "lock.fill")
                                 .font(.subheadline)
                                 .fontWeight(.medium)
                                 .foregroundColor(.secondary)
@@ -120,7 +121,7 @@ struct LoginView: View {
                                     ProgressView()
                                         .progressViewStyle(CircularProgressViewStyle(tint: .white))
                                 }
-                                Text(isLoading ? "Iniciando sesión..." : "Iniciar Sesión")
+                                Text(isLoading ? L(.loginLoading) : L(.loginButton))
                                     .font(.headline)
                                     .fontWeight(.semibold)
                             }
@@ -141,7 +142,7 @@ struct LoginView: View {
 
                         // Forgot password button
                         Button(action: { showingResetPassword = true }) {
-                            Text("¿Olvidaste tu contraseña?")
+                            Text(L(.loginForgotPassword))
                                 .font(.subheadline)
                                 .fontWeight(.medium)
                                 .foregroundColor(.blue)
@@ -158,12 +159,12 @@ struct LoginView: View {
                     // Register prompt
                     VStack(spacing: 12) {
                         HStack(spacing: 4) {
-                            Text("¿No tienes cuenta?")
+                            Text(L(.loginNoAccount))
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
 
                             Button(action: { showingRegister = true }) {
-                                Text("Crear cuenta")
+                                Text(L(.loginCreateAccount))
                                     .font(.subheadline)
                                     .fontWeight(.semibold)
                                     .foregroundColor(.blue)
@@ -207,7 +208,7 @@ struct LoginView: View {
             AnalyticsManager.shared.trackScreen("Main")
 
         } catch {
-            errorMessage = "Error al iniciar sesión: \(error.localizedDescription)"
+            errorMessage = L(.loginError, error.localizedDescription)
             Logger.error("Login error: \(error.localizedDescription)")
             AnalyticsManager.shared.trackError(type: "login", message: error.localizedDescription)
         }

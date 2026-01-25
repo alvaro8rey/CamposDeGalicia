@@ -6,6 +6,7 @@ import PhotosUI
 struct AddReviewView: View {
     @Environment(\.dismiss) var dismiss
     @EnvironmentObject var authViewModel: AuthViewModel
+    @EnvironmentObject var localizationManager: LocalizationManager
 
     let campoId: UUID
     let campoNombre: String
@@ -59,7 +60,7 @@ struct AddReviewView: View {
                     // Rating Section
                     Section {
                         VStack(alignment: .leading, spacing: 12) {
-                            Text("Tu valoración")
+                            Text(L(.reviewYourRating))
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
 
@@ -98,7 +99,7 @@ struct AddReviewView: View {
                                 .frame(minHeight: 120)
                                 .overlay(alignment: .topLeading) {
                                     if reviewText.isEmpty {
-                                        Text("Cuéntanos tu experiencia en este campo...")
+                                        Text(L(.reviewPlaceholder))
                                             .foregroundColor(.secondary)
                                             .padding(.top, 8)
                                             .padding(.leading, 4)
@@ -111,9 +112,9 @@ struct AddReviewView: View {
                                 .foregroundColor(reviewText.count > maxCharacters ? .red : .secondary)
                         }
                     } header: {
-                        Label("Tu opinión", systemImage: "text.bubble")
+                        Label(L(.reviewYourOpinion), systemImage: "text.bubble")
                     } footer: {
-                        Text("Sé respetuoso y describe tu experiencia de forma honesta.")
+                        Text(L(.reviewGuidelines))
                             .font(.caption)
                     }
 
@@ -193,9 +194,9 @@ struct AddReviewView: View {
                             }
                         }
                     } header: {
-                        Label("Fotos (opcional)", systemImage: "photo")
+                        Label(L(.reviewPhotosOptional), systemImage: "photo")
                     } footer: {
-                        Text("Sube fotos del campo para ayudar a otros visitantes (máximo \(maxPhotos)).")
+                        Text(L(.reviewPhotosHelp, maxPhotos))
                             .font(.caption)
                     }
 
@@ -205,11 +206,11 @@ struct AddReviewView: View {
                             HStack {
                                 Image(systemName: "eye.slash.fill")
                                     .foregroundColor(.blue)
-                                Text("Reseña anónima")
+                                Text(L(.reviewAnonymous))
                             }
                         }
                     } footer: {
-                        Text("Si activas esta opción, tu nombre no será visible en la reseña.")
+                        Text(L(.reviewAnonymousHelp))
                             .font(.caption)
                     }
 
@@ -221,17 +222,17 @@ struct AddReviewView: View {
                         }
                     }
                 }
-                .navigationTitle(isEditMode ? "Editar Reseña" : "Nueva Reseña")
+                .navigationTitle(isEditMode ? L(.reviewEdit) : L(.reviewAdd))
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) {
-                        Button("Cancelar") {
+                        Button(L(.cancel)) {
                             dismiss()
                         }
                     }
 
                     ToolbarItem(placement: .confirmationAction) {
-                        Button(isEditMode ? "Guardar" : "Publicar") {
+                        Button(isEditMode ? L(.save) : L(.reviewPublish)) {
                             Task { await submitReview() }
                         }
                         .disabled(!isValid || isSubmitting)
@@ -274,11 +275,11 @@ struct AddReviewView: View {
 
     private var ratingDescription: String {
         switch rating {
-        case 1: return "😞 Muy malo"
-        case 2: return "😕 Malo"
-        case 3: return "😐 Regular"
-        case 4: return "😊 Bueno"
-        case 5: return "🤩 Excelente"
+        case 1: return L(.reviewRatingVeryBad)
+        case 2: return L(.reviewRatingBad)
+        case 3: return L(.reviewRatingRegular)
+        case 4: return L(.reviewRatingGood)
+        case 5: return L(.reviewRatingExcellent)
         default: return ""
         }
     }

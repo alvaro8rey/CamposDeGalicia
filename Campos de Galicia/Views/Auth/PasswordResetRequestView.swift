@@ -68,7 +68,7 @@ struct PasswordResetRequestView: View {
                                     .progressViewStyle(CircularProgressViewStyle(tint: .white))
                             }
                             if resendTimer > 0 {
-                                Text("Reenviar en \(resendTimer)s")
+                                Text(L(.passwordResetResendIn, resendTimer))
                             } else {
                                 Text(isLoading ? L(.passwordResetSending) : L(.passwordResetButton))
                             }
@@ -110,7 +110,7 @@ struct PasswordResetRequestView: View {
     // MARK: - Methods
     private func sendResetEmail() async {
         guard !email.isEmpty else {
-            message = "Introduce un correo electrónico válido."
+            message = L(.passwordResetInvalidEmail)
             isSuccess = false
             return
         }
@@ -129,7 +129,7 @@ struct PasswordResetRequestView: View {
             Logger.success("✅ Password reset email sent to: \(email)")
 
         } catch {
-            message = "Error al enviar el correo: \(error.localizedDescription)"
+            message = L(.passwordResetError, error.localizedDescription)
             isSuccess = false
 
             Logger.error("Password reset error: \(error.localizedDescription)")

@@ -2,6 +2,7 @@ import SwiftUI
 import Supabase
 
 struct LevelsInfoView: View {
+    @EnvironmentObject var localizationManager: LocalizationManager
     @State private var level: Int = 1
     @State private var currentXP: Int = 0
     @State private var xpToNextLevel: Int = 100
@@ -34,7 +35,7 @@ struct LevelsInfoView: View {
             )
             .ignoresSafeArea()
         )
-        .navigationTitle("Niveles")
+        .navigationTitle(L(.levelsTitle))
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
             Task { await loadUserData() }
@@ -59,7 +60,7 @@ struct LevelsInfoView: View {
             Image(systemName: "crown.fill")
                 .foregroundColor(.yellow)
                 .font(.title2)
-            Text("Información sobre Niveles")
+            Text(L(.levelsInfoTitle))
                 .font(.system(size: 24, weight: .bold, design: .rounded))
             Spacer()
             ZStack {
@@ -121,7 +122,7 @@ struct LevelsInfoView: View {
 
             VStack(spacing: 2) {
                 HStack {
-                    Text("Nivel \(level)")
+                    Text(L(.profileLevel, level))
                         .font(.subheadline)
                         .fontWeight(.bold)
                     Spacer()
@@ -131,7 +132,7 @@ struct LevelsInfoView: View {
                 }
                 HStack {
                     Spacer()
-                    Text("Total: \(currentXP) XP")
+                    Text(L(.levelsTotal, currentXP))
                         .font(.caption2)
                         .foregroundColor(.secondary.opacity(0.8))
                 }
@@ -152,15 +153,15 @@ struct LevelsInfoView: View {
                 Image(systemName: "info.circle.fill")
                     .foregroundColor(.blue)
                     .font(.title3)
-                Text("¿Para qué sirven los niveles?")
+                Text(L(.levelsWhatFor))
                     .font(.system(size: 20, weight: .bold, design: .rounded))
             }
 
             VStack(alignment: .leading, spacing: 10) {
-                BenefitRow(icon: "star.fill", color: .yellow, text: "Mayor visibilidad de tus reseñas")
-                BenefitRow(icon: "medal.fill", color: .orange, text: "Reconocimiento dentro de la comunidad")
-                BenefitRow(icon: "chart.line.uptrend.xyaxis", color: .green, text: "Seguimiento de tu progreso y dedicación")
-                BenefitRow(icon: "trophy.fill", color: .purple, text: "Desbloqueo de logros y recompensas")
+                BenefitRow(icon: "star.fill", color: .yellow, text: L(.levelsBenefitVisibility))
+                BenefitRow(icon: "medal.fill", color: .orange, text: L(.levelsBenefitRecognition))
+                BenefitRow(icon: "chart.line.uptrend.xyaxis", color: .green, text: L(.levelsBenefitProgress))
+                BenefitRow(icon: "trophy.fill", color: .purple, text: L(.levelsBenefitUnlock))
             }
             .padding(.top, 4)
         }
@@ -179,7 +180,7 @@ struct LevelsInfoView: View {
                 Image(systemName: "sparkles")
                     .foregroundColor(.green)
                     .font(.title3)
-                Text("¿Cómo conseguir XP?")
+                Text(L(.levelsHowToGetXP))
                     .font(.system(size: 20, weight: .bold, design: .rounded))
             }
 
@@ -187,23 +188,23 @@ struct LevelsInfoView: View {
                 XPMethodCard(
                     id: "visitar",
                     icon: "map.fill",
-                    title: "Visitar campos",
-                    description: "Marca campos como visitados para ganar XP",
-                    xpRange: "Variable",
+                    title: L(.levelsVisitFields),
+                    description: L(.levelsVisitFieldsDesc),
+                    xpRange: L(.levelsVariable),
                     expandedCardId: $expandedCardId
                 )
 
                 XPMethodCard(
                     id: "reseñas",
                     icon: "text.bubble.fill",
-                    title: "Escribir reseñas",
-                    description: "Deja reseñas en campos visitados",
+                    title: L(.levelsWriteReviews),
+                    description: L(.levelsWriteReviewsDesc),
                     xpRange: "25-55 XP",
                     details: [
-                        "Base: 25 XP",
-                        "Reseña detallada (+100 caracteres): +10 XP",
-                        "Con fotos: +15 XP",
-                        "Editada/mejorada: +5 XP"
+                        L(.levelsReviewBase),
+                        L(.levelsReviewDetailed),
+                        L(.levelsReviewPhotos),
+                        L(.levelsReviewEdited)
                     ],
                     expandedCardId: $expandedCardId
                 )
@@ -211,14 +212,14 @@ struct LevelsInfoView: View {
                 XPMethodCard(
                     id: "diaria",
                     icon: "calendar.badge.clock",
-                    title: "Recompensa diaria",
-                    description: "Reclama tu recompensa cada día en la sección de Logros",
+                    title: L(.levelsDailyReward),
+                    description: L(.levelsDailyRewardDesc),
                     xpRange: "20-70 XP",
                     details: [
-                        "Día 1: 20 XP",
-                        "Día 2: 30 XP",
-                        "Día 3: 40 XP",
-                        "Día 4: 50 XP",
+                        L(.levelsDailyDay, 1, 20),
+                        L(.levelsDailyDay, 2, 30),
+                        L(.levelsDailyDay, 3, 40),
+                        L(.levelsDailyDay, 4, 50),
                         "Día 5-6: 70 XP"
                     ],
                     expandedCardId: $expandedCardId
@@ -227,14 +228,14 @@ struct LevelsInfoView: View {
                 XPMethodCard(
                     id: "logros",
                     icon: "trophy.fill",
-                    title: "Desbloquear logros",
-                    description: "Completa objetivos para ganar XP extra",
+                    title: L(.levelsUnlockAchievements),
+                    description: L(.levelsUnlockAchievementsDesc),
                     xpRange: "50-1000 XP",
                     details: [
-                        "Campos visitados: 50-500 XP",
-                        "Rachas diarias: 100-300 XP",
-                        "Reseñas escritas: 50-1000 XP",
-                        "Y muchos más..."
+                        L(.levelsAchievementFields),
+                        L(.levelsAchievementStreaks),
+                        L(.levelsAchievementReviews),
+                        L(.levelsAndMore)
                     ],
                     expandedCardId: $expandedCardId
                 )
@@ -255,11 +256,11 @@ struct LevelsInfoView: View {
                 Image(systemName: "gift.fill")
                     .foregroundColor(.purple)
                     .font(.title3)
-                Text("Beneficios por nivel")
+                Text(L(.levelsBenefitsTitle))
                     .font(.system(size: 20, weight: .bold, design: .rounded))
             }
 
-            Text("A medida que subes de nivel, tus reseñas aparecerán primero en la lista destacada de cada campo, dándote mayor visibilidad ante otros usuarios.")
+            Text(L(.levelsBenefitsDesc))
                 .font(.system(size: 15, design: .rounded))
                 .foregroundColor(.primary.opacity(0.85))
                 .lineSpacing(4)

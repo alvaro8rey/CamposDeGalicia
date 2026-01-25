@@ -5,6 +5,7 @@ struct PasswordResetRequestView: View {
 
     // MARK: - Environment
     @EnvironmentObject var authViewModel: AuthViewModel
+    @EnvironmentObject var localizationManager: LocalizationManager
     @Environment(\.dismiss) var dismiss
 
     // MARK: - State
@@ -26,11 +27,11 @@ struct PasswordResetRequestView: View {
                         .foregroundColor(.orange)
                         .padding(.top, 40)
 
-                    Text("Restablecer Contraseña")
+                    Text(L(.passwordResetTitle))
                         .font(.title2)
                         .fontWeight(.bold)
 
-                    Text("Introduce tu correo electrónico y te enviaremos un enlace para restablecer tu contraseña.")
+                    Text(L(.passwordResetDesc))
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                         .multilineTextAlignment(.center)
@@ -38,11 +39,11 @@ struct PasswordResetRequestView: View {
 
                     // Email field
                     VStack(alignment: .leading, spacing: 5) {
-                        Text("Correo Electrónico")
+                        Text(L(.loginEmail))
                             .font(.subheadline)
                             .foregroundColor(.secondary)
 
-                        TextField("tu@email.com", text: $email)
+                        TextField(L(.passwordResetEmailPlaceholder), text: $email)
                             .textFieldStyle(RoundedBorderTextFieldStyle())
                             .autocapitalization(.none)
                             .keyboardType(.emailAddress)
@@ -69,7 +70,7 @@ struct PasswordResetRequestView: View {
                             if resendTimer > 0 {
                                 Text("Reenviar en \(resendTimer)s")
                             } else {
-                                Text(isLoading ? "Enviando..." : "Enviar Enlace")
+                                Text(isLoading ? L(.passwordResetSending) : L(.passwordResetButton))
                             }
                         }
                         .font(.headline)
@@ -85,11 +86,11 @@ struct PasswordResetRequestView: View {
                     Spacer()
                 }
             }
-            .navigationTitle("Recuperar Cuenta")
+            .navigationTitle(L(.passwordResetTitle))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancelar") {
+                    Button(L(.cancel)) {
                         dismiss()
                     }
                     .disabled(isLoading)
@@ -120,7 +121,7 @@ struct PasswordResetRequestView: View {
         do {
             try await authViewModel.requestPasswordReset(email: email)
 
-            message = "Te hemos enviado un correo con el enlace para restablecer tu contraseña."
+            message = L(.passwordResetSuccess)
             isSuccess = true
 
             startResendCountdown()

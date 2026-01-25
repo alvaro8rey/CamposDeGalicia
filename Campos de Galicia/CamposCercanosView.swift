@@ -11,6 +11,7 @@ extension CLLocationCoordinate2D: Equatable {
 struct CamposCercanosView: View {
     @EnvironmentObject var camposViewModel: CamposViewModel
     @EnvironmentObject var authViewModel: AuthViewModel
+    @EnvironmentObject var localizationManager: LocalizationManager
     @Environment(\.colorScheme) var colorScheme
     @Binding var userLocation: CLLocationCoordinate2D?
     @Binding var isLoadingLocation: Bool
@@ -62,7 +63,7 @@ struct CamposCercanosView: View {
                 ScrollView {
                     VStack(spacing: 0) {
                         if isLoadingLocation {
-                            LoadingView(message: "Obteniendo tu ubicación...", style: .spinner)
+                            LoadingView(message: L(.loadingLocation), style: .spinner)
                                 .padding(.top, 40)
                         } else if let errorMessage = errorMessage {
                             EmptyCard(text: errorMessage)
@@ -70,7 +71,7 @@ struct CamposCercanosView: View {
                                 .padding(.top, 16)
                         } else if let _ = userLocation {
                             if nearbyCampos.isEmpty {
-                                EmptyCard(text: "No se encontraron campos cercanos dentro de \(Int(selectedDistance)) km.")
+                                EmptyCard(text: L(.nearbyNoFieldsFound, Int(selectedDistance)))
                                     .padding(.horizontal, 16)
                                     .padding(.top, 16)
                             } else {
@@ -87,18 +88,18 @@ struct CamposCercanosView: View {
                                 .padding(.top, 8)
                             }
                         } else {
-                            EmptyCard(text: "No se pudo obtener la ubicación. Habilita los servicios de ubicación.")
+                            EmptyCard(text: L(.nearbyLocationError))
                                 .padding(.horizontal, 16)
                                 .padding(.top, 40)
                         }
                     }
                 }
             }
-            .navigationTitle("Campos cercanos")
+            .navigationTitle(L(.nearbyCamposTitle))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .principal) {
-                    Text("Campos cercanos")
+                    Text(L(.nearbyCamposTitle))
                         .font(.title3)
                         .foregroundColor(.primary)
                 }
@@ -172,9 +173,9 @@ private struct DistancePickerCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Distancia máxima")
+            Text(L(.nearbyMaxDistance))
                 .font(.headline)
-            Picker("Distancia máxima", selection: $selectedDistance) {
+            Picker(L(.nearbyMaxDistance), selection: $selectedDistance) {
                 ForEach(distanceOptions, id: \.self) { distance in
                     Text("\(Int(distance)) km").tag(distance)
                 }
@@ -248,7 +249,7 @@ private struct CampoRowView_Classic: View {
                 Text("\(campoWithDistance.campo.localidad), \(campoWithDistance.campo.provincia)")
                     .font(.subheadline)
                     .foregroundColor(.secondary)
-                Text("Distancia: \(String(format: "%.1f", campoWithDistance.distance)) km")
+                Text(L(.nearbyDistance, campoWithDistance.distance))
                     .font(.caption)
                     .foregroundColor(.secondary)
             }

@@ -199,6 +199,90 @@ enum LocalizedKey: String {
     case loadingCampoInfo = "loading.campo.info"
     case loadingLogros = "loading.logros"
     case loadingLocation = "loading.location"
+
+    // MARK: - Map View
+    case mapSearchPlaceholder = "map.search.placeholder"
+    case mapContinueStraight = "map.continue.straight"
+    case mapDestination = "map.destination"
+    case mapKilometers = "map.kilometers"
+    case mapMinutesApprox = "map.minutes.approx"
+    case mapStartNavigation = "map.start.navigation"
+    case mapFootballField = "map.football.field"
+    case mapOf = "map.of"
+
+    // MARK: - Nearby Campos
+    case nearbyCamposTitle = "nearby.campos.title"
+    case nearbyMaxDistance = "nearby.max.distance"
+    case nearbyNoFieldsFound = "nearby.no.fields.found"
+    case nearbyLocationError = "nearby.location.error"
+    case nearbyDistance = "nearby.distance"
+
+    // MARK: - Profile
+    case profileTitle = "profile.title"
+    case profileHello = "profile.hello"
+    case profileLevel = "profile.level"
+    case profileAutoCheckin = "profile.auto.checkin"
+    case profileAutoCheckinDesc = "profile.auto.checkin.desc"
+    case profileAutoCheckinWarning = "profile.auto.checkin.warning"
+    case profilePersonalInfo = "profile.personal.info"
+    case profileEdit = "profile.edit"
+    case profileName = "profile.name"
+    case profileSurname = "profile.surname"
+    case profileEmail = "profile.email"
+    case profileNotAvailable = "profile.not.available"
+    case profileLogout = "profile.logout"
+    case profileAutoCheckinInfoTitle = "profile.auto.checkin.info.title"
+    case profileAutoCheckinInfoDesc = "profile.auto.checkin.info.desc"
+    case profileAutoCheckinInfoHow = "profile.auto.checkin.info.how"
+    case profileAutoCheckinInfoDetect = "profile.auto.checkin.info.detect"
+    case profileAutoCheckinInfoWait = "profile.auto.checkin.info.wait"
+    case profileAutoCheckinInfoRegister = "profile.auto.checkin.info.register"
+    case profileAutoCheckinInfoNoRepeat = "profile.auto.checkin.info.norepeat"
+    case profileAutoCheckinInfoReqs = "profile.auto.checkin.info.reqs"
+    case profileAutoCheckinInfoReqAlways = "profile.auto.checkin.info.req.always"
+    case profileAutoCheckinInfoReqBackground = "profile.auto.checkin.info.req.background"
+    case profileAutoCheckinInfoReqInternet = "profile.auto.checkin.info.req.internet"
+    case profileClose = "profile.close"
+
+    // MARK: - Levels Info
+    case levelsTitle = "levels.title"
+    case levelsInfoTitle = "levels.info.title"
+    case levelsWhatFor = "levels.what.for"
+    case levelsBenefitVisibility = "levels.benefit.visibility"
+    case levelsBenefitRecognition = "levels.benefit.recognition"
+    case levelsBenefitProgress = "levels.benefit.progress"
+    case levelsBenefitUnlock = "levels.benefit.unlock"
+    case levelsHowToGetXP = "levels.how.to.get.xp"
+    case levelsVisitFields = "levels.visit.fields"
+    case levelsVisitFieldsDesc = "levels.visit.fields.desc"
+    case levelsVariable = "levels.variable"
+    case levelsWriteReviews = "levels.write.reviews"
+    case levelsWriteReviewsDesc = "levels.write.reviews.desc"
+    case levelsReviewBase = "levels.review.base"
+    case levelsReviewDetailed = "levels.review.detailed"
+    case levelsReviewPhotos = "levels.review.photos"
+    case levelsReviewEdited = "levels.review.edited"
+    case levelsDailyReward = "levels.daily.reward"
+    case levelsDailyRewardDesc = "levels.daily.reward.desc"
+    case levelsDailyDay = "levels.daily.day"
+    case levelsUnlockAchievements = "levels.unlock.achievements"
+    case levelsUnlockAchievementsDesc = "levels.unlock.achievements.desc"
+    case levelsAchievementFields = "levels.achievement.fields"
+    case levelsAchievementStreaks = "levels.achievement.streaks"
+    case levelsAchievementReviews = "levels.achievement.reviews"
+    case levelsAndMore = "levels.and.more"
+    case levelsBenefitsTitle = "levels.benefits.title"
+    case levelsBenefitsDesc = "levels.benefits.desc"
+    case levelsTotal = "levels.total"
+
+    // MARK: - Password Reset
+    case passwordResetTitle = "password.reset.title"
+    case passwordResetDesc = "password.reset.desc"
+    case passwordResetEmailPlaceholder = "password.reset.email.placeholder"
+    case passwordResetButton = "password.reset.button"
+    case passwordResetSending = "password.reset.sending"
+    case passwordResetSuccess = "password.reset.success"
+    case passwordResetBackToLogin = "password.reset.back.to.login"
 }
 
 /// Manager de localización centralizado
@@ -411,6 +495,90 @@ class LocalizationManager: ObservableObject {
             .loadingCampoInfo: "Cargando información del campo...",
             .loadingLogros: "Cargando logros...",
             .loadingLocation: "Obteniendo tu ubicación...",
+
+            // Map View
+            .mapSearchPlaceholder: "Buscar campo...",
+            .mapContinueStraight: "Continúa recto",
+            .mapDestination: "Destino",
+            .mapKilometers: "kilómetros",
+            .mapMinutesApprox: "minutos aprox.",
+            .mapStartNavigation: "Iniciar navegación",
+            .mapFootballField: "Campo de fútbol",
+            .mapOf: "de",
+
+            // Nearby Campos
+            .nearbyCamposTitle: "Campos cercanos",
+            .nearbyMaxDistance: "Distancia máxima",
+            .nearbyNoFieldsFound: "No se encontraron campos cercanos dentro de %d km.",
+            .nearbyLocationError: "No se pudo obtener la ubicación. Habilita los servicios de ubicación.",
+            .nearbyDistance: "Distancia: %.1f km",
+
+            // Profile
+            .profileTitle: "Perfil",
+            .profileHello: "¡Hola, %@!",
+            .profileLevel: "Nivel %d",
+            .profileAutoCheckin: "Auto Check-in",
+            .profileAutoCheckinDesc: "Registrar visitas automáticamente al estar 2 minutos cerca de un campo",
+            .profileAutoCheckinWarning: "⚠️ Se necesitan permisos de ubicación 'Siempre' para el auto check-in",
+            .profilePersonalInfo: "Información Personal",
+            .profileEdit: "Editar",
+            .profileName: "Nombre",
+            .profileSurname: "Apellidos",
+            .profileEmail: "Email",
+            .profileNotAvailable: "No disponible",
+            .profileLogout: "Cerrar Sesión",
+            .profileAutoCheckinInfoTitle: "Auto Check-in",
+            .profileAutoCheckinInfoDesc: "El auto check-in registra automáticamente tu visita cuando estás dentro de 500m de un campo y permaneces allí durante 2 minutos.",
+            .profileAutoCheckinInfoHow: "Cómo funciona:",
+            .profileAutoCheckinInfoDetect: "Detecta cuando entras en 500m de un campo",
+            .profileAutoCheckinInfoWait: "Espera 2 minutos de permanencia en el área",
+            .profileAutoCheckinInfoRegister: "Registra la visita automáticamente",
+            .profileAutoCheckinInfoNoRepeat: "No se repite si ya visitaste el campo",
+            .profileAutoCheckinInfoReqs: "Requisitos:",
+            .profileAutoCheckinInfoReqAlways: "Permisos de ubicación 'Siempre'",
+            .profileAutoCheckinInfoReqBackground: "Mantener la app en segundo plano",
+            .profileAutoCheckinInfoReqInternet: "Conexión a internet para guardar",
+            .profileClose: "Cerrar",
+
+            // Levels Info
+            .levelsTitle: "Niveles",
+            .levelsInfoTitle: "Información sobre Niveles",
+            .levelsWhatFor: "¿Para qué sirven los niveles?",
+            .levelsBenefitVisibility: "Mayor visibilidad de tus reseñas",
+            .levelsBenefitRecognition: "Reconocimiento dentro de la comunidad",
+            .levelsBenefitProgress: "Seguimiento de tu progreso y dedicación",
+            .levelsBenefitUnlock: "Desbloqueo de logros y recompensas",
+            .levelsHowToGetXP: "¿Cómo conseguir XP?",
+            .levelsVisitFields: "Visitar campos",
+            .levelsVisitFieldsDesc: "Marca campos como visitados para ganar XP",
+            .levelsVariable: "Variable",
+            .levelsWriteReviews: "Escribir reseñas",
+            .levelsWriteReviewsDesc: "Deja reseñas en campos visitados",
+            .levelsReviewBase: "Base: 25 XP",
+            .levelsReviewDetailed: "Reseña detallada (+100 caracteres): +10 XP",
+            .levelsReviewPhotos: "Con fotos: +15 XP",
+            .levelsReviewEdited: "Editada/mejorada: +5 XP",
+            .levelsDailyReward: "Recompensa diaria",
+            .levelsDailyRewardDesc: "Reclama tu recompensa cada día en la sección de Logros",
+            .levelsDailyDay: "Día %d: %d XP",
+            .levelsUnlockAchievements: "Desbloquear logros",
+            .levelsUnlockAchievementsDesc: "Completa objetivos para ganar XP extra",
+            .levelsAchievementFields: "Campos visitados: 50-500 XP",
+            .levelsAchievementStreaks: "Rachas diarias: 100-300 XP",
+            .levelsAchievementReviews: "Reseñas escritas: 50-1000 XP",
+            .levelsAndMore: "Y muchos más...",
+            .levelsBenefitsTitle: "Beneficios por nivel",
+            .levelsBenefitsDesc: "A medida que subes de nivel, tus reseñas aparecerán primero en la lista destacada de cada campo, dándote mayor visibilidad ante otros usuarios.",
+            .levelsTotal: "Total: %d XP",
+
+            // Password Reset
+            .passwordResetTitle: "Restablecer Contraseña",
+            .passwordResetDesc: "Ingresa tu correo electrónico y te enviaremos un enlace para restablecer tu contraseña.",
+            .passwordResetEmailPlaceholder: "correo@ejemplo.com",
+            .passwordResetButton: "Enviar enlace",
+            .passwordResetSending: "Enviando...",
+            .passwordResetSuccess: "Enlace enviado. Revisa tu correo electrónico.",
+            .passwordResetBackToLogin: "Volver al inicio de sesión",
         ],
 
         // MARK: - Galego
@@ -591,6 +759,90 @@ class LocalizationManager: ObservableObject {
             .loadingCampoInfo: "Cargando información do campo...",
             .loadingLogros: "Cargando logros...",
             .loadingLocation: "Obtendo a túa ubicación...",
+
+            // Map View
+            .mapSearchPlaceholder: "Buscar campo...",
+            .mapContinueStraight: "Continúa recto",
+            .mapDestination: "Destino",
+            .mapKilometers: "kilómetros",
+            .mapMinutesApprox: "minutos aprox.",
+            .mapStartNavigation: "Iniciar navegación",
+            .mapFootballField: "Campo de fútbol",
+            .mapOf: "de",
+
+            // Nearby Campos
+            .nearbyCamposTitle: "Campos cercanos",
+            .nearbyMaxDistance: "Distancia máxima",
+            .nearbyNoFieldsFound: "Non se atoparon campos cercanos dentro de %d km.",
+            .nearbyLocationError: "Non se puido obter a ubicación. Habilita os servizos de localización.",
+            .nearbyDistance: "Distancia: %.1f km",
+
+            // Profile
+            .profileTitle: "Perfil",
+            .profileHello: "Ola, %@!",
+            .profileLevel: "Nivel %d",
+            .profileAutoCheckin: "Auto Check-in",
+            .profileAutoCheckinDesc: "Rexistrar visitas automaticamente ao estar 2 minutos preto dun campo",
+            .profileAutoCheckinWarning: "⚠️ Necesítanse permisos de ubicación 'Sempre' para o auto check-in",
+            .profilePersonalInfo: "Información Persoal",
+            .profileEdit: "Editar",
+            .profileName: "Nome",
+            .profileSurname: "Apelidos",
+            .profileEmail: "Email",
+            .profileNotAvailable: "Non dispoñible",
+            .profileLogout: "Pechar Sesión",
+            .profileAutoCheckinInfoTitle: "Auto Check-in",
+            .profileAutoCheckinInfoDesc: "O auto check-in rexistra automaticamente a túa visita cando estás dentro de 500m dun campo e permaneces alí durante 2 minutos.",
+            .profileAutoCheckinInfoHow: "Como funciona:",
+            .profileAutoCheckinInfoDetect: "Detecta cando entras en 500m dun campo",
+            .profileAutoCheckinInfoWait: "Espera 2 minutos de permanencia na área",
+            .profileAutoCheckinInfoRegister: "Rexistra a visita automaticamente",
+            .profileAutoCheckinInfoNoRepeat: "Non se repite se xa visitaches o campo",
+            .profileAutoCheckinInfoReqs: "Requisitos:",
+            .profileAutoCheckinInfoReqAlways: "Permisos de ubicación 'Sempre'",
+            .profileAutoCheckinInfoReqBackground: "Manter a app en segundo plano",
+            .profileAutoCheckinInfoReqInternet: "Conexión a internet para gardar",
+            .profileClose: "Pechar",
+
+            // Levels Info
+            .levelsTitle: "Niveis",
+            .levelsInfoTitle: "Información sobre Niveis",
+            .levelsWhatFor: "Para que serven os niveis?",
+            .levelsBenefitVisibility: "Maior visibilidade das túas recensións",
+            .levelsBenefitRecognition: "Recoñecemento dentro da comunidade",
+            .levelsBenefitProgress: "Seguimento do teu progreso e dedicación",
+            .levelsBenefitUnlock: "Desbloqueo de logros e recompensas",
+            .levelsHowToGetXP: "Como conseguir XP?",
+            .levelsVisitFields: "Visitar campos",
+            .levelsVisitFieldsDesc: "Marca campos como visitados para gañar XP",
+            .levelsVariable: "Variable",
+            .levelsWriteReviews: "Escribir recensións",
+            .levelsWriteReviewsDesc: "Deixa recensións en campos visitados",
+            .levelsReviewBase: "Base: 25 XP",
+            .levelsReviewDetailed: "Recensión detallada (+100 caracteres): +10 XP",
+            .levelsReviewPhotos: "Con fotos: +15 XP",
+            .levelsReviewEdited: "Editada/mellorada: +5 XP",
+            .levelsDailyReward: "Recompensa diaria",
+            .levelsDailyRewardDesc: "Reclama a túa recompensa cada día na sección de Logros",
+            .levelsDailyDay: "Día %d: %d XP",
+            .levelsUnlockAchievements: "Desbloquear logros",
+            .levelsUnlockAchievementsDesc: "Completa obxectivos para gañar XP extra",
+            .levelsAchievementFields: "Campos visitados: 50-500 XP",
+            .levelsAchievementStreaks: "Rachas diarias: 100-300 XP",
+            .levelsAchievementReviews: "Recensións escritas: 50-1000 XP",
+            .levelsAndMore: "E moitos máis...",
+            .levelsBenefitsTitle: "Beneficios por nivel",
+            .levelsBenefitsDesc: "A medida que sobes de nivel, as túas recensións aparecerán primeiro na lista destacada de cada campo, dándoche maior visibilidade ante outros usuarios.",
+            .levelsTotal: "Total: %d XP",
+
+            // Password Reset
+            .passwordResetTitle: "Restablecer Contrasinal",
+            .passwordResetDesc: "Ingresa o teu correo electrónico e enviarémosche un enlace para restablecer o teu contrasinal.",
+            .passwordResetEmailPlaceholder: "correo@exemplo.com",
+            .passwordResetButton: "Enviar enlace",
+            .passwordResetSending: "Enviando...",
+            .passwordResetSuccess: "Enlace enviado. Revisa o teu correo electrónico.",
+            .passwordResetBackToLogin: "Volver ao inicio de sesión",
         ]
     ]
 }

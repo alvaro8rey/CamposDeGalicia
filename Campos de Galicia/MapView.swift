@@ -75,6 +75,7 @@ extension View {
 struct MapaView: View {
     @EnvironmentObject var camposViewModel: CamposViewModel
     @EnvironmentObject var authViewModel: AuthViewModel
+    @EnvironmentObject var localizationManager: LocalizationManager
 
     @Binding var externalIsNavigating: Bool
 
@@ -251,8 +252,8 @@ struct MapaView: View {
                         HStack {
                             Image(systemName: "magnifyingglass")
                                 .foregroundColor(.secondary)
-                            
-                            TextField("Buscar campo...", text: $searchText, onEditingChanged: { editing in
+
+                            TextField(L(.mapSearchPlaceholder), text: $searchText, onEditingChanged: { editing in
                                 if editing {
                                     // Si se pincha en el buscador, cerramos cualquier chincheta abierta
                                     deselectAllAnnotations()
@@ -486,7 +487,7 @@ struct MapaView: View {
 
                 VStack(alignment: .leading, spacing: 4) {
                     let step = route.steps[currentStepIndex]
-                    Text(step.instructions.isEmpty ? "Continúa recto" : step.instructions)
+                    Text(step.instructions.isEmpty ? L(.mapContinueStraight) : step.instructions)
                         .font(.system(size: 16, weight: .semibold))
                         .foregroundColor(.primary)
                         .lineLimit(2)
@@ -516,7 +517,7 @@ struct MapaView: View {
                     Text("\(currentStepIndex + 1)")
                         .font(.system(size: 18, weight: .bold))
                         .foregroundColor(.blue)
-                    Text("de \(route.steps.count)")
+                    Text("\(L(.mapOf)) \(route.steps.count)")
                         .font(.caption2)
                         .foregroundColor(.secondary)
                 }
@@ -576,7 +577,7 @@ struct MapaView: View {
                                 .foregroundColor(.green)
                                 .font(.title3)
 
-                            Text(destination.title ?? "Destino")
+                            Text(destination.title ?? L(.mapDestination))
                                 .font(.system(size: 18, weight: .bold))
                                 .foregroundColor(.primary)
                         }
@@ -610,7 +611,7 @@ struct MapaView: View {
                             .font(.system(size: 24, weight: .bold))
                             .foregroundColor(.primary)
                     }
-                    Text("kilómetros")
+                    Text(L(.mapKilometers))
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
@@ -628,7 +629,7 @@ struct MapaView: View {
                             .font(.system(size: 24, weight: .bold))
                             .foregroundColor(.primary)
                     }
-                    Text("minutos aprox.")
+                    Text(L(.mapMinutesApprox))
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
@@ -644,7 +645,7 @@ struct MapaView: View {
                 HStack(spacing: 10) {
                     Image(systemName: "location.fill")
                         .font(.system(size: 18, weight: .semibold))
-                    Text("Iniciar navegación")
+                    Text(L(.mapStartNavigation))
                         .font(.system(size: 17, weight: .semibold))
                 }
                 .foregroundColor(.white)
@@ -813,7 +814,7 @@ struct MapaView: View {
                 newAnnotations.append(MapAnnotationItem(
                     coordinate: coordinate,
                     title: campo.nombre,
-                    subtitle: "Campo de fútbol",
+                    subtitle: L(.mapFootballField),
                     campo: campo,
                     isFromManualCoordinates: true,
                     isVisited: isVisited

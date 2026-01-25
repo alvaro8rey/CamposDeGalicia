@@ -9,6 +9,7 @@ struct ProfileView: View {
     @EnvironmentObject var geofenceManager: GeofenceManager
     @EnvironmentObject var locationManager: LocationManager
     @EnvironmentObject var camposViewModel: CamposViewModel
+    @EnvironmentObject var localizationManager: LocalizationManager
     @Environment(\.colorScheme) var colorScheme
 
     // MARK: - State
@@ -73,11 +74,11 @@ struct ProfileView: View {
                 .padding(.vertical)
             }
         }
-        .navigationTitle("Perfil")
+        .navigationTitle(L(.profileTitle))
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .principal) {
-                Text("Perfil")
+                Text(L(.profileTitle))
                     .font(.title3)
                     .foregroundColor(.primary)
             }
@@ -155,7 +156,7 @@ struct ProfileView: View {
             )
 
             VStack(alignment: .leading, spacing: 4) {
-                Text("¡Hola, \(authViewModel.nombre)!")
+                Text(L(.profileHello, authViewModel.nombre))
                     .font(.system(size: 24, weight: .bold, design: .rounded))
                     .foregroundColor(.primary)
 
@@ -173,7 +174,7 @@ struct ProfileView: View {
     private var progressBarView: some View {
         VStack(spacing: 8) {
             HStack {
-                Text("Nivel \(profileVM.level)")
+                Text(L(.profileLevel, profileVM.level))
                     .font(.headline)
                 Spacer()
                 Text("\(profileVM.currentXP) / \(profileVM.xpToNextLevel) XP")
@@ -209,14 +210,14 @@ struct ProfileView: View {
             Toggle(isOn: $autoCheckinStored) {
                 VStack(alignment: .leading, spacing: 4) {
                     HStack {
-                        Text("Auto Check-in")
+                        Text(L(.profileAutoCheckin))
                             .font(.headline)
                         Button(action: { showInfoSheet = true }) {
                             Image(systemName: "info.circle")
                                 .foregroundColor(.blue)
                         }
                     }
-                    Text("Registrar visitas automáticamente al estar 2 minutos cerca de un campo")
+                    Text(L(.profileAutoCheckinDesc))
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
@@ -231,7 +232,7 @@ struct ProfileView: View {
             }
 
             if locationManager.authorizationStatus != .authorizedAlways && autoCheckinStored {
-                Text("⚠️ Se necesitan permisos de ubicación 'Siempre' para el auto check-in")
+                Text(L(.profileAutoCheckinWarning))
                     .font(.caption)
                     .foregroundColor(.orange)
             }
@@ -246,7 +247,7 @@ struct ProfileView: View {
     private var personalDataSection: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
-                Text("Información Personal")
+                Text(L(.profilePersonalInfo))
                     .font(.title3)
                     .fontWeight(.bold)
 
@@ -255,7 +256,7 @@ struct ProfileView: View {
                 Button(action: { showEditProfile = true }) {
                     HStack(spacing: 4) {
                         Image(systemName: "pencil")
-                        Text("Editar")
+                        Text(L(.profileEdit))
                     }
                     .font(.subheadline)
                     .foregroundColor(.blue)
@@ -264,11 +265,11 @@ struct ProfileView: View {
 
             // Display Info
             VStack(alignment: .leading, spacing: 12) {
-                InfoRow(icon: "person.fill", label: "Nombre", value: authViewModel.nombre)
+                InfoRow(icon: "person.fill", label: L(.profileName), value: authViewModel.nombre)
                 Divider()
-                InfoRow(icon: "person.fill", label: "Apellidos", value: authViewModel.apellidos)
+                InfoRow(icon: "person.fill", label: L(.profileSurname), value: authViewModel.apellidos)
                 Divider()
-                InfoRow(icon: "envelope.fill", label: "Email", value: authViewModel.user?.email ?? "No disponible")
+                InfoRow(icon: "envelope.fill", label: L(.profileEmail), value: authViewModel.user?.email ?? L(.profileNotAvailable))
             }
         }
         .padding()
@@ -291,7 +292,7 @@ struct ProfileView: View {
             Button(action: { Task { await logout() } }) {
                 HStack {
                     Image(systemName: "rectangle.portrait.and.arrow.right")
-                    Text("Cerrar Sesión")
+                    Text(L(.profileLogout))
                 }
                 .frame(maxWidth: .infinity)
                 .padding()
@@ -354,34 +355,34 @@ struct InfoSheetView: View {
         NavigationView {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
-                    Text("Auto Check-in")
+                    Text(L(.profileAutoCheckinInfoTitle))
                         .font(.title2)
                         .fontWeight(.bold)
 
-                    Text("El auto check-in registra automáticamente tu visita cuando estás dentro de 500m de un campo y permaneces allí durante 2 minutos.")
+                    Text(L(.profileAutoCheckinInfoDesc))
                         .font(.body)
 
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("Cómo funciona:")
+                        Text(L(.profileAutoCheckinInfoHow))
                             .font(.headline)
                             .padding(.top, 8)
 
-                        Label("Detecta cuando entras en 500m de un campo", systemImage: "location.circle")
-                        Label("Espera 2 minutos de permanencia en el área", systemImage: "clock")
-                        Label("Registra la visita automáticamente", systemImage: "checkmark.circle.fill")
-                        Label("No se repite si ya visitaste el campo", systemImage: "shield.checkered")
+                        Label(L(.profileAutoCheckinInfoDetect), systemImage: "location.circle")
+                        Label(L(.profileAutoCheckinInfoWait), systemImage: "clock")
+                        Label(L(.profileAutoCheckinInfoRegister), systemImage: "checkmark.circle.fill")
+                        Label(L(.profileAutoCheckinInfoNoRepeat), systemImage: "shield.checkered")
                     }
                     .font(.subheadline)
                     .padding(.vertical, 8)
 
-                    Text("Requisitos:")
+                    Text(L(.profileAutoCheckinInfoReqs))
                         .font(.headline)
                         .padding(.top, 8)
 
                     VStack(alignment: .leading, spacing: 8) {
-                        Label("Permisos de ubicación 'Siempre'", systemImage: "location.fill")
-                        Label("Mantener la app en segundo plano", systemImage: "app.badge")
-                        Label("Conexión a internet para guardar", systemImage: "wifi")
+                        Label(L(.profileAutoCheckinInfoReqAlways), systemImage: "location.fill")
+                        Label(L(.profileAutoCheckinInfoReqBackground), systemImage: "app.badge")
+                        Label(L(.profileAutoCheckinInfoReqInternet), systemImage: "wifi")
                     }
                     .font(.subheadline)
 
@@ -389,11 +390,11 @@ struct InfoSheetView: View {
                 }
                 .padding()
             }
-            .navigationTitle("Información")
+            .navigationTitle(L(.profileAutoCheckinInfoTitle))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Cerrar") {
+                    Button(L(.profileClose)) {
                         dismiss()
                     }
                 }

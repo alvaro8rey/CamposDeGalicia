@@ -69,13 +69,12 @@ struct OnboardingView: View {
             }
             .navigationBarHidden(true)
             .onChange(of: page) { newValue in
-                // Solicita permisos solo cuando se llega a cada pantalla correspondiente
+                // Actualiza el estado de los permisos cuando se llega a cada pantalla
                 if newValue == 3 { // Notificaciones
-                    requestNotificationPermissionIfNeeded()
+                    refreshNotifStatus()
                 } else if newValue == 4 { // Ubicación
-                    if locationPerm.status == .notDetermined {
-                        locationPerm.requestWhenInUse()
-                    }
+                    // Solo actualiza el estado, no pide permisos automáticamente
+                    locationPerm.status = CLLocationManager.authorizationStatus()
                 }
             }
             .onAppear {
@@ -166,6 +165,27 @@ struct OnboardingView: View {
                 .padding(.horizontal, 24)
 
             permissionStatusView(type: .notifications)
+
+            // Botón para dar permisos si están no determinados
+            if notifStatus == .notDetermined {
+                Button(action: {
+                    requestNotificationPermission()
+                }) {
+                    HStack {
+                        Image(systemName: "bell.badge")
+                        Text("Permitir Notificaciones")
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(Color.purple)
+                    .foregroundColor(.white)
+                    .cornerRadius(12)
+                    .fontWeight(.semibold)
+                }
+                .padding(.horizontal, 24)
+                .padding(.top, 8)
+            }
+
             Spacer()
         }
         .padding(.top, 24)
@@ -186,6 +206,27 @@ struct OnboardingView: View {
                 .padding(.horizontal, 24)
 
             permissionStatusView(type: .location)
+
+            // Botón para dar permisos si están no determinados
+            if locationPerm.status == .notDetermined {
+                Button(action: {
+                    locationPerm.requestWhenInUse()
+                }) {
+                    HStack {
+                        Image(systemName: "location.fill")
+                        Text("Permitir Ubicación")
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(Color.pink)
+                    .foregroundColor(.white)
+                    .cornerRadius(12)
+                    .fontWeight(.semibold)
+                }
+                .padding(.horizontal, 24)
+                .padding(.top, 8)
+            }
+
             Spacer()
         }
         .padding(.top, 24)
@@ -228,14 +269,10 @@ struct OnboardingView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    private func requestNotificationPermissionIfNeeded() {
-        UNUserNotificationCenter.current().getNotificationSettings { settings in
-            if settings.authorizationStatus == .notDetermined {
-                UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { _, _ in
-                    DispatchQueue.main.async {
-                        refreshNotifStatus()
-                    }
-                }
+    private func requestNotificationPermission() {
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { _, _ in
+            DispatchQueue.main.async {
+                refreshNotifStatus()
             }
         }
     }
@@ -328,4 +365,18 @@ struct OnboardingView: View {
         .padding(.horizontal, 24)
         .frame(maxWidth: .infinity, alignment: .center)
     }
+}
+
+// MARK: - Preview
+#Preview {
+    OnboardingView()
+}
+
+#Preview("Página de Bienvenida") {
+    OnboardingView()
+}
+
+#Preview("Modo Oscuro") {
+    OnboardingView()
+        .preferredColorScheme(.dark)
 }

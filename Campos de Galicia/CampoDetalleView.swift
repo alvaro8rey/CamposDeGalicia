@@ -358,12 +358,12 @@ struct CampoDetalleView: View {
                 }
             }
             for id in uniqueUserIds where userNames[id] == nil {
-                userNames[id] = "Usuario desconocido"
+                userNames[id] = L(.campoUnknownUser)
             }
         } catch {
             print("Error loading user names:", error)
             for id in uniqueUserIds {
-                userNames[id] = "Usuario desconocido"
+                userNames[id] = L(.campoUnknownUser)
             }
         }
     }

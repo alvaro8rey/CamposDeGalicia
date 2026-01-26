@@ -40,11 +40,11 @@ struct DailyRewardCardView: View {
                         .font(.title2)
                         .foregroundColor(.orange)
 
-                    Text("Recompensa Diaria")
+                    Text(L(.dailyRewardTitle))
                         .font(.system(size: 22, weight: .bold))
                 }
 
-                Text(hasClaimedToday ? "¡Ya reclamaste hoy!" : "Reclama tu recompensa")
+                Text(hasClaimedToday ? L(.dailyRewardClaimed) : L(.dailyRewardClaim, currentXP))
                     .font(.subheadline)
                     .foregroundColor(.secondary)
             }
@@ -57,7 +57,7 @@ struct DailyRewardCardView: View {
                     .font(.system(size: 24, weight: .heavy))
                     .foregroundColor(.orange)
 
-                Text("racha")
+                Text(L(.dailyRewardStreak))
                     .font(.caption2)
                     .foregroundColor(.secondary)
                     .textCase(.uppercase)
@@ -131,7 +131,7 @@ struct DailyRewardCardView: View {
             HStack(spacing: 8) {
                 Image(systemName: "checkmark.circle.fill")
                     .foregroundColor(.green)
-                Text("Recompensa reclamada hoy")
+                Text(L(.dailyRewardClaimedToday))
                     .fontWeight(.medium)
                     .foregroundColor(.secondary)
             }
@@ -151,7 +151,7 @@ struct DailyRewardCardView: View {
             HStack(spacing: 4) {
                 Image(systemName: "bell.badge")
                     .font(.caption)
-                Text("Probar notificación en 20s")
+                Text(L(.dailyRewardTestNotif))
                     .font(.caption)
             }
             .foregroundColor(.blue)
@@ -206,7 +206,7 @@ struct DayCircleView: View {
 
     var body: some View {
         VStack(spacing: 8) {
-            Text("Día \(day)")
+            Text(L(.dailyRewardDay, day))
                 .font(.caption)
                 .fontWeight(isCurrent ? .bold : .regular)
                 .foregroundColor(isCurrent ? .orange : .secondary)

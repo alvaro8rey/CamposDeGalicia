@@ -55,7 +55,7 @@ struct CampoInfoCard: View {
                     HStack(spacing: 8) {
                         Image(systemName: "plus.circle.fill")
                             .font(.body)
-                        Text("Contribuir información")
+                        Text(L(.campoContribute))
                             .font(.subheadline)
                             .fontWeight(.semibold)
                     }

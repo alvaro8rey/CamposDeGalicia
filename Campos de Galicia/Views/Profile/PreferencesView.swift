@@ -14,7 +14,7 @@ struct PreferencesView: View {
     // MARK: - Body
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Preferencias")
+            Text(L(.preferencesTitle))
                 .font(.title3)
                 .fontWeight(.bold)
 
@@ -70,7 +70,7 @@ struct PreferencesView: View {
             // Distance Preference
             VStack(alignment: .leading, spacing: 8) {
                 Label {
-                    Text("Distancia predeterminada para búsqueda de campos cercanos:")
+                    Text(L(.preferencesDistance))
                         .font(.subheadline)
                         .fontWeight(.medium)
                 } icon: {
@@ -79,9 +79,9 @@ struct PreferencesView: View {
                 }
 
                 Picker("Distancia", selection: $profileVM.distanciaPredeterminada) {
-                    Text("5 km").tag(5.0)
-                    Text("10 km").tag(10.0)
-                    Text("20 km").tag(20.0)
+                    Text(L(.preferencesDistanceKm, 5)).tag(5.0)
+                    Text(L(.preferencesDistanceKm, 10)).tag(10.0)
+                    Text(L(.preferencesDistanceKm, 20)).tag(20.0)
                 }
                 .pickerStyle(SegmentedPickerStyle())
                 .disabled(isSaving)

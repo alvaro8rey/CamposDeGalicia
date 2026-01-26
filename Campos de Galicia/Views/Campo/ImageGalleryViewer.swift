@@ -33,7 +33,7 @@ struct ImageGalleryViewer: View {
                                     Image(systemName: "exclamationmark.triangle.fill")
                                         .foregroundColor(.red)
                                         .font(.system(size: 40))
-                                    Text("Error al cargar")
+                                    Text(L(.reviewLoadError))
                                         .foregroundColor(.white)
                                         .font(.headline)
                                 }

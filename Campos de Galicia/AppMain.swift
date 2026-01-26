@@ -75,7 +75,7 @@ struct AppMain: App {
                 }
                 .tabItem {
                     Image(systemName: "house.fill")
-                    Text("Inicio")
+                    Text(L(.tabHome))
                 }
                 .tag(0)
 
@@ -89,7 +89,7 @@ struct AppMain: App {
                 }
                 .tabItem {
                     Image(systemName: "map.fill")
-                    Text("Mapa")
+                    Text(L(.tabMap))
                 }
                 .tag(1)
 
@@ -108,7 +108,7 @@ struct AppMain: App {
                 }
                 .tabItem {
                     Image(systemName: "mappin.and.ellipse")
-                    Text("Cercanos")
+                    Text(L(.tabNearby))
                 }
                 .tag(2)
 
@@ -121,7 +121,7 @@ struct AppMain: App {
                 .environmentObject(locationManager)
                 .tabItem {
                     Image(systemName: "person.fill")
-                    Text("Usuario")
+                    Text(L(.tabProfile))
                 }
                 .tag(3)
             }
@@ -153,30 +153,30 @@ struct AppMain: App {
                 handleDeepLink(url: url)
             }
             // Alerta de seguridad para rutas activas
-            .alert("Ruta en curso", isPresented: $showExitRouteAlert) {
-                Button("Continuar ruta", role: .cancel) {
+            .alert(L(.navRouteInProgress), isPresented: $showExitRouteAlert) {
+                Button(L(.navContinueRoute), role: .cancel) {
                     // Forzamos la pestaña 1 por si hubo amago visual
                     self.selectedTab = 1
                 }
-                Button("Detener y Salir", role: .destructive) {
+                Button(L(.navStopAndExit), role: .destructive) {
                     // 1. IMPORTANTE: Cambiamos el estado de navegación a FALSE.
                     // Esto notificará a MapaView para que limpie la ruta y overlays.
                     self.isMapNavigating = false
-                    
+
                     // 2. Ejecutamos el cambio de pestaña después de limpiar
                     DispatchQueue.main.async {
                         self.selectedTab = pendingTab
                     }
                 }
             } message: {
-                Text("¿Deseas cancelar la navegación actual? El mapa volverá a su estado inicial.")
+                Text(L(.navCancelMessage))
             }
             // Alerta de verificación de cuenta
             .alert(isPresented: $showVerificationAlert) {
                 Alert(
-                    title: Text("Verificación"),
+                    title: Text(L(.navVerification)),
                     message: Text(verificationResult),
-                    dismissButton: .default(Text("Aceptar"))
+                    dismissButton: .default(Text(L(.navAccept)))
                 )
             }
         }

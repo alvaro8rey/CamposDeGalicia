@@ -11,7 +11,7 @@ struct VisitHistoryView: View {
     // MARK: - Body
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Últimas Visitas")
+            Text(L(.profileVisitHistory))
                 .font(.title3)
                 .fontWeight(.bold)
 
@@ -23,7 +23,7 @@ struct VisitHistoryView: View {
                     Image(systemName: "map")
                         .font(.system(size: 40))
                         .foregroundColor(.gray)
-                    Text("Aún no has visitado ningún campo")
+                    Text(L(.profileNoVisitsYet))
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                 }

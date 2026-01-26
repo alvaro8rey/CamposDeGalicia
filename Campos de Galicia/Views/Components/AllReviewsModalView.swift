@@ -82,7 +82,7 @@ struct AllReviewsModalView: View {
                 }
                 .padding(.top)
             }
-            .navigationTitle("Valoraciones y reseñas")
+            .navigationTitle(L(.reviewsAndRatings))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {

@@ -11,7 +11,7 @@ struct ProfileStatsView: View {
     // MARK: - Body
     var body: some View {
         VStack(spacing: 16) {
-            Text("Tus Estadísticas")
+            Text(L(.profileStats))
                 .font(.title3)
                 .fontWeight(.bold)
                 .frame(maxWidth: .infinity, alignment: .leading)

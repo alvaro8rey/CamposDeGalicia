@@ -12,7 +12,7 @@ struct CampoPhotosSection: View {
                 Image(systemName: "photo.stack.fill")
                     .font(.title3)
                     .foregroundColor(.blue)
-                Text("Fotos")
+                Text(L(.campoPhotos))
                     .font(.title3)
                     .fontWeight(.semibold)
                     .foregroundColor(.primary)
@@ -23,7 +23,7 @@ struct CampoPhotosSection: View {
                 HStack(spacing: 16) {
                     ForEach(photos.indices, id: \.self) { index in
                         let foto = photos[index]
-                        let nombre = userNames[foto.userId] ?? "Usuario desconocido"
+                        let nombre = userNames[foto.userId] ?? L(.campoUnknownUser)
 
                         VStack(spacing: 8) {
                             if let url = URL(string: foto.url) {
@@ -50,7 +50,7 @@ struct CampoPhotosSection: View {
                                 }
                             }
 
-                            Text("Por \(nombre)")
+                            Text(L(.campoPhotoBy, nombre))
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                                 .lineLimit(1)

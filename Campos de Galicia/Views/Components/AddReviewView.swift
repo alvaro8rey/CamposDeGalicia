@@ -127,7 +127,7 @@ struct AddReviewView: View {
                                 selectionBehavior: .ordered,
                                 matching: .images
                             ) {
-                                Label("Añadir fotos (\(existingPhotoURLs.count + selectedPhotos.count)/\(maxPhotos))", systemImage: "photo.on.rectangle.angled")
+                                Label(L(.reviewAddPhotosCount, existingPhotoURLs.count + selectedPhotos.count, maxPhotos), systemImage: "photo.on.rectangle.angled")
                                     .font(.subheadline)
                             }
                             .onChange(of: selectedPhotos) { oldSelection, newSelection in

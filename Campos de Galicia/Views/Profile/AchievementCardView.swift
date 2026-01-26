@@ -83,7 +83,7 @@ struct AchievementCardView: View {
                         Image(systemName: "checkmark.circle.fill")
                             .font(.caption)
                             .foregroundColor(.green)
-                        Text("¡Completado!")
+                        Text(L(.reviewCompleted))
                             .font(.caption)
                             .fontWeight(.semibold)
                             .foregroundColor(.green)

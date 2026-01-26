@@ -32,7 +32,7 @@ struct CampoDetailsSection: View {
                             .foregroundColor(.white)
                     }
 
-                    Text("Detalles del campo")
+                    Text(L(.campoDetails))
                         .font(.title3)
                         .fontWeight(.bold)
                         .foregroundStyle(

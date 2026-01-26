@@ -33,7 +33,7 @@ struct CampoLocationSection: View {
                                 .foregroundColor(.white)
                         }
 
-                        Text("Ubicación")
+                        Text(L(.campoLocation))
                             .font(.title3)
                             .fontWeight(.bold)
                             .foregroundStyle(
@@ -145,7 +145,7 @@ struct CampoLocationSection: View {
                         HStack(spacing: 10) {
                             Image(systemName: "location.north.circle.fill")
                                 .font(.title3)
-                            Text("Cómo llegar")
+                            Text(L(.campoHowToGet))
                                 .font(.subheadline)
                                 .fontWeight(.semibold)
                             Spacer()

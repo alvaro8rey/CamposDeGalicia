@@ -68,7 +68,7 @@ struct ReviewCardView: View {
                 HStack(spacing: 4) {
                     Image(systemName: "pencil")
                         .font(.caption2)
-                    Text("Editada · \(formatEditDate(updatedDate))")
+                    Text(L(.reviewEditedAt, formatEditDate(updatedDate)))
                         .font(.caption)
                 }
                 .foregroundColor(.secondary.opacity(0.8))
@@ -114,7 +114,7 @@ struct ReviewCardView: View {
                     Button {
                         onEdit(review)
                     } label: {
-                        Label("Editar", systemImage: "pencil")
+                        Label(L(.reviewEditAction), systemImage: "pencil")
                     }
                 }
 
@@ -122,7 +122,7 @@ struct ReviewCardView: View {
                     Button(role: .destructive) {
                         onDelete(review)
                     } label: {
-                        Label("Eliminar", systemImage: "trash")
+                        Label(L(.reviewDeleteAction), systemImage: "trash")
                     }
                 }
             }
@@ -176,7 +176,7 @@ struct ReviewImageViewer: View {
                                         Image(systemName: "exclamationmark.triangle")
                                             .font(.largeTitle)
                                             .foregroundColor(.gray)
-                                        Text("Error al cargar")
+                                        Text(L(.reviewLoadError))
                                             .foregroundColor(.gray)
                                     }
                                 @unknown default:
@@ -232,7 +232,7 @@ struct RatingSummaryView: View {
                             color: .orange
                         )
 
-                        Text("\(stats.totalReviews) \(stats.totalReviews == 1 ? "reseña" : "reseñas")")
+                        Text("\(stats.totalReviews) \(stats.totalReviews == 1 ? L(.reviewSingle) : L(.reviewPlural))")
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
@@ -338,11 +338,11 @@ struct EmptyReviewsView: View {
                 .font(.system(size: 48))
                 .foregroundColor(.gray.opacity(0.3))
 
-            Text("Sin reseñas todavía")
+            Text(L(.reviewNoReviewsYet))
                 .font(.headline)
                 .foregroundColor(.secondary)
 
-            Text("Sé el primero en dejar tu opinión")
+            Text(L(.reviewBeFirst))
                 .font(.subheadline)
                 .foregroundColor(.secondary)
         }
@@ -467,7 +467,7 @@ struct CompactReviewCardView: View {
                     .foregroundColor(.secondary)
 
                 if review.isEdited {
-                    Text("· Editada")
+                    Text("· \(L(.reviewEdited))")
                         .font(.caption2)
                         .foregroundColor(.secondary.opacity(0.7))
                 }

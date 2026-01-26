@@ -343,6 +343,74 @@ enum LocalizedKey: String {
     case passwordResetResendIn = "password.reset.resend.in"
     case passwordResetInvalidEmail = "password.reset.invalid.email"
     case passwordResetError = "password.reset.error"
+
+    // MARK: - Navigation Tabs
+    case tabHome = "tab.home"
+    case tabMap = "tab.map"
+    case tabNearby = "tab.nearby"
+    case tabProfile = "tab.profile"
+
+    // MARK: - Navigation Alerts
+    case navRouteInProgress = "nav.route.in.progress"
+    case navContinueRoute = "nav.continue.route"
+    case navStopAndExit = "nav.stop.and.exit"
+    case navCancelMessage = "nav.cancel.message"
+    case navVerification = "nav.verification"
+    case navAccept = "nav.accept"
+
+    // MARK: - Campo Sections
+    case campoPhotos = "campo.photos"
+    case campoPhotoBy = "campo.photo.by"
+    case campoDetails = "campo.details"
+    case campoLocation = "campo.location"
+    case campoHowToGet = "campo.how.to.get"
+    case campoContribute = "campo.contribute"
+    case campoUnknownUser = "campo.unknown.user"
+
+    // MARK: - Review Actions
+    case reviewEditAction = "review.edit.action"
+    case reviewDeleteAction = "review.delete.action"
+    case reviewWriteNew = "review.write.new"
+    case reviewsAndRatings = "reviews.and.ratings"
+    case reviewLoadError = "review.load.error"
+    case reviewAddPhotosCount = "review.add.photos.count"
+
+    // MARK: - Preferences
+    case preferencesTitle = "preferences.title"
+
+    // MARK: - Review Stats
+    case reviewRating = "review.rating"
+    case reviewRatings = "review.ratings"
+    case reviewNoRatingsYet = "review.no.ratings.yet"
+    case reviewEditMine = "review.edit.mine"
+    case reviewSingle = "review.single"
+    case reviewPlural = "review.plural"
+    case reviewNoReviewsYet = "review.no.reviews.yet"
+    case reviewBeFirst = "review.be.first"
+    case reviewEdited = "review.edited"
+    case reviewEditedAt = "review.edited.at"
+    case reviewOf = "review.of"
+    case reviewLoginToOpine = "review.login.to.opine"
+    case reviewShareExperience = "review.share.experience"
+    case reviewVisitFirst = "review.visit.first"
+    case reviewOnlyVisited = "review.only.visited"
+    case reviewAlreadyLeft = "review.already.left"
+    case reviewOnlyOne = "review.only.one"
+    case reviewRetry = "review.retry"
+    case reviewCompleted = "review.completed"
+
+    // MARK: - Daily Reward Extra
+    case dailyRewardClaimedToday = "daily.reward.claimed.today"
+    case dailyRewardTestNotif = "daily.reward.test.notif"
+
+    // MARK: - Preferences Extra
+    case preferencesDistance = "preferences.distance"
+    case preferencesDistanceKm = "preferences.distance.km"
+
+    // MARK: - Profile Stats
+    case profileStats = "profile.stats"
+    case profileVisitHistory = "profile.visit.history"
+    case profileNoVisitsYet = "profile.no.visits.yet"
 }
 
 /// Manager de localización centralizado
@@ -699,6 +767,74 @@ class LocalizationManager: ObservableObject {
             .passwordResetResendIn: "Reenviar en %ds",
             .passwordResetInvalidEmail: "Introduce un correo electrónico válido.",
             .passwordResetError: "Error al enviar el correo: %@",
+
+            // Navigation Tabs
+            .tabHome: "Inicio",
+            .tabMap: "Mapa",
+            .tabNearby: "Cercanos",
+            .tabProfile: "Usuario",
+
+            // Navigation Alerts
+            .navRouteInProgress: "Ruta en curso",
+            .navContinueRoute: "Continuar ruta",
+            .navStopAndExit: "Detener y Salir",
+            .navCancelMessage: "¿Deseas cancelar la navegación actual? El mapa volverá a su estado inicial.",
+            .navVerification: "Verificación",
+            .navAccept: "Aceptar",
+
+            // Campo Sections
+            .campoPhotos: "Fotos",
+            .campoPhotoBy: "Por %@",
+            .campoDetails: "Detalles del campo",
+            .campoLocation: "Ubicación",
+            .campoHowToGet: "Cómo llegar",
+            .campoContribute: "Contribuir información",
+            .campoUnknownUser: "Usuario desconocido",
+
+            // Review Actions
+            .reviewEditAction: "Editar",
+            .reviewDeleteAction: "Eliminar",
+            .reviewWriteNew: "Escribir una reseña",
+            .reviewsAndRatings: "Valoraciones y reseñas",
+            .reviewLoadError: "Error al cargar",
+            .reviewAddPhotosCount: "Añadir fotos (%d/%d)",
+
+            // Preferences
+            .preferencesTitle: "Preferencias",
+
+            // Review Stats
+            .reviewRating: "valoración",
+            .reviewRatings: "valoraciones",
+            .reviewNoRatingsYet: "Sin valoraciones todavía",
+            .reviewEditMine: "Editar mi reseña",
+            .reviewSingle: "reseña",
+            .reviewPlural: "reseñas",
+            .reviewNoReviewsYet: "Sin reseñas todavía",
+            .reviewBeFirst: "Sé el primero en dejar tu opinión",
+            .reviewEdited: "Editada",
+            .reviewEditedAt: "Editada · %@",
+            .reviewOf: "de",
+            .reviewLoginToOpine: "Inicia sesión para opinar",
+            .reviewShareExperience: "Comparte tu experiencia con la comunidad",
+            .reviewVisitFirst: "Visita el campo primero",
+            .reviewOnlyVisited: "Solo puedes reseñar campos que hayas visitado",
+            .reviewAlreadyLeft: "Ya dejaste tu opinión",
+            .reviewOnlyOne: "Solo puedes dejar una reseña por campo",
+            .reviewRetry: "Reintentar",
+            .reviewCompleted: "¡Completado!",
+
+            // Daily Reward Extra
+            .dailyRewardClaimedToday: "Recompensa reclamada hoy",
+            .dailyRewardTestNotif: "Probar notificación en 20s",
+
+            // Preferences Extra
+            .preferencesDistance: "Distancia predeterminada para búsqueda de campos cercanos:",
+            .preferencesDistanceKm: "%d km",
+
+            // Profile Stats
+            .profileStats: "Tus Estadísticas",
+            .profileVisitHistory: "Últimas Visitas",
+            .profileNoVisitsYet: "Aún no has visitado ningún campo",
         ],
 
         // MARK: - Galego
@@ -1023,6 +1159,74 @@ class LocalizationManager: ObservableObject {
             .passwordResetResendIn: "Reenviar en %ds",
             .passwordResetInvalidEmail: "Introduce un correo electrónico válido.",
             .passwordResetError: "Erro ao enviar o correo: %@",
+
+            // Navigation Tabs
+            .tabHome: "Inicio",
+            .tabMap: "Mapa",
+            .tabNearby: "Cercanos",
+            .tabProfile: "Usuario",
+
+            // Navigation Alerts
+            .navRouteInProgress: "Ruta en curso",
+            .navContinueRoute: "Continuar ruta",
+            .navStopAndExit: "Deter e Saír",
+            .navCancelMessage: "Desexas cancelar a navegación actual? O mapa volverá ao seu estado inicial.",
+            .navVerification: "Verificación",
+            .navAccept: "Aceptar",
+
+            // Campo Sections
+            .campoPhotos: "Fotos",
+            .campoPhotoBy: "Por %@",
+            .campoDetails: "Detalles do campo",
+            .campoLocation: "Ubicación",
+            .campoHowToGet: "Como chegar",
+            .campoContribute: "Contribuír información",
+            .campoUnknownUser: "Usuario descoñecido",
+
+            // Review Actions
+            .reviewEditAction: "Editar",
+            .reviewDeleteAction: "Eliminar",
+            .reviewWriteNew: "Escribir unha recensión",
+            .reviewsAndRatings: "Valoracións e recensións",
+            .reviewLoadError: "Erro ao cargar",
+            .reviewAddPhotosCount: "Engadir fotos (%d/%d)",
+
+            // Preferences
+            .preferencesTitle: "Preferencias",
+
+            // Review Stats
+            .reviewRating: "valoración",
+            .reviewRatings: "valoracións",
+            .reviewNoRatingsYet: "Sen valoracións todavía",
+            .reviewEditMine: "Editar miña recensión",
+            .reviewSingle: "recensión",
+            .reviewPlural: "recensións",
+            .reviewNoReviewsYet: "Sen recensións todavía",
+            .reviewBeFirst: "Sé o primeiro en deixar a túa opinión",
+            .reviewEdited: "Editada",
+            .reviewEditedAt: "Editada · %@",
+            .reviewOf: "de",
+            .reviewLoginToOpine: "Inicia sesión para opinar",
+            .reviewShareExperience: "Comparte a túa experiencia coa comunidade",
+            .reviewVisitFirst: "Visita o campo primeiro",
+            .reviewOnlyVisited: "Só podes reseñar campos que visitaches",
+            .reviewAlreadyLeft: "Xa deixaches a túa opinión",
+            .reviewOnlyOne: "Só podes deixar unha recensión por campo",
+            .reviewRetry: "Reintentar",
+            .reviewCompleted: "Completado!",
+
+            // Daily Reward Extra
+            .dailyRewardClaimedToday: "Recompensa reclamada hoxe",
+            .dailyRewardTestNotif: "Probar notificación en 20s",
+
+            // Preferences Extra
+            .preferencesDistance: "Distancia predeterminada para procura de campos cercanos:",
+            .preferencesDistanceKm: "%d km",
+
+            // Profile Stats
+            .profileStats: "As túas Estadísticas",
+            .profileVisitHistory: "Últimas Visitas",
+            .profileNoVisitsYet: "Aínda non visitaches ningún campo",
         ]
     ]
 }

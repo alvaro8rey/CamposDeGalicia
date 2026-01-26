@@ -21,14 +21,14 @@ struct ContribucionFormView: View {
     var body: some View {
         NavigationView {
             Form {
-                Section(header: Text("Ayuda a completar los datos de \(campo.nombre)")) {
+                Section(header: Text(L(.contribucionHelp, campo.nombre))) {
                     PhotosPicker(
                         selection: $selectedPhotos,
                         maxSelectionCount: 5,
                         selectionBehavior: .ordered,
                         matching: .images
                     ) {
-                        Label("Añadir fotos", systemImage: "photo.on.rectangle.angled")
+                        Label(L(.contribucionAddPhotos), systemImage: "photo.on.rectangle.angled")
                             .foregroundColor(.blue)
                     }
                     .onChange(of: selectedPhotos) { oldSelection, newSelection in
@@ -69,30 +69,30 @@ struct ContribucionFormView: View {
                         }
                     }
 
-                    Toggle("¿Tiene cantina?", isOn: $tieneCantina)
+                    Toggle(L(.contribucionCantina), isOn: $tieneCantina)
 
-                    TextField("Aforo de la grada (número)", text: $aforoGrada)
+                    TextField(L(.contribucionAforo), text: $aforoGrada)
                         .keyboardType(.numberPad)
 
-                    TextField("Medidas del campo (ej. 105x68 metros)", text: $medidasCampo)
+                    TextField(L(.contribucionMedidas), text: $medidasCampo)
 
-                    Picker("Tipo de iluminación", selection: $tipoIluminacion) {
-                        Text("Seleccionar").tag("")
-                        Text("Natural").tag("Natural")
-                        Text("Artificial").tag("Artificial")
+                    Picker(L(.contribucionIluminacion), selection: $tipoIluminacion) {
+                        Text(L(.contribucionSelect)).tag("")
+                        Text(L(.contribucionIluminacionNatural)).tag("Natural")
+                        Text(L(.contribucionIluminacionArtificial)).tag("Artificial")
                     }
 
-                    Picker("Estado del césped", selection: $estadoCesped) {
-                        Text("Seleccionar").tag("")
-                        Text("Bueno").tag("Bueno")
-                        Text("Regular").tag("Regular")
-                        Text("Malo").tag("Malo")
+                    Picker(L(.contribucionCesped), selection: $estadoCesped) {
+                        Text(L(.contribucionSelect)).tag("")
+                        Text(L(.contribucionCespedBueno)).tag("Bueno")
+                        Text(L(.contribucionCespedRegular)).tag("Regular")
+                        Text(L(.contribucionCespedMalo)).tag("Malo")
                     }
 
-                    Picker("Accesibilidad", selection: $accesibilidad) {
-                        Text("Seleccionar").tag("")
-                        Text("Sí, tiene acceso para discapacitados").tag("Sí, tiene acceso para discapacitados")
-                        Text("No, no tiene acceso").tag("No, no tiene acceso")
+                    Picker(L(.contribucionAccesibilidad), selection: $accesibilidad) {
+                        Text(L(.contribucionSelect)).tag("")
+                        Text(L(.contribucionAccesibilidadSi)).tag("Sí, tiene acceso para discapacitados")
+                        Text(L(.contribucionAccesibilidadNo)).tag("No, no tiene acceso")
                     }
 
                     TextEditor(text: $notas)
@@ -103,14 +103,14 @@ struct ContribucionFormView: View {
                         )
                 }
             }
-            .navigationTitle("Aportar información")
+            .navigationTitle(L(.contribucionTitle))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancelar") { dismiss() }
+                    Button(L(.cancel)) { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Enviar") {
+                    Button(L(.send)) {
                         Task { await submitForm() }
                     }
                     .disabled(!isFormValid())

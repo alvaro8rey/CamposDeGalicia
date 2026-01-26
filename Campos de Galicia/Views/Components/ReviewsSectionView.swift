@@ -50,7 +50,7 @@ struct ReviewsSectionView: View {
             }) {
                 HStack {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("Valoraciones y reseñas")
+                        Text(L(.reviewsAndRatings))
                             .font(.system(size: 20, weight: .bold))
                             .foregroundColor(.primary)
 
@@ -69,12 +69,12 @@ struct ReviewsSectionView: View {
                                     .fontWeight(.semibold)
                                     .foregroundColor(.primary)
 
-                                Text("· \(reviewsManager.stats.totalReviews) \(reviewsManager.stats.totalReviews == 1 ? "valoración" : "valoraciones")")
+                                Text("· \(reviewsManager.stats.totalReviews) \(reviewsManager.stats.totalReviews == 1 ? L(.reviewRating) : L(.reviewRatings))")
                                     .font(.subheadline)
                                     .foregroundColor(.secondary)
                             }
                         } else {
-                            Text("Sin valoraciones todavía")
+                            Text(L(.reviewNoRatingsYet))
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
                         }
@@ -115,7 +115,7 @@ struct ReviewsSectionView: View {
                             Image(systemName: "square.and.pencil")
                                 .font(.system(size: 16))
 
-                            Text("Escribir una reseña")
+                            Text(L(.reviewWriteNew))
                                 .font(.callout)
                                 .fontWeight(.medium)
 
@@ -139,7 +139,7 @@ struct ReviewsSectionView: View {
                             Image(systemName: "pencil")
                                 .font(.system(size: 16))
 
-                            Text("Editar mi reseña")
+                            Text(L(.reviewEditMine))
                                 .font(.callout)
                                 .fontWeight(.medium)
 
@@ -279,11 +279,11 @@ struct NotAuthenticatedReviewView: View {
                 .foregroundColor(.blue)
 
             VStack(alignment: .leading, spacing: 4) {
-                Text("Inicia sesión para opinar")
+                Text(L(.reviewLoginToOpine))
                     .font(.subheadline)
                     .fontWeight(.semibold)
 
-                Text("Comparte tu experiencia con la comunidad")
+                Text(L(.reviewShareExperience))
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
@@ -305,11 +305,11 @@ struct NotVisitedYetView: View {
                 .foregroundColor(.orange)
 
             VStack(alignment: .leading, spacing: 4) {
-                Text("Visita el campo primero")
+                Text(L(.reviewVisitFirst))
                     .font(.subheadline)
                     .fontWeight(.semibold)
 
-                Text("Solo puedes reseñar campos que hayas visitado")
+                Text(L(.reviewOnlyVisited))
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
@@ -331,11 +331,11 @@ struct AlreadyReviewedView: View {
                 .foregroundColor(.green)
 
             VStack(alignment: .leading, spacing: 4) {
-                Text("Ya dejaste tu opinión")
+                Text(L(.reviewAlreadyLeft))
                     .font(.subheadline)
                     .fontWeight(.semibold)
 
-                Text("Solo puedes dejar una reseña por campo")
+                Text(L(.reviewOnlyOne))
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
@@ -367,7 +367,7 @@ struct ErrorView: View {
             Button(action: onRetry) {
                 HStack {
                     Image(systemName: "arrow.clockwise")
-                    Text("Reintentar")
+                    Text(L(.reviewRetry))
                 }
                 .font(.subheadline)
                 .fontWeight(.semibold)

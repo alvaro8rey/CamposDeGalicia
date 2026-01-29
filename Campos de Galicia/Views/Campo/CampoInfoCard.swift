@@ -4,6 +4,7 @@ import SwiftUI
 struct CampoInfoCard: View {
     let campo: CampoModel
     let isLoggedIn: Bool
+    let isVisited: Bool
     let onContribute: () -> Void
 
     var body: some View {
@@ -49,8 +50,8 @@ struct CampoInfoCard: View {
                 )
             }
 
-            // Botón de contribuir (solo si está logueado)
-            if isLoggedIn {
+            // Botón de contribuir (solo si está logueado y ha visitado el campo)
+            if isLoggedIn && isVisited {
                 Button(action: onContribute) {
                     HStack(spacing: 8) {
                         Image(systemName: "plus.circle.fill")

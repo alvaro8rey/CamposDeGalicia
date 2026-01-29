@@ -14,7 +14,16 @@ struct CampoModel: Codable, Equatable, Identifiable {
     var tipo: String
     var latitud: Double?   // Latitud del campo
     var longitud: Double?  // Longitud del campo
-    
+
+    // Campos de contribuciones
+    var tiene_cantina: Bool?
+    var aforo_grada: Int?
+    var medidas_campo: String?
+    var tipo_iluminacion: String?
+    var estado_cesped: String?
+    var accesibilidad: String?
+    var notas_adicionales: String?
+
     // Implementación de Equatable
     static func == (lhs: CampoModel, rhs: CampoModel) -> Bool {
         return lhs.id == rhs.id
@@ -35,4 +44,11 @@ struct CampoUpdate: Encodable {
     var tipo: String?
     var latitud: Double?
     var longitud: Double?
+    var tiene_cantina: Bool?
+    var aforo_grada: Int?
+    var medidas_campo: String?
+    var tipo_iluminacion: String?
+    var estado_cesped: String?
+    var accesibilidad: String?
+    var notas_adicionales: String?
 }

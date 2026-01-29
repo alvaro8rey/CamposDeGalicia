@@ -73,6 +73,7 @@ struct CampoDetalleView: View {
                         CampoInfoCard(
                             campo: campo,
                             isLoggedIn: supabase.auth.currentUser != nil,
+                            isVisited: isVisited,
                             onContribute: { showingContribucionForm = true }
                         )
                         .padding(.top, -30) // Overlap con la imagen hero

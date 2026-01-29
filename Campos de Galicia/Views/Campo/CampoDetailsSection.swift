@@ -73,91 +73,96 @@ struct CampoDetailsSection: View {
                         accentColor: .green
                     )
 
-                    // Detalles de contribución
-                    if let contribucion = contribucionAprobada {
-                        if let tieneCantina = contribucion.tiene_cantina {
-                            Divider()
-                                .background(Color.green.opacity(0.2))
+                    // Detalles del campo (priorizando datos del campo sobre contribuciones)
+                    // Cantina
+                    if let tieneCantina = campo.tiene_cantina ?? contribucionAprobada?.tiene_cantina {
+                        Divider()
+                            .background(Color.green.opacity(0.2))
 
-                            ModernDetailRow(
-                                icon: "fork.knife",
-                                label: "Cantina",
-                                value: tieneCantina ? "Disponible" : "No disponible",
-                                accentColor: .green
-                            )
-                        }
+                        ModernDetailRow(
+                            icon: "fork.knife",
+                            label: "Cantina",
+                            value: tieneCantina ? "Disponible" : "No disponible",
+                            accentColor: .green
+                        )
+                    }
 
-                        if let aforo = contribucion.aforo_grada {
-                            Divider()
-                                .background(Color.green.opacity(0.2))
+                    // Aforo
+                    if let aforo = campo.aforo_grada ?? contribucionAprobada?.aforo_grada {
+                        Divider()
+                            .background(Color.green.opacity(0.2))
 
-                            ModernDetailRow(
-                                icon: "person.3.fill",
-                                label: "Aforo grada",
-                                value: "\(aforo) personas",
-                                accentColor: .green
-                            )
-                        }
+                        ModernDetailRow(
+                            icon: "person.3.fill",
+                            label: "Aforo grada",
+                            value: "\(aforo) personas",
+                            accentColor: .green
+                        )
+                    }
 
-                        if let medidas = contribucion.medidas_campo {
-                            Divider()
-                                .background(Color.green.opacity(0.2))
+                    // Medidas
+                    if let medidas = campo.medidas_campo ?? contribucionAprobada?.medidas_campo {
+                        Divider()
+                            .background(Color.green.opacity(0.2))
 
-                            ModernDetailRow(
-                                icon: "move.3d",
-                                label: "Medidas",
-                                value: medidas,
-                                accentColor: .green
-                            )
-                        }
+                        ModernDetailRow(
+                            icon: "move.3d",
+                            label: "Medidas",
+                            value: medidas,
+                            accentColor: .green
+                        )
+                    }
 
-                        if let iluminacion = contribucion.tipo_iluminacion {
-                            Divider()
-                                .background(Color.green.opacity(0.2))
+                    // Iluminación
+                    if let iluminacion = campo.tipo_iluminacion ?? contribucionAprobada?.tipo_iluminacion {
+                        Divider()
+                            .background(Color.green.opacity(0.2))
 
-                            ModernDetailRow(
-                                icon: "lightbulb.fill",
-                                label: "Iluminación",
-                                value: iluminacion,
-                                accentColor: .green
-                            )
-                        }
+                        ModernDetailRow(
+                            icon: "lightbulb.fill",
+                            label: "Iluminación",
+                            value: iluminacion,
+                            accentColor: .green
+                        )
+                    }
 
-                        if let estadoCesped = contribucion.estado_cesped {
-                            Divider()
-                                .background(Color.green.opacity(0.2))
+                    // Estado césped
+                    if let estadoCesped = campo.estado_cesped ?? contribucionAprobada?.estado_cesped {
+                        Divider()
+                            .background(Color.green.opacity(0.2))
 
-                            ModernDetailRow(
-                                icon: "leaf.fill",
-                                label: "Estado césped",
-                                value: estadoCesped,
-                                accentColor: .green
-                            )
-                        }
+                        ModernDetailRow(
+                            icon: "leaf.fill",
+                            label: "Estado césped",
+                            value: estadoCesped,
+                            accentColor: .green
+                        )
+                    }
 
-                        if let accesibilidad = contribucion.accesibilidad {
-                            Divider()
-                                .background(Color.green.opacity(0.2))
+                    // Accesibilidad
+                    if let accesibilidad = campo.accesibilidad ?? contribucionAprobada?.accesibilidad {
+                        Divider()
+                            .background(Color.green.opacity(0.2))
 
-                            ModernDetailRow(
-                                icon: "figure.roll",
-                                label: "Accesibilidad",
-                                value: accesibilidad,
-                                accentColor: .green
-                            )
-                        }
+                        ModernDetailRow(
+                            icon: "figure.roll",
+                            label: "Accesibilidad",
+                            value: accesibilidad,
+                            accentColor: .green
+                        )
+                    }
 
-                        if let notas = contribucion.notas {
-                            Divider()
-                                .background(Color.green.opacity(0.2))
+                    // Notas
+                    if let notas = campo.notas_adicionales ?? contribucionAprobada?.notas {
+                        Divider()
+                            .background(Color.green.opacity(0.2))
 
-                            ModernDetailRow(
-                                icon: "note.text",
-                                label: "Notas",
-                                value: notas,
-                                accentColor: .green
-                            )
-                        }
+                        ModernDetailRow(
+                            icon: "note.text",
+                            label: "Notas",
+                            value: notas,
+                            accentColor: .green
+                        )
                     }
                 }
                 .padding(16)

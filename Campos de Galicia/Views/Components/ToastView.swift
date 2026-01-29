@@ -81,7 +81,7 @@ struct ToastView: View {
                 .font(.subheadline)
                 .fontWeight(.medium)
                 .foregroundColor(.white)
-                .lineLimit(2)
+                .lineLimit(5)
                 .fixedSize(horizontal: false, vertical: true)
 
             Spacer()
@@ -93,7 +93,7 @@ struct ToastView: View {
             }
         }
         .padding(.horizontal, 16)
-        .padding(.vertical, 12)
+        .padding(.vertical, 16)
         .background(
             toast.type.backgroundColor
                 .opacity(0.95)

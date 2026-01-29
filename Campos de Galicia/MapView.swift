@@ -866,6 +866,11 @@ struct CustomMapView: UIViewRepresentable {
     let onShowSummary: (MapAnnotationItem) -> Void
     @Binding var mapView: MKMapView?
 
+    // Clase auxiliar para guardar referencias a constraints
+    class MapViewContext {
+        var compassTopConstraint: NSLayoutConstraint?
+    }
+
     func makeUIView(context: Context) -> MKMapView {
         let mapView = MKMapView()
         mapView.delegate = context.coordinator
@@ -883,10 +888,14 @@ struct CustomMapView: UIViewRepresentable {
         compass.translatesAutoresizingMaskIntoConstraints = false
         mapView.addSubview(compass)
 
+        // Guardar el constraint del top para poder ajustarlo dinámicamente
+        let compassTopConstraint = compass.topAnchor.constraint(equalTo: mapView.safeAreaLayoutGuide.topAnchor, constant: 90)
+        context.coordinator.mapViewContext.compassTopConstraint = compassTopConstraint
+
         NSLayoutConstraint.activate([
-            // La posicionamos en el margen derecho, pero bajando 90 puntos para evitar el buscador
+            // La posicionamos en el margen derecho
             compass.trailingAnchor.constraint(equalTo: mapView.trailingAnchor, constant: -12),
-            compass.topAnchor.constraint(equalTo: mapView.safeAreaLayoutGuide.topAnchor, constant: 90)
+            compassTopConstraint
         ])
 
         DispatchQueue.main.async {
@@ -902,6 +911,18 @@ struct CustomMapView: UIViewRepresentable {
         // Siempre usar tracking nativo de MapKit (sin restricciones)
         if uiView.userTrackingMode != userTrackingMode {
             uiView.setUserTrackingMode(userTrackingMode, animated: true)
+        }
+
+        // Ajustar posición de la brújula según si hay navegación activa
+        if let compassTopConstraint = context.coordinator.mapViewContext.compassTopConstraint {
+            // Cuando hay navegación, bajar la brújula para que no choque con el header
+            let topOffset: CGFloat = isNavigating ? 150 : 90
+            if compassTopConstraint.constant != topOffset {
+                compassTopConstraint.constant = topOffset
+                UIView.animate(withDuration: 0.3) {
+                    uiView.layoutIfNeeded()
+                }
+            }
         }
 
         let currentAnnos = uiView.annotations.compactMap { $0 as? CampoAnnotation }
@@ -921,6 +942,7 @@ struct CustomMapView: UIViewRepresentable {
         private var lastRecalculationDate = Date()
         private var currentDestination: MapAnnotationItem?
         private var locationManager: CLLocationManager?
+        let mapViewContext = MapViewContext()
 
         init(_ parent: CustomMapView) {
             self.parent = parent
@@ -984,53 +1006,59 @@ struct CustomMapView: UIViewRepresentable {
 
             let userCLLocation = CLLocation(latitude: userLocation.latitude, longitude: userLocation.longitude)
 
-            // Calcular la distancia total recorrida hasta el paso actual
-            var distanceToStepStart: CLLocationDistance = 0
-            for i in 0..<parent.currentStepIndex {
-                distanceToStepStart += currentRoute.steps[i].distance
+            // Calcular la distancia total hasta el FINAL del paso actual
+            var distanceToEndOfCurrentStep: CLLocationDistance = 0
+            for i in 0...parent.currentStepIndex {
+                distanceToEndOfCurrentStep += currentRoute.steps[i].distance
             }
 
-            // Encontrar el punto más cercano en la polyline de la ruta
-            let userPoint = MKMapPoint(userLocation)
+            print("📊 Paso \(parent.currentStepIndex + 1)/\(currentRoute.steps.count) - Distancia hasta fin del paso: \(String(format: "%.0f", distanceToEndOfCurrentStep))m")
+
+            // Encontrar el punto en la polyline que corresponde al final del paso actual
             let polyline = currentRoute.polyline
             let points = polyline.points()
-            var closestDistance = Double.greatestFiniteMagnitude
-            var closestIndex = 0
+            var accumulatedDistance: CLLocationDistance = 0
+            var endOfStepCoordinate: CLLocationCoordinate2D?
 
-            for i in 0..<polyline.pointCount {
-                let distance = points[i].distance(to: userPoint)
-                if distance < closestDistance {
-                    closestDistance = distance
-                    closestIndex = i
+            for i in 0..<polyline.pointCount - 1 {
+                let point1 = points[i]
+                let point2 = points[i + 1]
+                let segmentDistance = point1.distance(to: point2)
+
+                if accumulatedDistance + segmentDistance >= distanceToEndOfCurrentStep {
+                    // Este segmento contiene el final del paso actual
+                    // Interpolar la posición exacta si es necesario (para mayor precisión)
+                    let remainingInSegment = distanceToEndOfCurrentStep - accumulatedDistance
+                    let fraction = remainingInSegment / segmentDistance
+
+                    let lat = point1.coordinate.latitude + (point2.coordinate.latitude - point1.coordinate.latitude) * fraction
+                    let lon = point1.coordinate.longitude + (point2.coordinate.longitude - point1.coordinate.longitude) * fraction
+                    endOfStepCoordinate = CLLocationCoordinate2D(latitude: lat, longitude: lon)
+                    break
                 }
+                accumulatedDistance += segmentDistance
             }
 
-            // Calcular la distancia desde el usuario hasta el final del paso actual
-            let currentStep = currentRoute.steps[parent.currentStepIndex]
-            var remainingDistanceInStep = currentStep.distance
-
-            // Calcular qué fracción del paso hemos completado
-            if closestIndex < polyline.pointCount - 1 {
-                var distanceAlongPolyline: CLLocationDistance = 0
-                for i in 0..<closestIndex {
-                    if i + 1 < polyline.pointCount {
-                        let point1 = points[i]
-                        let point2 = points[i + 1]
-                        distanceAlongPolyline += point1.distance(to: point2)
-                    }
-                }
-
-                let distanceCoveredInStep = max(0, distanceAlongPolyline - distanceToStepStart)
-                remainingDistanceInStep = max(0, currentStep.distance - distanceCoveredInStep)
+            // Si no encontramos el punto, usar el último punto de la polyline
+            if endOfStepCoordinate == nil {
+                endOfStepCoordinate = points[polyline.pointCount - 1].coordinate
             }
+
+            // Calcular la distancia directa desde el usuario hasta el final del paso
+            guard let endCoord = endOfStepCoordinate else { return }
+            let endLocation = CLLocation(latitude: endCoord.latitude, longitude: endCoord.longitude)
+            let remainingDistance = userCLLocation.distance(from: endLocation)
 
             // Actualizar la distancia en el UI
             DispatchQueue.main.async {
-                self.parent.distanceToNextStep = remainingDistanceInStep
+                self.parent.distanceToNextStep = remainingDistance
             }
 
-            // Avanzar al siguiente paso si hemos completado el 90% del paso actual
-            if remainingDistanceInStep < currentStep.distance * 0.1 && parent.currentStepIndex < currentRoute.steps.count - 1 {
+            print("📍 Distancia restante al siguiente paso: \(String(format: "%.0f", remainingDistance))m")
+
+            // Avanzar al siguiente paso si estamos muy cerca del final (menos de 20 metros)
+            if remainingDistance < 20 && parent.currentStepIndex < currentRoute.steps.count - 1 {
+                print("➡️ Avanzando al paso \(parent.currentStepIndex + 2)/\(currentRoute.steps.count)")
                 DispatchQueue.main.async {
                     withAnimation {
                         self.parent.currentStepIndex += 1

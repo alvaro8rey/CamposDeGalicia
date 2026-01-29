@@ -96,6 +96,7 @@ struct ProfileView: View {
             .environmentObject(geofenceManager)
             .environmentObject(locationManager)
             .environmentObject(camposViewModel)
+            .preferredColorScheme(ThemeManager.shared.currentTheme.colorScheme)
         }
         .task {
             guard let userId = authViewModel.user?.id.uuidString else { return }

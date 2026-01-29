@@ -126,13 +126,13 @@ struct AppMain: App {
                 }
                 .tag(3)
             }
+            .id(themeManager.currentTheme.rawValue)
             .accentColor(.blue)
             .environmentObject(geofenceManager)
             .environmentObject(camposViewModel)
             .environmentObject(LocalizationManager.shared)
             .environmentObject(themeManager)
             .preferredColorScheme(themeManager.currentTheme.colorScheme)
-            .animation(.easeInOut(duration: 0.3), value: themeManager.currentTheme)
             .withToast()
             .onAppear {
                 locationManager.requestLocation()

@@ -9,8 +9,19 @@ class ToastManager: ObservableObject {
     @Published var toasts: [Toast] = []
 
     private let maxToasts = 3 // Máximo número de toasts visibles simultáneamente
+    private var toastWindow: ToastWindow?
 
-    private init() {}
+    private init() {
+        // Crear la ventana de toasts para que aparezcan sobre todo
+        setupToastWindow()
+    }
+
+    private func setupToastWindow() {
+        // Esperar a que la escena de ventana esté disponible
+        DispatchQueue.main.async { [weak self] in
+            self?.toastWindow = ToastWindow()
+        }
+    }
 
     /// Muestra un toast de éxito
     func success(_ message: String, duration: Double = 3.0) {

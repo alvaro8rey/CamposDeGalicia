@@ -1,23 +1,14 @@
 import SwiftUI
 
 /// ViewModifier para mostrar toasts
+/// NOTA: Los toasts ahora se muestran en una UIWindow separada (ToastWindow)
+/// Este modifier se mantiene por compatibilidad pero ya no renderiza nada
 struct ToastModifier: ViewModifier {
     @ObservedObject var toastManager = ToastManager.shared
 
     func body(content: Content) -> some View {
-        ZStack(alignment: .top) {
-            content
-
-            VStack(spacing: 8) {
-                ForEach(toastManager.toasts) { toast in
-                    ToastView(toast: toast) {
-                        toastManager.dismiss(toast)
-                    }
-                }
-            }
-            .padding(.top, 8)
-            .zIndex(9999)
-        }
+        // Los toasts se renderizan en ToastWindow, no aquí
+        content
     }
 }
 

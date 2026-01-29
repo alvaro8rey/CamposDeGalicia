@@ -492,21 +492,25 @@ struct MapaView: View {
                         .foregroundColor(.primary)
                         .lineLimit(2)
 
-                    // Mostrar distancia en tiempo real con mejor formato
-                    let displayDistance = distanceToNextStep > 0 ? distanceToNextStep : step.distance
+                    // Mostrar distancia restante en tiempo real
                     HStack(spacing: 4) {
                         Image(systemName: "location.fill")
                             .font(.caption)
                             .foregroundColor(.green)
 
-                        if displayDistance >= 1000 {
-                            Text("\(String(format: "%.1f", displayDistance / 1000)) km")
+                        if distanceToNextStep >= 1000 {
+                            Text(String(format: "En %.1f km", distanceToNextStep / 1000))
+                                .font(.system(size: 14, weight: .medium))
+                                .foregroundColor(.secondary)
+                        } else if distanceToNextStep > 0 {
+                            Text(String(format: "En %d m", Int(distanceToNextStep)))
                                 .font(.system(size: 14, weight: .medium))
                                 .foregroundColor(.secondary)
                         } else {
-                            Text("\(Int(displayDistance)) m")
+                            // Si la distancia es 0, mostrar "Ahora"
+                            Text("Ahora")
                                 .font(.system(size: 14, weight: .medium))
-                                .foregroundColor(.secondary)
+                                .foregroundColor(.green)
                         }
                     }
                 }
@@ -743,8 +747,23 @@ struct MapaView: View {
             self.showRouteSummary = false
             self.externalIsNavigating = true
             self.currentStepIndex = 0
-            self.distanceToNextStep = 0
             self.userTrackingMode = .followWithHeading
+
+            // Calcular distancia inicial al primer paso
+            if let route = self.route,
+               let userLocation = mapView?.userLocation.location?.coordinate,
+               route.steps.count > 0 {
+                let userCLLocation = CLLocation(latitude: userLocation.latitude, longitude: userLocation.longitude)
+
+                // Calcular distancia al final del primer paso
+                let firstStepEndCoordinate = calculateStepEndCoordinate(route: route, stepIndex: 0)
+                let endLocation = CLLocation(latitude: firstStepEndCoordinate.latitude, longitude: firstStepEndCoordinate.longitude)
+                self.distanceToNextStep = userCLLocation.distance(from: endLocation)
+
+                print("📏 Distancia inicial al primer paso: \(String(format: "%.0f", self.distanceToNextStep))m")
+            } else {
+                self.distanceToNextStep = 0
+            }
         }
 
         // Pasar el destino al Coordinator para que pueda recalcular rutas
@@ -754,6 +773,40 @@ struct MapaView: View {
         }
 
         print("🧭 User tracking mode: \(userTrackingMode == .followWithHeading ? "followWithHeading" : "otro")")
+    }
+
+    // Helper para calcular la coordenada al final de un paso específico
+    private func calculateStepEndCoordinate(route: MKRoute, stepIndex: Int) -> CLLocationCoordinate2D {
+        // Calcular la distancia total hasta el final del paso
+        var distanceToEndOfStep: CLLocationDistance = 0
+        for i in 0...stepIndex {
+            distanceToEndOfStep += route.steps[i].distance
+        }
+
+        // Encontrar el punto en la polyline que corresponde al final del paso
+        let polyline = route.polyline
+        let points = polyline.points()
+        var accumulatedDistance: CLLocationDistance = 0
+
+        for i in 0..<polyline.pointCount - 1 {
+            let point1 = points[i]
+            let point2 = points[i + 1]
+            let segmentDistance = point1.distance(to: point2)
+
+            if accumulatedDistance + segmentDistance >= distanceToEndOfStep {
+                // Este segmento contiene el final del paso
+                let remainingInSegment = distanceToEndOfStep - accumulatedDistance
+                let fraction = remainingInSegment / segmentDistance
+
+                let lat = point1.coordinate.latitude + (point2.coordinate.latitude - point1.coordinate.latitude) * fraction
+                let lon = point1.coordinate.longitude + (point2.coordinate.longitude - point1.coordinate.longitude) * fraction
+                return CLLocationCoordinate2D(latitude: lat, longitude: lon)
+            }
+            accumulatedDistance += segmentDistance
+        }
+
+        // Si no encontramos el punto, devolver el último punto de la polyline
+        return points[polyline.pointCount - 1].coordinate
     }
     
     private func stopNavigation() {
@@ -1012,7 +1065,7 @@ struct CustomMapView: UIViewRepresentable {
                 distanceToEndOfCurrentStep += currentRoute.steps[i].distance
             }
 
-            print("📊 Paso \(parent.currentStepIndex + 1)/\(currentRoute.steps.count) - Distancia hasta fin del paso: \(String(format: "%.0f", distanceToEndOfCurrentStep))m")
+            print("📊 Paso \(parent.currentStepIndex + 1)/\(currentRoute.steps.count) - Distancia total hasta fin del paso: \(String(format: "%.0f", distanceToEndOfCurrentStep))m")
 
             // Encontrar el punto en la polyline que corresponde al final del paso actual
             let polyline = currentRoute.polyline
@@ -1027,9 +1080,9 @@ struct CustomMapView: UIViewRepresentable {
 
                 if accumulatedDistance + segmentDistance >= distanceToEndOfCurrentStep {
                     // Este segmento contiene el final del paso actual
-                    // Interpolar la posición exacta si es necesario (para mayor precisión)
+                    // Interpolar la posición exacta para mayor precisión
                     let remainingInSegment = distanceToEndOfCurrentStep - accumulatedDistance
-                    let fraction = remainingInSegment / segmentDistance
+                    let fraction = segmentDistance > 0 ? remainingInSegment / segmentDistance : 0
 
                     let lat = point1.coordinate.latitude + (point2.coordinate.latitude - point1.coordinate.latitude) * fraction
                     let lon = point1.coordinate.longitude + (point2.coordinate.longitude - point1.coordinate.longitude) * fraction
@@ -1049,12 +1102,12 @@ struct CustomMapView: UIViewRepresentable {
             let endLocation = CLLocation(latitude: endCoord.latitude, longitude: endCoord.longitude)
             let remainingDistance = userCLLocation.distance(from: endLocation)
 
+            print("📍 Distancia restante desde ubicación actual hasta fin del paso: \(String(format: "%.0f", remainingDistance))m")
+
             // Actualizar la distancia en el UI
             DispatchQueue.main.async {
-                self.parent.distanceToNextStep = remainingDistance
+                self.parent.distanceToNextStep = max(0, remainingDistance)
             }
-
-            print("📍 Distancia restante al siguiente paso: \(String(format: "%.0f", remainingDistance))m")
 
             // Avanzar al siguiente paso si estamos muy cerca del final (menos de 20 metros)
             if remainingDistance < 20 && parent.currentStepIndex < currentRoute.steps.count - 1 {
@@ -1062,6 +1115,10 @@ struct CustomMapView: UIViewRepresentable {
                 DispatchQueue.main.async {
                     withAnimation {
                         self.parent.currentStepIndex += 1
+                        // Recalcular distancia para el nuevo paso
+                        if let userLocation = self.parent.mapView?.userLocation.location {
+                            self.updateCurrentStep(userLocation: userLocation.coordinate)
+                        }
                     }
                 }
             }

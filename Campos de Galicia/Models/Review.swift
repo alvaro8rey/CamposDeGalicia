@@ -49,9 +49,9 @@ struct Review: Identifiable, Codable, Equatable {
     // Computed property for display
     var displayName: String {
         if is_anonymous == true {
-            return "Anónimo"
+            return L(.reviewAnonymousName)
         }
-        return reviewer_name ?? "Usuario"
+        return reviewer_name ?? L(.campoUnknownUser)
     }
 
     var formattedDate: String {
@@ -107,12 +107,21 @@ struct ReviewStats {
 
 /// Tipo de ordenación para reseñas
 enum ReviewSortType: String, CaseIterable, Identifiable {
-    case recent = "Más recientes"
-    case oldest = "Más antiguas"
-    case highest = "Mejor valoradas"
-    case lowest = "Peor valoradas"
+    case recent
+    case oldest
+    case highest
+    case lowest
 
     var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .recent: return L(.reviewSortRecent)
+        case .oldest: return L(.reviewSortOldest)
+        case .highest: return L(.reviewSortHighest)
+        case .lowest: return L(.reviewSortLowest)
+        }
+    }
 
     var iconName: String {
         switch self {

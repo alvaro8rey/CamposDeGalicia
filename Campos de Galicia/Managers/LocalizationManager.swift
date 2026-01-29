@@ -411,6 +411,56 @@ enum LocalizedKey: String {
     case profileStats = "profile.stats"
     case profileVisitHistory = "profile.visit.history"
     case profileNoVisitsYet = "profile.no.visits.yet"
+
+    // MARK: - Provinces
+    case provinceACoruna = "province.a.coruna"
+    case provinceOurense = "province.ourense"
+    case provinceLugo = "province.lugo"
+    case provincePontevedra = "province.pontevedra"
+
+    // MARK: - Test Notifications
+    case testNotificationTitle = "test.notification.title"
+    case testNotificationBody = "test.notification.body"
+
+    // MARK: - Configuration Errors
+    case errorSupabaseCredentials = "error.supabase.credentials"
+    case errorSupabaseInvalidURL = "error.supabase.invalid.url"
+
+    // MARK: - Authentication Errors
+    case errorUserNotAuthenticated = "error.user.not.authenticated"
+    case errorCouldNotAuthenticate = "error.could.not.authenticate"
+
+    // MARK: - Review Sort Types
+    case reviewSortRecent = "review.sort.recent"
+    case reviewSortOldest = "review.sort.oldest"
+    case reviewSortHighest = "review.sort.highest"
+    case reviewSortLowest = "review.sort.lowest"
+
+    // MARK: - Review Manager Errors
+    case errorLoadingReviews = "error.loading.reviews"
+    case errorCouldNotUpdateReview = "error.could.not.update.review"
+    case errorUpdatingReview = "error.updating.review"
+    case errorDeletingReview = "error.deleting.review"
+
+    // MARK: - Profile Errors
+    case errorMultiplePreferences = "error.multiple.preferences"
+    case errorLogout = "error.logout"
+
+    // MARK: - Success Messages
+    case successPreferencesSaved = "success.preferences.saved"
+
+    // MARK: - UI Elements
+    case reviewAnonymousName = "review.anonymous.name"
+    case reviewShowLess = "review.show.less"
+    case reviewShowMore = "review.show.more"
+    case preferencesButtonSaving = "preferences.button.saving"
+    case preferencesButtonSave = "preferences.button.save"
+    case reviewRatingLabel = "review.rating.label"
+
+    // MARK: - Connection Status
+    case connectionTypeCellular = "connection.type.cellular"
+    case connectionTypeUnknown = "connection.type.unknown"
+    case connectionOffline = "connection.offline"
 }
 
 /// Manager de localización centralizado
@@ -835,6 +885,56 @@ class LocalizationManager: ObservableObject {
             .profileStats: "Tus Estadísticas",
             .profileVisitHistory: "Últimas Visitas",
             .profileNoVisitsYet: "Aún no has visitado ningún campo",
+
+            // Provinces
+            .provinceACoruna: "A Coruña",
+            .provinceOurense: "Ourense",
+            .provinceLugo: "Lugo",
+            .provincePontevedra: "Pontevedra",
+
+            // Test Notifications
+            .testNotificationTitle: "Test notificación",
+            .testNotificationBody: "Debería aparecer en %d segundos",
+
+            // Configuration Errors
+            .errorSupabaseCredentials: "❌ Credenciales de Supabase inválidas. Ver EnvironmentConfig.swift",
+            .errorSupabaseInvalidURL: "❌ URL de Supabase inválida: %@",
+
+            // Authentication Errors
+            .errorUserNotAuthenticated: "Usuario no autenticado",
+            .errorCouldNotAuthenticate: "No se pudo autenticar el usuario",
+
+            // Review Sort Types
+            .reviewSortRecent: "Más recientes",
+            .reviewSortOldest: "Más antiguas",
+            .reviewSortHighest: "Mejor valoradas",
+            .reviewSortLowest: "Peor valoradas",
+
+            // Review Manager Errors
+            .errorLoadingReviews: "Error al cargar reseñas: %@",
+            .errorCouldNotUpdateReview: "No se pudo actualizar la reseña",
+            .errorUpdatingReview: "Error al actualizar reseña: %@",
+            .errorDeletingReview: "Error al eliminar reseña: %@",
+
+            // Profile Errors
+            .errorMultiplePreferences: "Error: Múltiples registros de preferencias encontrados.",
+            .errorLogout: "Error al cerrar sesión: %@",
+
+            // Success Messages
+            .successPreferencesSaved: "✅ Preferencias guardadas con éxito",
+
+            // UI Elements
+            .reviewAnonymousName: "Anónimo",
+            .reviewShowLess: "Menos",
+            .reviewShowMore: "Más",
+            .preferencesButtonSaving: "Guardando...",
+            .preferencesButtonSave: "Guardar Preferencias",
+            .reviewRatingLabel: "Valoración",
+
+            // Connection Status
+            .connectionTypeCellular: "Datos móviles",
+            .connectionTypeUnknown: "Desconocido",
+            .connectionOffline: "Sin conexión a internet",
         ],
 
         // MARK: - Galego
@@ -1227,6 +1327,56 @@ class LocalizationManager: ObservableObject {
             .profileStats: "As túas Estadísticas",
             .profileVisitHistory: "Últimas Visitas",
             .profileNoVisitsYet: "Aínda non visitaches ningún campo",
+
+            // Provinces
+            .provinceACoruna: "A Coruña",
+            .provinceOurense: "Ourense",
+            .provinceLugo: "Lugo",
+            .provincePontevedra: "Pontevedra",
+
+            // Test Notifications
+            .testNotificationTitle: "Test notificación",
+            .testNotificationBody: "Debería aparecer en %d segundos",
+
+            // Configuration Errors
+            .errorSupabaseCredentials: "❌ Credenciais de Supabase inválidas. Ver EnvironmentConfig.swift",
+            .errorSupabaseInvalidURL: "❌ URL de Supabase inválida: %@",
+
+            // Authentication Errors
+            .errorUserNotAuthenticated: "Usuario non autenticado",
+            .errorCouldNotAuthenticate: "Non se puido autenticar o usuario",
+
+            // Review Sort Types
+            .reviewSortRecent: "Máis recentes",
+            .reviewSortOldest: "Máis antigas",
+            .reviewSortHighest: "Mellor valoradas",
+            .reviewSortLowest: "Peor valoradas",
+
+            // Review Manager Errors
+            .errorLoadingReviews: "Erro ao cargar recensións: %@",
+            .errorCouldNotUpdateReview: "Non se puido actualizar a recensión",
+            .errorUpdatingReview: "Erro ao actualizar recensión: %@",
+            .errorDeletingReview: "Erro ao eliminar recensión: %@",
+
+            // Profile Errors
+            .errorMultiplePreferences: "Erro: Múltiples rexistros de preferencias atopados.",
+            .errorLogout: "Erro ao pechar sesión: %@",
+
+            // Success Messages
+            .successPreferencesSaved: "✅ Preferencias gardadas con éxito",
+
+            // UI Elements
+            .reviewAnonymousName: "Anónimo",
+            .reviewShowLess: "Menos",
+            .reviewShowMore: "Máis",
+            .preferencesButtonSaving: "Gardando...",
+            .preferencesButtonSave: "Gardar Preferencias",
+            .reviewRatingLabel: "Valoración",
+
+            // Connection Status
+            .connectionTypeCellular: "Datos móbiles",
+            .connectionTypeUnknown: "Descoñecido",
+            .connectionOffline: "Sen conexión a internet",
         ]
     ]
 }

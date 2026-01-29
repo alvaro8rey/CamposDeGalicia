@@ -94,7 +94,7 @@ struct PreferencesView: View {
                         ProgressView()
                             .progressViewStyle(CircularProgressViewStyle())
                     }
-                    Text(isSaving ? "Guardando..." : "Guardar Preferencias")
+                    Text(isSaving ? L(.preferencesButtonSaving) : L(.preferencesButtonSave))
                         .font(.headline)
                 }
                 .frame(maxWidth: .infinity)
@@ -132,7 +132,7 @@ struct PreferencesView: View {
         await profileVM.savePreferences(for: userId)
 
         if profileVM.errorMessage == nil {
-            successMessage = "✅ Preferencias guardadas con éxito"
+            successMessage = L(.successPreferencesSaved)
         } else {
             successMessage = profileVM.errorMessage
         }

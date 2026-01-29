@@ -11,7 +11,7 @@ let supabase: SupabaseClient = {
 
     // Validar credenciales
     guard config.validate() else {
-        fatalError("❌ Credenciales de Supabase inválidas. Ver EnvironmentConfig.swift")
+        fatalError(L(.errorSupabaseCredentials))
     }
 
     // Log de configuración en modo debug
@@ -20,7 +20,7 @@ let supabase: SupabaseClient = {
     }
 
     guard let url = URL(string: config.supabaseURL) else {
-        fatalError("❌ URL de Supabase inválida: \(config.supabaseURL)")
+        fatalError(L(.errorSupabaseInvalidURL, config.supabaseURL))
     }
 
     return SupabaseClient(

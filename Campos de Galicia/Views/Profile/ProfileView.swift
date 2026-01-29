@@ -316,7 +316,7 @@ struct ProfileView: View {
             profileVM.historialCampos = []
             profileVM.totalAchievementsCount = 0
         } catch {
-            profileVM.errorMessage = "Error al cerrar sesión: \(error.localizedDescription)"
+            profileVM.errorMessage = L(.errorLogout, error.localizedDescription)
         }
     }
 }

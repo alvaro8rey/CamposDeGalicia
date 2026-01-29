@@ -15,7 +15,7 @@ struct ContentView: View {
 
     // Lista de provincias disponibles
     var provincias: [String] {
-        [L(.contentAllProvinces), "A Coruña", "Ourense", "Lugo", "Pontevedra"]
+        [L(.contentAllProvinces), L(.provinceACoruna), L(.provinceOurense), L(.provinceLugo), L(.provincePontevedra)]
     }
     
     // Lista de campos y estado de carga gestionados por el view model

@@ -24,9 +24,9 @@ class NetworkMonitor: ObservableObject {
         var description: String {
             switch self {
             case .wifi: return "Wi-Fi"
-            case .cellular: return "Datos móviles"
+            case .cellular: return L(.connectionTypeCellular)
             case .wired: return "Ethernet"
-            case .unknown: return "Desconocido"
+            case .unknown: return L(.connectionTypeUnknown)
             }
         }
 
@@ -128,7 +128,7 @@ class NetworkMonitor: ObservableObject {
         if isConnected {
             return "Conectado a \(connectionType.description)"
         } else {
-            return "Sin conexión a internet"
+            return L(.connectionOffline)
         }
     }
 }
@@ -159,7 +159,7 @@ struct NetworkStatusBannerModifier: ViewModifier {
                 HStack {
                     Image(systemName: "wifi.slash")
                         .foregroundColor(.white)
-                    Text("Sin conexión a internet")
+                    Text(L(.connectionOffline))
                         .font(.subheadline)
                         .foregroundColor(.white)
                 }

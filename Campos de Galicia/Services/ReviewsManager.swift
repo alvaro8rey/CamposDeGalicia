@@ -112,7 +112,7 @@ class ReviewsManager: ObservableObject {
 
             Logger.debug("✅ Cargadas \(reviews.count) reseñas con niveles")
         } catch {
-            errorMessage = "Error al cargar reseñas: \(error.localizedDescription)"
+            errorMessage = L(.errorLoadingReviews, error.localizedDescription)
             Logger.error("Error loading reviews: \(error.localizedDescription)")
         }
 
@@ -241,7 +241,7 @@ class ReviewsManager: ObservableObject {
 
             if updatedReviews.isEmpty {
                 Logger.error("❌ No se encontró ninguna reseña con ID: \(reviewId)")
-                errorMessage = "No se pudo actualizar la reseña"
+                errorMessage = L(.errorCouldNotUpdateReview)
                 return false
             }
 
@@ -255,7 +255,7 @@ class ReviewsManager: ObservableObject {
 
             return true
         } catch {
-            errorMessage = "Error al actualizar reseña: \(error.localizedDescription)"
+            errorMessage = L(.errorUpdatingReview, error.localizedDescription)
             Logger.error("❌ Error updating review: \(error.localizedDescription)")
             Logger.error("❌ Error details: \(error)")
             return false
@@ -278,7 +278,7 @@ class ReviewsManager: ObservableObject {
             Logger.success("✅ Reseña eliminada")
             return true
         } catch {
-            errorMessage = "Error al eliminar reseña: \(error.localizedDescription)"
+            errorMessage = L(.errorDeletingReview, error.localizedDescription)
             Logger.error("Error deleting review: \(error.localizedDescription)")
             return false
         }

@@ -192,7 +192,7 @@ class ProfileViewModel: ObservableObject {
                         distanciaPredeterminada = distancia
                     }
                 } else {
-                    errorMessage = "Error: Múltiples registros de preferencias encontrados."
+                    errorMessage = L(.errorMultiplePreferences)
                     let dict = array[0]
                     if let distancia = dict["distancia_predeterminada"] as? Double {
                         distanciaPredeterminada = distancia

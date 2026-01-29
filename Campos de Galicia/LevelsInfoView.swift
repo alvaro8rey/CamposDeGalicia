@@ -297,7 +297,7 @@ struct LevelsInfoView: View {
 
     private func loadUserData() async {
         guard let currentUser = supabase.auth.currentUser else {
-            errorMessage = "Usuario no autenticado"
+            errorMessage = L(.errorUserNotAuthenticated)
             return
         }
 

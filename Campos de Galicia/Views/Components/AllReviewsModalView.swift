@@ -46,7 +46,7 @@ struct AllReviewsModalView: View {
                                     HStack(spacing: 6) {
                                         Image(systemName: type.iconName)
                                             .font(.caption2)
-                                        Text(type.rawValue)
+                                        Text(type.displayName)
                                             .font(.caption)
                                     }
                                     .fontWeight(.medium)

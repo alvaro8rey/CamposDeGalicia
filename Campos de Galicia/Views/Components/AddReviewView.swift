@@ -89,7 +89,7 @@ struct AddReviewView: View {
                             }
                         }
                     } header: {
-                        Label("Valoración", systemImage: "star.fill")
+                        Label(L(.reviewRatingLabel), systemImage: "star.fill")
                     }
 
                     // Review Text Section
@@ -250,7 +250,7 @@ struct AddReviewView: View {
                     VStack(spacing: 16) {
                         ProgressView()
                             .scaleEffect(1.5)
-                        Text(isEditMode ? "Actualizando reseña..." : "Publicando reseña...")
+                        Text(isEditMode ? L(.reviewUpdating) : L(.reviewPublishing))
                             .foregroundColor(.white)
                     }
                     .padding(24)
@@ -260,7 +260,7 @@ struct AddReviewView: View {
 
                 // Success Animation
                 if showSuccess {
-                    SuccessCheckmarkView(message: isEditMode ? "¡Reseña actualizada!" : "¡Reseña publicada!")
+                    SuccessCheckmarkView(message: isEditMode ? L(.reviewUpdated) : L(.reviewPublished))
                 }
             }
         }
@@ -340,7 +340,7 @@ struct AddReviewView: View {
         defer { isSubmitting = false }
 
         guard let userId = authViewModel.user?.id else {
-            errorMessage = "Error: Usuario no autenticado"
+            errorMessage = "\(L(.error)): \(L(.errorUserNotAuthenticated))"
             return
         }
 

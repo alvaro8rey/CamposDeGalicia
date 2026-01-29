@@ -409,7 +409,7 @@ struct CompactReviewCardView: View {
                         isExpanded.toggle()
                     }
                 }) {
-                    Text(isExpanded ? "Menos" : "Más")
+                    Text(isExpanded ? L(.reviewShowLess) : L(.reviewShowMore))
                         .font(.subheadline)
                         .fontWeight(.medium)
                         .foregroundColor(.blue)

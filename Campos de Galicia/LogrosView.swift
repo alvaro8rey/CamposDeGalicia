@@ -386,7 +386,7 @@ struct LogrosView: View {
 
     private func loadUser() async {
         guard let currentUser = supabase.auth.currentUser else {
-            errorMessage = "No se pudo autenticar el usuario"
+            errorMessage = L(.errorCouldNotAuthenticate)
             return
         }
         userId = currentUser.id.uuidString
@@ -399,7 +399,7 @@ struct LogrosView: View {
 
     private func loadUserProgress() async {
         guard let userId = userId else {
-            errorMessage = "Usuario no autenticado"
+            errorMessage = L(.errorUserNotAuthenticated)
             return
         }
         do {
@@ -679,8 +679,8 @@ struct LogrosView: View {
         dateComponents.minute = DAILY_MIN
 
         let content = UNMutableNotificationContent()
-        content.title = "Campos de Galicia"
-        content.body  = "¡Tu recompensa diaria te espera! Reclámala ahora en la sección de Logros 🎁"
+        content.title = L(.appName)
+        content.body  = L(.dailyRewardNotificationBody)
         content.sound = .default
 
         let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents, repeats: true)
@@ -696,8 +696,8 @@ struct LogrosView: View {
     private func scheduleOneOffTest(after seconds: TimeInterval = 20) {
         UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: ["test_oneoff"])
         let content = UNMutableNotificationContent()
-        content.title = "Test notificación"
-        content.body  = "Debería aparecer en \(Int(seconds))s"
+        content.title = L(.testNotificationTitle)
+        content.body  = L(.testNotificationBody, Int(seconds))
         content.sound = .default
 
         let trigger = UNTimeIntervalNotificationTrigger(timeInterval: seconds, repeats: false)

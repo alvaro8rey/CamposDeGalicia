@@ -462,6 +462,15 @@ enum LocalizedKey: String {
     case connectionTypeCellular = "connection.type.cellular"
     case connectionTypeUnknown = "connection.type.unknown"
     case connectionOffline = "connection.offline"
+
+    // MARK: - Settings
+    case settingsTitle = "settings.title"
+    case settingsGeneral = "settings.general"
+    case settingsAccount = "settings.account"
+    case settingsTheme = "settings.theme"
+    case settingsThemeLight = "settings.theme.light"
+    case settingsThemeDark = "settings.theme.dark"
+    case settingsThemeSystem = "settings.theme.system"
 }
 
 /// Manager de localización centralizado
@@ -937,6 +946,15 @@ class LocalizationManager: ObservableObject {
             .connectionTypeCellular: "Datos móviles",
             .connectionTypeUnknown: "Desconocido",
             .connectionOffline: "Sin conexión a internet",
+
+            // Settings
+            .settingsTitle: "Ajustes",
+            .settingsGeneral: "General",
+            .settingsAccount: "Cuenta",
+            .settingsTheme: "Tema de la aplicación",
+            .settingsThemeLight: "Claro",
+            .settingsThemeDark: "Oscuro",
+            .settingsThemeSystem: "Sistema",
         ],
 
         // MARK: - Galego
@@ -1380,6 +1398,15 @@ class LocalizationManager: ObservableObject {
             .connectionTypeCellular: "Datos móbiles",
             .connectionTypeUnknown: "Descoñecido",
             .connectionOffline: "Sen conexión a internet",
+
+            // Settings
+            .settingsTitle: "Axustes",
+            .settingsGeneral: "Xeral",
+            .settingsAccount: "Conta",
+            .settingsTheme: "Tema da aplicación",
+            .settingsThemeLight: "Claro",
+            .settingsThemeDark: "Escuro",
+            .settingsThemeSystem: "Sistema",
         ]
     ]
 }

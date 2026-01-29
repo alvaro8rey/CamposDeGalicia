@@ -17,6 +17,7 @@ struct ProfileView: View {
     @State private var showEditProfile: Bool = false
     @State private var showVisitDetails: Bool = false
     @State private var showInfoSheet: Bool = false
+    @State private var showSettings: Bool = false
     @AppStorage("auto_checkin_enabled") private var autoCheckinStored: Bool = false
 
     // MARK: - Body
@@ -60,16 +61,6 @@ struct ProfileView: View {
                         showVisitDetails = true
                     })
                     .padding(.horizontal)
-
-                    // Preferences
-                    PreferencesView(
-                        profileVM: profileVM,
-                        userId: authViewModel.user?.id.uuidString ?? ""
-                    )
-                    .padding(.horizontal)
-
-                    // Action Buttons
-                    actionButtonsSection
                 }
                 .padding(.vertical)
             }
@@ -81,6 +72,13 @@ struct ProfileView: View {
                 Text(L(.profileTitle))
                     .font(.title3)
                     .foregroundColor(.primary)
+            }
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button(action: { showSettings = true }) {
+                    Image(systemName: "gearshape.fill")
+                        .foregroundColor(.gray)
+                        .font(.system(size: 20))
+                }
             }
             ToolbarItem(placement: .navigationBarTrailing) {
                 NavigationLink(destination: LogrosView().onAppear {
@@ -107,6 +105,15 @@ struct ProfileView: View {
         }
         .sheet(isPresented: $showInfoSheet) {
             InfoSheetView()
+        }
+        .sheet(isPresented: $showSettings) {
+            SettingsView(
+                profileVM: profileVM,
+                userId: authViewModel.user?.id.uuidString ?? ""
+            )
+            .environmentObject(localizationManager)
+            .environmentObject(ThemeManager.shared)
+            .environmentObject(authViewModel)
         }
         .task {
             guard let userId = authViewModel.user?.id.uuidString else { return }
@@ -286,39 +293,6 @@ struct ProfileView: View {
         }
     }
 
-    // MARK: - Action Buttons Section
-    private var actionButtonsSection: some View {
-        VStack(spacing: 12) {
-            Button(action: { Task { await logout() } }) {
-                HStack {
-                    Image(systemName: "rectangle.portrait.and.arrow.right")
-                    Text(L(.profileLogout))
-                }
-                .frame(maxWidth: .infinity)
-                .padding()
-                .background(Color.red)
-                .foregroundColor(.white)
-                .cornerRadius(12)
-            }
-        }
-        .padding(.horizontal)
-    }
-
-    // MARK: - Methods
-    private func logout() async {
-        do {
-            try await authViewModel.logout()
-            // Reset profile data
-            profileVM.level = 1
-            profileVM.currentXP = 0
-            profileVM.xpToNextLevel = 100
-            profileVM.camposVisitados = 0
-            profileVM.historialCampos = []
-            profileVM.totalAchievementsCount = 0
-        } catch {
-            profileVM.errorMessage = L(.errorLogout, error.localizedDescription)
-        }
-    }
 }
 
 // MARK: - Info Row Helper

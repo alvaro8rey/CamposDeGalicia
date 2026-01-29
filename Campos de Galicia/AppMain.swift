@@ -13,6 +13,7 @@ struct AppMain: App {
     @StateObject private var authViewModel = AuthViewModel.shared
     @StateObject private var locationManager = LocationManager()
     @StateObject private var geofenceManager = GeofenceManager()
+    @StateObject private var themeManager = ThemeManager.shared
     
     @State private var distanciaPredeterminada: Double = 10.0
     @State private var showVerificationAlert: Bool = false
@@ -129,6 +130,8 @@ struct AppMain: App {
             .environmentObject(geofenceManager)
             .environmentObject(camposViewModel)
             .environmentObject(LocalizationManager.shared)
+            .environmentObject(themeManager)
+            .preferredColorScheme(themeManager.currentTheme.colorScheme)
             .withToast()
             .onAppear {
                 locationManager.requestLocation()

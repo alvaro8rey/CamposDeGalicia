@@ -74,6 +74,14 @@ struct LogrosView: View {
         )
         .navigationTitle(L(.logrosTitle))
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                NavigationLink(destination: LevelsInfoView()) {
+                    Image(systemName: "info.circle")
+                        .foregroundColor(.gray)
+                }
+            }
+        }
         .onAppear {
             Task { await boot() }
         }

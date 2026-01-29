@@ -23,6 +23,15 @@ class ProfileViewModel: ObservableObject {
     @Published var camposVisitados: Int = 0
     @Published var totalAchievementsCount: Int = 0
     @Published var newAchievementsCount: Int = 0
+    @Published var provinciasVisitadas: Int = 0
+    @Published var diasConsecutivos: Int = 0
+    @Published var reseñasEscritas: Int = 0
+
+    // Achievements
+    @Published var closestAchievement: Logro? = nil
+    @Published var closestAchievementProgress: (current: Int, target: Int) = (0, 0)
+    private var allLogros: [Logro] = []
+    private var logrosDesbloqueados: Set<UUID> = []
 
     // Visit History
     @Published var historialCampos: [CampoModel] = []
@@ -119,6 +128,153 @@ class ProfileViewModel: ObservableObject {
 
     func resetNewAchievementsCount() {
         newAchievementsCount = 0
+    }
+
+    /// Carga todos los logros disponibles
+    func loadAllAchievements() async {
+        do {
+            let response = try await supabase.from("logros")
+                .select("id, nombre, descripcion, condicion, orden, xp")
+                .execute()
+            let decoder = JSONDecoder()
+            allLogros = try decoder.decode([Logro].self, from: response.data)
+            Logger.debug("Loaded \(allLogros.count) achievements")
+        } catch {
+            errorMessage = "Error al cargar logros: \(error.localizedDescription)"
+            Logger.error("Error loading achievements: \(error.localizedDescription)")
+        }
+    }
+
+    /// Carga los IDs de los logros desbloqueados por el usuario
+    func loadUnlockedAchievements(for userId: String) async {
+        do {
+            let response = try await supabase.from("logros_desbloqueados")
+                .select("id_logro")
+                .eq("id_usuario", value: userId)
+                .execute()
+            let decoder = JSONDecoder()
+            let array = try decoder.decode([[String: UUID]].self, from: response.data)
+            logrosDesbloqueados = Set(array.compactMap { $0["id_logro"] })
+            Logger.debug("Loaded \(logrosDesbloqueados.count) unlocked achievements")
+        } catch {
+            errorMessage = "Error al cargar logros desbloqueados: \(error.localizedDescription)"
+            Logger.error("Error loading unlocked achievements: \(error.localizedDescription)")
+        }
+    }
+
+    /// Carga estadísticas adicionales necesarias para calcular progreso de logros
+    func loadAdditionalStats(for userId: String) async {
+        do {
+            // Cargar provincias visitadas
+            let visitasResponse = try await supabase.from("visitas")
+                .select("id_campo")
+                .eq("id_usuario", value: userId)
+                .limit(500)
+                .execute()
+
+            let jsonObject = try JSONSerialization.jsonObject(with: visitasResponse.data, options: [])
+            if let array = jsonObject as? [[String: Any]] {
+                let campoIds = Set(array.compactMap { $0["id_campo"] as? String })
+
+                if !campoIds.isEmpty {
+                    let camposResponse = try await supabase.from("campos")
+                        .select("provincia")
+                        .in("id", values: Array(campoIds))
+                        .execute()
+                    if let camposArr = try JSONSerialization.jsonObject(with: camposResponse.data) as? [[String: Any]] {
+                        let uniqueProvincias = Set(camposArr.compactMap { $0["provincia"] as? String })
+                        provinciasVisitadas = uniqueProvincias.count
+                    }
+                }
+            }
+
+            // Cargar reseñas escritas
+            let reseñasResponse = try await supabase.from("reseñas")
+                .select("id")
+                .eq("user_id", value: userId)
+                .limit(100)
+                .execute()
+            if let reseñasArr = try JSONSerialization.jsonObject(with: reseñasResponse.data) as? [[String: Any]] {
+                reseñasEscritas = reseñasArr.count
+            }
+
+            // Cargar días consecutivos desde accesos_diarios
+            let accesosResponse = try await supabase.from("accesos_diarios")
+                .select("dias_consecutivos")
+                .eq("id_usuario", value: userId)
+                .execute()
+            if let accesosArr = try JSONSerialization.jsonObject(with: accesosResponse.data) as? [[String: Any]],
+               !accesosArr.isEmpty,
+               let dias = accesosArr[0]["dias_consecutivos"] as? Int {
+                diasConsecutivos = dias
+            }
+
+            Logger.debug("Additional stats loaded: \(provinciasVisitadas) provincias, \(reseñasEscritas) reseñas, \(diasConsecutivos) días")
+        } catch {
+            errorMessage = "Error al cargar estadísticas: \(error.localizedDescription)"
+            Logger.error("Error loading additional stats: \(error.localizedDescription)")
+        }
+    }
+
+    /// Calcula el progreso de un logro específico
+    private func calculateProgress(for logro: Logro) -> (current: Int, target: Int) {
+        guard let condicion = logro.condicion else { return (0, 0) }
+
+        if condicion.contains("campos_visitados") {
+            let target = condicion.split(separator: ">=").last.flatMap { Int($0.trimmingCharacters(in: .whitespaces)) } ?? 0
+            return (min(camposVisitados, target), target)
+        }
+        if condicion.contains("provincias_visitadas") {
+            let target = condicion.split(separator: ">=").last.flatMap { Int($0.trimmingCharacters(in: .whitespaces)) } ?? 0
+            return (min(provinciasVisitadas, target), target)
+        }
+        if condicion.contains("dias_visitados") {
+            let target = condicion.split(separator: ">=").last.flatMap { Int($0.trimmingCharacters(in: .whitespaces)) } ?? 0
+            return (min(diasConsecutivos, target), target)
+        }
+        if condicion.contains("reseñas_escritas") {
+            let target = condicion.split(separator: ">=").last.flatMap { Int($0.trimmingCharacters(in: .whitespaces)) } ?? 0
+            return (min(reseñasEscritas, target), target)
+        }
+        return (0, 0)
+    }
+
+    /// Calcula y actualiza el logro más cercano a completar
+    func updateClosestAchievement() {
+        // Filtrar logros pendientes (no desbloqueados)
+        let pendingLogros = allLogros.filter { !logrosDesbloqueados.contains($0.id) }
+
+        guard !pendingLogros.isEmpty else {
+            closestAchievement = nil
+            closestAchievementProgress = (0, 0)
+            return
+        }
+
+        // Calcular progreso para cada logro pendiente
+        var bestLogro: Logro? = nil
+        var bestProgress: Double = 0.0
+        var bestProgressValues: (current: Int, target: Int) = (0, 0)
+
+        for logro in pendingLogros {
+            let (current, target) = calculateProgress(for: logro)
+            guard target > 0 else { continue }
+
+            let progress = Double(current) / Double(target)
+
+            // Buscar el logro con mayor progreso (más cercano a completar)
+            if progress > bestProgress || (progress == bestProgress && (logro.orden ?? Int.max) < (bestLogro?.orden ?? Int.max)) {
+                bestProgress = progress
+                bestLogro = logro
+                bestProgressValues = (current, target)
+            }
+        }
+
+        closestAchievement = bestLogro
+        closestAchievementProgress = bestProgressValues
+
+        if let achievement = bestLogro {
+            Logger.debug("Closest achievement: \(achievement.nombre) - \(bestProgressValues.current)/\(bestProgressValues.target)")
+        }
     }
 
     // MARK: - Visit History Methods
@@ -254,5 +410,9 @@ class ProfileViewModel: ObservableObject {
         await loadAchievementsCount(for: userId)
         await loadVisitHistory(for: userId, campos: campos)
         await loadPreferences(for: userId)
+        await loadAllAchievements()
+        await loadUnlockedAchievements(for: userId)
+        await loadAdditionalStats(for: userId)
+        updateClosestAchievement()
     }
 }

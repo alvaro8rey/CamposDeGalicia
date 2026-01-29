@@ -53,6 +53,9 @@ struct ProfileView: View {
                     )
                     .padding(.horizontal)
 
+                    // Achievements Section
+                    achievementsSection
+
                     // Personal Data Section
                     personalDataSection
 
@@ -78,22 +81,6 @@ struct ProfileView: View {
                     Image(systemName: "gearshape.fill")
                         .foregroundColor(.gray)
                         .font(.system(size: 20))
-                }
-            }
-            ToolbarItem(placement: .navigationBarTrailing) {
-                NavigationLink(destination: LogrosView().onAppear {
-                    profileVM.resetNewAchievementsCount()
-                }) {
-                    Image(systemName: "trophy.fill")
-                        .foregroundColor(.yellow)
-                        .font(.system(size: 20))
-                }
-                .badge(profileVM.newAchievementsCount > 0 ? profileVM.newAchievementsCount : 0)
-            }
-            ToolbarItem(placement: .navigationBarTrailing) {
-                NavigationLink(destination: LevelsInfoView()) {
-                    Image(systemName: "info.circle")
-                        .foregroundColor(.gray)
                 }
             }
         }
@@ -248,6 +235,127 @@ struct ProfileView: View {
         .background(Color(UIColor.secondarySystemBackground))
         .cornerRadius(12)
         .padding(.horizontal)
+    }
+
+    // MARK: - Achievements Section
+    private var achievementsSection: some View {
+        NavigationLink(destination: LogrosView().onAppear {
+            profileVM.resetNewAchievementsCount()
+        }) {
+            VStack(alignment: .leading, spacing: 16) {
+                HStack {
+                    Text(L(.logrosTitle))
+                        .font(.title3)
+                        .fontWeight(.bold)
+                        .foregroundColor(.primary)
+
+                    Spacer()
+
+                    HStack(spacing: 4) {
+                        if profileVM.newAchievementsCount > 0 {
+                            Text("\(profileVM.newAchievementsCount)")
+                                .font(.caption)
+                                .fontWeight(.bold)
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(Color.red)
+                                .cornerRadius(10)
+                        }
+
+                        Image(systemName: "chevron.right")
+                            .foregroundColor(.secondary)
+                            .font(.caption)
+                    }
+                }
+
+                if let closestAchievement = profileVM.closestAchievement {
+                    VStack(alignment: .leading, spacing: 12) {
+                        HStack(spacing: 12) {
+                            ZStack {
+                                Circle()
+                                    .fill(Color.yellow.opacity(0.2))
+                                    .frame(width: 44, height: 44)
+
+                                Image(systemName: "trophy.fill")
+                                    .font(.system(size: 20))
+                                    .foregroundColor(.yellow)
+                            }
+
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(closestAchievement.nombre)
+                                    .font(.body)
+                                    .fontWeight(.semibold)
+                                    .foregroundColor(.primary)
+
+                                if let descripcion = closestAchievement.descripcion {
+                                    Text(descripcion)
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                        .lineLimit(2)
+                                }
+                            }
+
+                            Spacer()
+
+                            Text("+\(closestAchievement.xp ?? 0)")
+                                .font(.caption)
+                                .fontWeight(.bold)
+                                .foregroundColor(.yellow)
+                        }
+
+                        // Progress bar
+                        let progress = profileVM.closestAchievementProgress
+                        if progress.target > 0 {
+                            VStack(spacing: 4) {
+                                GeometryReader { geometry in
+                                    ZStack(alignment: .leading) {
+                                        Rectangle()
+                                            .fill(Color.gray.opacity(0.2))
+                                            .frame(height: 8)
+                                            .cornerRadius(4)
+
+                                        Rectangle()
+                                            .fill(Color.yellow)
+                                            .frame(width: CGFloat(progress.current) / CGFloat(progress.target) * geometry.size.width, height: 8)
+                                            .cornerRadius(4)
+                                    }
+                                }
+                                .frame(height: 8)
+
+                                HStack {
+                                    Text("\(progress.current) / \(progress.target)")
+                                        .font(.caption2)
+                                        .foregroundColor(.secondary)
+                                    Spacer()
+                                    Text("\(Int((Double(progress.current) / Double(progress.target)) * 100))%")
+                                        .font(.caption2)
+                                        .fontWeight(.bold)
+                                        .foregroundColor(.yellow)
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    HStack(spacing: 12) {
+                        Image(systemName: "checkmark.seal.fill")
+                            .font(.title2)
+                            .foregroundColor(.green)
+
+                        Text(L(.logrosAllCompleted))
+                            .font(.body)
+                            .foregroundColor(.secondary)
+
+                        Spacer()
+                    }
+                }
+            }
+            .padding()
+            .background(Color(UIColor.secondarySystemBackground))
+            .cornerRadius(12)
+            .padding(.horizontal)
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: - Personal Data Section

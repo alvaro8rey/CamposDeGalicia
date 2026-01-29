@@ -17,8 +17,6 @@ struct SettingsView: View {
     // MARK: - State
     @State private var isSaving: Bool = false
     @State private var successMessage: String? = nil
-    @State private var showLanguageAlert: Bool = false
-    @State private var showThemeAlert: Bool = false
 
     // MARK: - Body
     var body: some View {
@@ -106,20 +104,6 @@ struct SettingsView: View {
                     }
                 }
             }
-            .alert(isPresented: $showLanguageAlert) {
-                Alert(
-                    title: Text(L(.profileLanguageTitle)),
-                    message: Text(L(.profileLanguageMessage)),
-                    dismissButton: .default(Text(L(.ok)))
-                )
-            }
-            .alert(isPresented: $showThemeAlert) {
-                Alert(
-                    title: Text(L(.settingsTheme)),
-                    message: Text("El tema se aplicará inmediatamente"),
-                    dismissButton: .default(Text(L(.ok)))
-                )
-            }
         }
     }
 
@@ -142,7 +126,6 @@ struct SettingsView: View {
                             Button(action: {
                                 if localization.currentLanguage != language {
                                     localization.currentLanguage = language
-                                    showLanguageAlert = true
                                 }
                             }) {
                                 HStack(spacing: 6) {
@@ -196,7 +179,6 @@ struct SettingsView: View {
                             Button(action: {
                                 if themeManager.currentTheme != theme {
                                     themeManager.currentTheme = theme
-                                    showThemeAlert = true
                                 }
                             }) {
                                 HStack(spacing: 6) {

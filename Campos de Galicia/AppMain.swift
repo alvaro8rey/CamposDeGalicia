@@ -132,6 +132,7 @@ struct AppMain: App {
             .environmentObject(LocalizationManager.shared)
             .environmentObject(themeManager)
             .preferredColorScheme(themeManager.currentTheme.colorScheme)
+            .animation(.easeInOut(duration: 0.3), value: themeManager.currentTheme)
             .withToast()
             .onAppear {
                 locationManager.requestLocation()

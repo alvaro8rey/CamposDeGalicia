@@ -46,9 +46,11 @@ class ThemeManager: ObservableObject {
     static let shared = ThemeManager()
 
     @Published var currentTheme: AppTheme {
+        willSet {
+            objectWillChange.send()
+        }
         didSet {
             UserDefaults.standard.set(currentTheme.rawValue, forKey: "app_theme")
-            objectWillChange.send()
         }
     }
 

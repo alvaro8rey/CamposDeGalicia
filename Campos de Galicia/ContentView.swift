@@ -17,22 +17,29 @@ struct ContentView: View {
     var provincias: [String] {
         [L(.contentAllProvinces), L(.provinceACoruna), L(.provinceOurense), L(.provinceLugo), L(.provincePontevedra)]
     }
-    
+
     // Lista de campos y estado de carga gestionados por el view model
     @Binding var distanciaPredeterminada: Double // Añadimos el binding
-    
+
     // Lista de campos filtrada
     @State private var filteredCampos: [CampoModel] = []
-    
+
     // Estado para controlar la vista (predeterminada como lista)
     @State private var isGridView: Bool = false // False para vista de lista, True para vista en cuadrados
-    
+
     // Estado para el conteo de campos mostrados
     @State private var camposMostrados: Int = 0
 
     // Onboarding
     @AppStorage("hasSeenOnboarding") private var hasSeenOnboarding: Bool = false
     @State private var showOnboarding: Bool = false
+
+    // Computed property para saber si hay filtros activos
+    private var hasActiveFilters: Bool {
+        !searchNombre.isEmpty ||
+        !searchLocalidad.isEmpty ||
+        selectedProvincia != L(.contentAllProvinces)
+    }
 
     var body: some View {
         ZStack {
@@ -59,7 +66,8 @@ struct ContentView: View {
                     // Barra de botones y filtros
                     FilterBarView(
                         isGridView: $isGridView,
-                        isFilterExpanded: $isFilterExpanded
+                        isFilterExpanded: $isFilterExpanded,
+                        hasActiveFilters: hasActiveFilters
                     )
 
                     // Contenedor de filtros colapsable
@@ -91,6 +99,7 @@ struct ContentView: View {
                     CampoListView(
                         filteredCampos: filteredCampos,
                         isGridView: isGridView,
+                        isFilterExpanded: $isFilterExpanded,
                         onRefresh: {
                             await camposViewModel.refreshCampos()
                         }
@@ -375,6 +384,7 @@ struct ContentView: View {
 struct FilterBarView: View {
     @Binding var isGridView: Bool
     @Binding var isFilterExpanded: Bool
+    let hasActiveFilters: Bool
 
     var body: some View {
         HStack(spacing: 16) {
@@ -422,10 +432,10 @@ struct FilterBarView: View {
                         .font(.subheadline)
                         .fontWeight(.medium)
                 }
-                .foregroundColor(isFilterExpanded ? .blue : .secondary)
+                .foregroundColor((isFilterExpanded || hasActiveFilters) ? .blue : .secondary)
                 .padding(.horizontal, 14)
                 .padding(.vertical, 10)
-                .background(isFilterExpanded ? Color.blue.opacity(0.15) : Color.clear)
+                .background((isFilterExpanded || hasActiveFilters) ? Color.blue.opacity(0.15) : Color.clear)
                 .clipShape(Capsule())
             }
         }
@@ -580,6 +590,7 @@ struct CampoListView: View {
     @EnvironmentObject var authViewModel: AuthViewModel
     let filteredCampos: [CampoModel]
     let isGridView: Bool
+    @Binding var isFilterExpanded: Bool
     let onRefresh: () async -> Void
 
     // URL de la imagen predeterminada de Supabase
@@ -766,6 +777,17 @@ struct CampoListView: View {
             await onRefresh()
         }
         .background(Color.clear)
+        .simultaneousGesture(
+            DragGesture(minimumDistance: 10)
+                .onChanged { _ in
+                    // Cerrar el desplegable de filtros al detectar scroll
+                    if isFilterExpanded {
+                        withAnimation(.easeOut(duration: 0.3)) {
+                            isFilterExpanded = false
+                        }
+                    }
+                }
+        )
         .onAppear {
             loadVisitedCampos()
         }

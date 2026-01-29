@@ -44,7 +44,7 @@ struct DailyRewardCardView: View {
                         .font(.system(size: 22, weight: .bold))
                 }
 
-                Text(hasClaimedToday ? L(.dailyRewardClaimed) : L(.dailyRewardClaim, currentXP))
+                Text(hasClaimedToday ? L(.dailyRewardClaimed) : L(.dailyRewardClaim, dailyXP))
                     .font(.subheadline)
                     .foregroundColor(.secondary)
             }

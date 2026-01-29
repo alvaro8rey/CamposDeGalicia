@@ -22,6 +22,7 @@ struct CampoModel: Codable, Equatable, Identifiable {
     var tipo_iluminacion: String?
     var estado_cesped: String?
     var accesibilidad: String?
+    var parking: Bool?
     var notas_adicionales: String?
 
     // Implementación de Equatable
@@ -50,5 +51,6 @@ struct CampoUpdate: Encodable {
     var tipo_iluminacion: String?
     var estado_cesped: String?
     var accesibilidad: String?
+    var parking: Bool?
     var notas_adicionales: String?
 }

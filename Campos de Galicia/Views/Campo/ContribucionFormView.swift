@@ -16,6 +16,7 @@ struct ContribucionFormView: View {
     @State private var tipoIluminacion: String = ""
     @State private var estadoCesped: String = ""
     @State private var accesibilidad: String = ""
+    @State private var tieneParking: Bool = false
     @State private var notas: String = ""
 
     var body: some View {
@@ -95,6 +96,8 @@ struct ContribucionFormView: View {
                         Text(L(.contribucionAccesibilidadNo)).tag("No, no tiene acceso")
                     }
 
+                    Toggle(L(.contribucionParking), isOn: $tieneParking)
+
                     TextEditor(text: $notas)
                         .frame(height: 100)
                         .overlay(
@@ -127,6 +130,7 @@ struct ContribucionFormView: View {
         !tipoIluminacion.isEmpty ||
         !estadoCesped.isEmpty ||
         !accesibilidad.isEmpty ||
+        tieneParking ||
         !notas.isEmpty
     }
 
@@ -183,6 +187,7 @@ struct ContribucionFormView: View {
                 tipo_iluminacion: tipoIluminacion.isEmpty ? nil : tipoIluminacion,
                 estado_cesped: estadoCesped.isEmpty ? nil : estadoCesped,
                 accesibilidad: accesibilidad.isEmpty ? nil : accesibilidad,
+                parking: tieneParking ? true : nil,
                 notas: notas.isEmpty ? nil : notas,
                 fecha: Date(),
                 aprobada: false

@@ -32,6 +32,7 @@ BEGIN
     tipo_iluminacion = COALESCE(campos.tipo_iluminacion, contrib.tipo_iluminacion),
     estado_cesped = COALESCE(campos.estado_cesped, contrib.estado_cesped),
     accesibilidad = COALESCE(campos.accesibilidad, contrib.accesibilidad),
+    parking = COALESCE(campos.parking, contrib.parking),
     notas_adicionales = COALESCE(campos.notas_adicionales, contrib.notas)
   WHERE id = campo_id_value;
 
@@ -72,6 +73,7 @@ BEGIN
       tipo_iluminacion = COALESCE(campos.tipo_iluminacion, NEW.tipo_iluminacion),
       estado_cesped = COALESCE(campos.estado_cesped, NEW.estado_cesped),
       accesibilidad = COALESCE(campos.accesibilidad, NEW.accesibilidad),
+      parking = COALESCE(campos.parking, NEW.parking),
       notas_adicionales = COALESCE(campos.notas_adicionales, NEW.notas)
     WHERE id = NEW.id_campo;
   END IF;

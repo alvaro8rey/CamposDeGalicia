@@ -197,6 +197,7 @@ enum LocalizedKey: String {
     case contribucionAccesibilidad = "contribucion.accesibilidad"
     case contribucionAccesibilidadSi = "contribucion.accesibilidad.si"
     case contribucionAccesibilidadNo = "contribucion.accesibilidad.no"
+    case contribucionParking = "contribucion.parking"
     case contribucionSuccess = "contribucion.success"
     case contribucionError = "contribucion.error"
     case contribucionSelect = "contribucion.select"
@@ -671,6 +672,7 @@ class LocalizationManager: ObservableObject {
             .contribucionAccesibilidad: "Accesibilidad",
             .contribucionAccesibilidadSi: "Sí, tiene acceso para discapacitados",
             .contribucionAccesibilidadNo: "No, no tiene acceso",
+            .contribucionParking: "¿Tiene parking?",
             .contribucionSuccess: "✅ Contribución enviada. ¡Gracias!",
             .contribucionError: "Error al enviar contribución",
             .contribucionSelect: "Seleccionar",
@@ -1097,11 +1099,11 @@ class LocalizationManager: ObservableObject {
             .reviewRatingExcellent: "🤩 Excelente",
 
             // Contribuciones
-            .contribucionTitle: "Aportar información",
+            .contribucionTitle: "Achegar información",
             .contribucionHelp: "Axuda a completar os datos de %@",
             .contribucionAddPhotos: "Engadir fotos",
             .contribucionCantina: "Ten cantina?",
-            .contribucionAforo: "Aforo da grada (número)",
+            .contribucionAforo: "Aforo da bancada (número)",
             .contribucionMedidas: "Medidas do campo (ex. 105x68 metros)",
             .contribucionIluminacion: "Tipo de iluminación",
             .contribucionIluminacionNatural: "Natural",
@@ -1111,10 +1113,11 @@ class LocalizationManager: ObservableObject {
             .contribucionCespedRegular: "Regular",
             .contribucionCespedMalo: "Malo",
             .contribucionAccesibilidad: "Accesibilidade",
-            .contribucionAccesibilidadSi: "Si, ten acceso para discapacitados",
+            .contribucionAccesibilidadSi: "Si, ten acceso para persoas con discapacidade",
             .contribucionAccesibilidadNo: "Non, non ten acceso",
+            .contribucionParking: "Ten aparcadoiro?",
             .contribucionSuccess: "✅ Contribución enviada. Grazas!",
-            .contribucionError: "Erro ao enviar contribución",
+            .contribucionError: "Erro ao enviar a contribución",
             .contribucionSelect: "Seleccionar",
 
             // Toast

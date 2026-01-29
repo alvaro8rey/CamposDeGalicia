@@ -11,6 +11,7 @@ struct CampoContribucion: Encodable {
     let tipo_iluminacion: String?
     let estado_cesped: String?
     let accesibilidad: String?
+    let parking: Bool?
     let notas: String?
     let fecha: Date
     let aprobada: Bool
@@ -26,6 +27,7 @@ struct ContribucionAprobada: Codable, Equatable {
     let tipo_iluminacion: String?
     let estado_cesped: String?
     let accesibilidad: String?
+    let parking: Bool?
     let notas: String?
     let es_principal: Bool?
 }

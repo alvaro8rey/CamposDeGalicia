@@ -729,12 +729,12 @@ struct CampoListView: View {
                                             .foregroundColor(.secondary)
                                     }
 
-                                    if let tipo = campo.tipo {
+                                    if !campo.tipo.isEmpty {
                                         HStack(spacing: 4) {
                                             Image(systemName: "soccerball")
                                                 .font(.caption2)
                                                 .foregroundColor(.green)
-                                            Text(tipo)
+                                            Text(campo.tipo)
                                                 .font(.caption)
                                                 .foregroundColor(.green)
                                                 .padding(.horizontal, 8)

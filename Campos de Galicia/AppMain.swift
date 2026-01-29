@@ -18,7 +18,7 @@ struct AppMain: App {
     @State private var distanciaPredeterminada: Double = 10.0
     @State private var showVerificationAlert: Bool = false
     @State private var verificationResult: String = ""
-    
+
     // Gestión de navegación y pestañas
     @State private var selectedTab: Int = 0
     @State private var isMapNavigating: Bool = false
@@ -27,6 +27,9 @@ struct AppMain: App {
 
     // Task de limpieza periódica
     @State private var cleanupTask: Task<Void, Never>?
+
+    // Forzar refresh de UI cuando cambia el tema
+    @State private var themeRefreshTrigger: Int = 0
 
     init() {
         let viewModel = CamposViewModel()
@@ -126,7 +129,6 @@ struct AppMain: App {
                 }
                 .tag(3)
             }
-            .id(themeManager.currentTheme.rawValue)
             .accentColor(.blue)
             .environmentObject(geofenceManager)
             .environmentObject(camposViewModel)
@@ -134,6 +136,10 @@ struct AppMain: App {
             .environmentObject(themeManager)
             .preferredColorScheme(themeManager.currentTheme.colorScheme)
             .withToast()
+            .background(Color.clear.opacity(Double(themeRefreshTrigger) * 0.0001))
+            .onChange(of: themeManager.currentTheme) { _, _ in
+                themeRefreshTrigger += 1
+            }
             .onAppear {
                 locationManager.requestLocation()
                 if geofenceManager.autoCheckinEnabled {

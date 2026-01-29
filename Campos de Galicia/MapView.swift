@@ -34,13 +34,6 @@ extension CampoAnnotation {
     }
 }
 
-struct Filtros: Equatable {
-    var tipo: String? = nil
-    var superficie: String? = nil
-    var provincia: String? = nil
-    var nombre: String? = nil
-    var localidad: String? = nil
-}
 
 // MARK: - Estilo Liquid Glass
 
@@ -83,8 +76,6 @@ struct MapaView: View {
     @State private var isSatelliteView: Bool = false
     @State private var selectedCampo: CampoModel? = nil
     @State private var annotationItems: [MapAnnotationItem] = []
-    @State private var showFiltros: Bool = false
-    @State private var filtros: Filtros = Filtros()
 
     // Propiedades de búsqueda
     @State private var searchText: String = ""
@@ -358,15 +349,6 @@ struct MapaView: View {
                     } label: {
                         Image(systemName: isSatelliteView ? "map.fill" : "globe.europe.africa.fill")
                             .font(.system(size: 20))
-                    }
-                    .liquidGlass()
-
-                    Button {
-                        HapticFeedback.light()
-                        showFiltros = true
-                    } label: {
-                        Image(systemName: "line.3.horizontal.decrease")
-                            .font(.system(size: 20, weight: .bold))
                     }
                     .liquidGlass()
 

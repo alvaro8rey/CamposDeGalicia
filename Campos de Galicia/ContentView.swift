@@ -72,15 +72,20 @@ struct ContentView: View {
                             applyAction: applyFilters,
                             resetAction: resetFilters
                         )
+                        .padding(.top, 4)
                     }
 
                     // Texto con el conteo de campos mostrados
-                    Text(L(.contentShownFields, camposMostrados))
-                        .font(.caption)
-                        .foregroundColor(.gray)
-                        .padding(.horizontal)
-                        .padding(.top, 8) // Aumentamos la separación superior
-                        .padding(.bottom, 4)
+                    HStack {
+                        Text(L(.contentShownFields, camposMostrados))
+                            .font(.caption)
+                            .fontWeight(.medium)
+                            .foregroundColor(.secondary)
+                        Spacer()
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.top, isFilterExpanded ? 12 : 8)
+                    .padding(.bottom, 4)
 
                     // Lista de campos filtrada
                     CampoListView(
@@ -372,30 +377,32 @@ struct FilterBarView: View {
     @Binding var isFilterExpanded: Bool
 
     var body: some View {
-        HStack(spacing: 20) {
+        HStack(spacing: 16) {
             Button(action: {
-                withAnimation(.easeInOut) {
+                HapticFeedback.light()
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                     isGridView = true
                 }
             }) {
                 Image(systemName: "square.grid.2x2.fill")
-                    .font(.title2)
+                    .font(.title3)
                     .foregroundColor(isGridView ? .blue : .secondary)
-                    .padding(10)
-                    .background(isGridView ? Color.blue.opacity(0.1) : Color.clear)
+                    .frame(width: 44, height: 44)
+                    .background(isGridView ? Color.blue.opacity(0.15) : Color.clear)
                     .clipShape(Circle())
             }
 
             Button(action: {
-                withAnimation(.easeInOut) {
+                HapticFeedback.light()
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                     isGridView = false
                 }
             }) {
                 Image(systemName: "line.3.horizontal")
-                    .font(.title2)
+                    .font(.title3)
                     .foregroundColor(!isGridView ? .blue : .secondary)
-                    .padding(10)
-                    .background(!isGridView ? Color.blue.opacity(0.1) : Color.clear)
+                    .frame(width: 44, height: 44)
+                    .background(!isGridView ? Color.blue.opacity(0.15) : Color.clear)
                     .clipShape(Circle())
             }
 
@@ -403,29 +410,38 @@ struct FilterBarView: View {
 
             // Botón de filtros (solo ícono)
             Button(action: {
-                withAnimation(.easeInOut) {
+                HapticFeedback.light()
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                     isFilterExpanded.toggle()
                 }
             }) {
-                Image(systemName: "line.horizontal.3.decrease.circle.fill")
-                    .font(.title2)
-                    .foregroundColor(isFilterExpanded ? .blue : .secondary)
-                    .padding(10)
-                    .background(isFilterExpanded ? Color.blue.opacity(0.1) : Color.clear)
-                    .clipShape(Circle())
+                HStack(spacing: 6) {
+                    Image(systemName: "line.horizontal.3.decrease.circle.fill")
+                        .font(.title3)
+                    Text(L(.contentFilterLabel))
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                }
+                .foregroundColor(isFilterExpanded ? .blue : .secondary)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 10)
+                .background(isFilterExpanded ? Color.blue.opacity(0.15) : Color.clear)
+                .clipShape(Capsule())
             }
         }
-        .padding()
+        .padding(.horizontal, 16)
+        .padding(.vertical, 14)
         .background(
-            LinearGradient(gradient: Gradient(colors: [Color.blue.opacity(0.1), Color(UIColor.secondarySystemBackground).opacity(0.8)]), startPoint: .topLeading, endPoint: .bottomTrailing)
+            .ultraThinMaterial
         )
-        .cornerRadius(15)
+        .cornerRadius(18)
         .overlay(
-            RoundedRectangle(cornerRadius: 15)
-                .stroke(Color.gray.opacity(0.3), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 18)
+                .stroke(Color.gray.opacity(0.2), lineWidth: 1)
         )
-        .shadow(color: Color.black.opacity(0.1), radius: 8, x: 0, y: 4)
-        .padding(.horizontal)
+        .shadow(color: Color.black.opacity(0.08), radius: 12, x: 0, y: 4)
+        .padding(.horizontal, 12)
+        .padding(.top, 8)
     }
 }
 
@@ -439,45 +455,48 @@ struct FiltersView: View {
     let resetAction: () -> Void
 
     var body: some View {
-        VStack(spacing: 12) {
-            Text(L(.contentFilterLabel))
-                .fontWeight(.bold)
-                .foregroundColor(.primary)
-                .frame(maxWidth: .infinity, alignment: .leading)
+        VStack(spacing: 16) {
+            HStack {
+                Text(L(.contentFilterLabel))
+                    .font(.headline)
+                    .foregroundColor(.primary)
+                Spacer()
+            }
 
-            // Filtro por nombre
-            TextField(L(.contentSearchByName), text: $searchNombre)
-                .padding()
-                .background(Color(.secondarySystemFill))
-                .cornerRadius(12)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(Color.gray.opacity(0.4), lineWidth: 1)
-                )
+            // Filtro por nombre con icono
+            HStack(spacing: 12) {
+                Image(systemName: "magnifyingglass")
+                    .foregroundColor(.secondary)
+                TextField(L(.contentSearchByName), text: $searchNombre)
+            }
+            .padding(14)
+            .background(Color(.tertiarySystemBackground))
+            .cornerRadius(14)
+            .overlay(
+                RoundedRectangle(cornerRadius: 14)
+                    .stroke(Color.gray.opacity(0.2), lineWidth: 1)
+            )
 
-            // Filtro por localidad
-            TextField(L(.contentSearchByLocation), text: $searchLocalidad)
-                .padding()
-                .background(Color(.secondarySystemFill))
-                .cornerRadius(12)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(Color.gray.opacity(0.4), lineWidth: 1)
-                )
+            // Filtro por localidad con icono
+            HStack(spacing: 12) {
+                Image(systemName: "mappin.circle")
+                    .foregroundColor(.secondary)
+                TextField(L(.contentSearchByLocation), text: $searchLocalidad)
+            }
+            .padding(14)
+            .background(Color(.tertiarySystemBackground))
+            .cornerRadius(14)
+            .overlay(
+                RoundedRectangle(cornerRadius: 14)
+                    .stroke(Color.gray.opacity(0.2), lineWidth: 1)
+            )
 
             // Filtro por provincia
-            Text(L(.contentProvince))
-                .fontWeight(.bold)
-                .foregroundColor(.primary)
-                .frame(maxWidth: .infinity, alignment: .leading)
-
-            ZStack(alignment: .leading) {
-                Color(.secondarySystemFill)
-                    .cornerRadius(12)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12)
-                            .stroke(Color.gray.opacity(0.4), lineWidth: 1)
-                    )
+            VStack(alignment: .leading, spacing: 8) {
+                Text(L(.contentProvince))
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                    .foregroundColor(.secondary)
 
                 Picker(L(.contentProvince), selection: $selectedProvincia) {
                     ForEach(provincias, id: \.self) { provincia in
@@ -485,49 +504,74 @@ struct FiltersView: View {
                     }
                 }
                 .pickerStyle(MenuPickerStyle())
-                .padding(.horizontal)
-                .padding(.vertical, 10)
-                .foregroundColor(.secondary)
-                .frame(minHeight: 44)
+                .padding(14)
+                .background(Color(.tertiarySystemBackground))
+                .cornerRadius(14)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14)
+                        .stroke(Color.gray.opacity(0.2), lineWidth: 1)
+                )
             }
-            .frame(maxWidth: .infinity)
 
             // Botones de aplicar y resetear
-            HStack(spacing: 10) {
-                Button(action: applyAction) {
-                    Text(L(.contentApply))
-                        .fontWeight(.bold)
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color.blue)
-                        .foregroundColor(.white)
-                        .cornerRadius(12)
-                        .shadow(color: Color.black.opacity(0.2), radius: 4)
+            HStack(spacing: 12) {
+                Button(action: {
+                    HapticFeedback.medium()
+                    applyAction()
+                }) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "checkmark.circle.fill")
+                        Text(L(.contentApply))
+                            .fontWeight(.semibold)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(
+                        LinearGradient(
+                            gradient: Gradient(colors: [Color.blue, Color.blue.opacity(0.8)]),
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+                    .foregroundColor(.white)
+                    .cornerRadius(14)
+                    .shadow(color: Color.blue.opacity(0.3), radius: 8, x: 0, y: 4)
                 }
 
-                Button(action: resetAction) {
-                    Text(L(.contentReset))
-                        .fontWeight(.bold)
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color.red)
-                        .foregroundColor(.white)
-                        .cornerRadius(12)
-                        .shadow(color: Color.black.opacity(0.2), radius: 4)
+                Button(action: {
+                    HapticFeedback.light()
+                    resetAction()
+                }) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "arrow.counterclockwise")
+                        Text(L(.contentReset))
+                            .fontWeight(.semibold)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(Color(.tertiarySystemBackground))
+                    .foregroundColor(.secondary)
+                    .cornerRadius(14)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 14)
+                            .stroke(Color.gray.opacity(0.3), lineWidth: 1)
+                    )
                 }
             }
+            .padding(.top, 4)
         }
-        .padding()
+        .padding(18)
         .background(
-            LinearGradient(gradient: Gradient(colors: [Color.blue.opacity(0.1), Color(UIColor.systemBackground).opacity(0.95)]), startPoint: .topLeading, endPoint: .bottomTrailing)
+            .ultraThinMaterial
         )
-        .cornerRadius(15)
+        .cornerRadius(18)
         .overlay(
-            RoundedRectangle(cornerRadius: 15)
-                .stroke(Color.gray.opacity(0.3), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 18)
+                .stroke(Color.gray.opacity(0.2), lineWidth: 1)
         )
-        .shadow(color: Color.black.opacity(0.1), radius: 8, x: 0, y: 4)
-        .padding(.horizontal)
+        .shadow(color: Color.black.opacity(0.08), radius: 12, x: 0, y: 4)
+        .padding(.horizontal, 12)
+        .transition(.move(edge: .top).combined(with: .opacity))
     }
 }
 
@@ -558,7 +602,7 @@ struct CampoListView: View {
                     GridItem(.fixed(itemWidth), spacing: gridSpacing)
                 ]
 
-                LazyVGrid(columns: columns, spacing: 16) {
+                LazyVGrid(columns: columns, spacing: 14) {
                     ForEach(filteredCampos, id: \.id) { campo in
                         NavigationLink(destination: CampoDetalleView(campoID: campo.id)
                             .environmentObject(authViewModel)) {
@@ -574,16 +618,16 @@ struct CampoListView: View {
                                             image
                                                 .resizable()
                                                 .aspectRatio(contentMode: .fill)
-                                                .frame(width: itemWidth, height: 100)
+                                                .frame(width: itemWidth, height: 110)
                                                 .clipped()
                                         } placeholder: {
                                             Color.gray.opacity(0.3)
-                                                .frame(width: itemWidth, height: 100)
+                                                .frame(width: itemWidth, height: 110)
                                         }
                                     }
 
                                     // Textos con altura fija
-                                    VStack(alignment: .leading, spacing: 2) {
+                                    VStack(alignment: .leading, spacing: 4) {
                                         Text(campo.nombre)
                                             .font(.caption)
                                             .fontWeight(.semibold)
@@ -592,31 +636,36 @@ struct CampoListView: View {
                                             .multilineTextAlignment(.leading)
                                             .fixedSize(horizontal: false, vertical: true)
 
-                                        Text("\(campo.localidad ?? ""), \(campo.provincia)")
-                                            .font(.caption2)
-                                            .foregroundColor(.secondary)
-                                            .lineLimit(1)
+                                        HStack(spacing: 3) {
+                                            Image(systemName: "mappin.circle")
+                                                .font(.system(size: 9))
+                                                .foregroundColor(.secondary)
+                                            Text("\(campo.localidad ?? ""), \(campo.provincia)")
+                                                .font(.caption2)
+                                                .foregroundColor(.secondary)
+                                                .lineLimit(1)
+                                        }
                                     }
-                                    .frame(height: 42, alignment: .top)
-                                    .padding(.horizontal, 8)
-                                    .padding(.vertical, 6)
+                                    .frame(height: 44, alignment: .top)
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 8)
                                 }
-                                .frame(width: itemWidth, height: 148)
+                                .frame(width: itemWidth, height: 162)
                                 .background(Color(UIColor.secondarySystemBackground))
-                                .cornerRadius(10)
-                                .shadow(color: Color.black.opacity(0.1), radius: 2, x: 0, y: 1)
+                                .cornerRadius(14)
+                                .shadow(color: Color.black.opacity(0.08), radius: 8, x: 0, y: 4)
 
                                 // Indicador de campo visitado
                                 if visitedCampoIds.contains(campo.id) {
                                     Image(systemName: "checkmark.circle.fill")
-                                        .font(.system(size: 20))
+                                        .font(.system(size: 22))
                                         .foregroundColor(.orange)
                                         .background(
                                             Circle()
                                                 .fill(Color.white)
-                                                .frame(width: 16, height: 16)
+                                                .frame(width: 18, height: 18)
                                         )
-                                        .padding(6)
+                                        .padding(8)
                                 }
                             }
                         }
@@ -626,12 +675,12 @@ struct CampoListView: View {
                 .padding(.horizontal, 12)
                 .padding(.top, 8)
             } else {
-                // Vista en lista
-                LazyVStack(spacing: 0) {
+                // Vista en lista con diseño mejorado
+                LazyVStack(spacing: 12) {
                     ForEach(filteredCampos, id: \.id) { campo in
                         NavigationLink(destination: CampoDetalleView(campoID: campo.id)
                             .environmentObject(authViewModel)) {
-                            HStack(spacing: 12) {
+                            HStack(spacing: 14) {
                                 let imageURL = (campo.foto_url?.isEmpty == false ? campo.foto_url : nil) ?? defaultImageURL
                                 if let url = URL(string: imageURL) {
                                     ZStack(alignment: .topTrailing) {
@@ -642,44 +691,75 @@ struct CampoListView: View {
                                             image
                                                 .resizable()
                                                 .scaledToFill()
-                                                .frame(width: 60, height: 60)
-                                                .cornerRadius(10)
+                                                .frame(width: 70, height: 70)
+                                                .cornerRadius(12)
                                                 .clipped()
                                         } placeholder: {
                                             Color.gray.opacity(0.3)
-                                                .frame(width: 60, height: 60)
-                                                .cornerRadius(10)
+                                                .frame(width: 70, height: 70)
+                                                .cornerRadius(12)
                                         }
 
                                         // Indicador de campo visitado
                                         if visitedCampoIds.contains(campo.id) {
                                             Image(systemName: "checkmark.circle.fill")
-                                                .font(.system(size: 18))
+                                                .font(.system(size: 20))
                                                 .foregroundColor(.orange)
                                                 .background(
                                                     Circle()
                                                         .fill(Color.white)
-                                                        .frame(width: 14, height: 14)
+                                                        .frame(width: 16, height: 16)
                                                 )
-                                                .offset(x: 4, y: -4)
+                                                .offset(x: 6, y: -6)
                                         }
                                     }
                                 }
-                                VStack(alignment: .leading, spacing: 4) {
+                                VStack(alignment: .leading, spacing: 6) {
                                     Text(campo.nombre)
-                                        .font(.headline)
+                                        .font(.system(size: 17, weight: .semibold))
                                         .foregroundColor(.primary)
-                                    Text("\(campo.localidad), \(campo.provincia)")
-                                        .font(.subheadline)
-                                        .foregroundColor(.secondary)
+                                        .lineLimit(2)
+
+                                    HStack(spacing: 4) {
+                                        Image(systemName: "mappin.circle.fill")
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
+                                        Text("\(campo.localidad ?? ""), \(campo.provincia)")
+                                            .font(.subheadline)
+                                            .foregroundColor(.secondary)
+                                    }
+
+                                    if let tipo = campo.tipo {
+                                        HStack(spacing: 4) {
+                                            Image(systemName: "soccerball")
+                                                .font(.caption2)
+                                                .foregroundColor(.green)
+                                            Text(tipo)
+                                                .font(.caption)
+                                                .foregroundColor(.green)
+                                                .padding(.horizontal, 8)
+                                                .padding(.vertical, 3)
+                                                .background(Color.green.opacity(0.15))
+                                                .cornerRadius(6)
+                                        }
+                                    }
                                 }
                                 Spacer()
+
+                                Image(systemName: "chevron.right")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
                             }
-                            .padding()
+                            .padding(16)
+                            .background(Color(UIColor.secondarySystemBackground))
+                            .cornerRadius(16)
+                            .shadow(color: Color.black.opacity(0.08), radius: 8, x: 0, y: 4)
                         }
                         .buttonStyle(PlainButtonStyle())
                     }
                 }
+                .padding(.horizontal, 12)
+                .padding(.top, 8)
             }
         }
         .refreshable {

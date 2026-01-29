@@ -75,8 +75,8 @@ struct CamposCercanosView: View {
                                     .padding(.horizontal, 16)
                                     .padding(.top, 16)
                             } else {
-                                // ✅ Misma estructura que en ContentView
-                                LazyVStack(spacing: 0) {
+                                // Vista de lista mejorada
+                                LazyVStack(spacing: 12) {
                                     ForEach(nearbyCampos, id: \.campo.id) { item in
                                         NavigationLink(destination: CampoDetalleView(campoID: item.campo.id)
                                             .environmentObject(authViewModel)) {
@@ -85,6 +85,7 @@ struct CamposCercanosView: View {
                                         .buttonStyle(PlainButtonStyle())
                                     }
                                 }
+                                .padding(.horizontal, 12)
                                 .padding(.top, 8)
                             }
                         } else {
@@ -122,16 +123,25 @@ struct CamposCercanosView: View {
                 Spacer()
                 HStack {
                     Spacer()
-                    Button(action: { requestLocation() }) {
+                    Button(action: {
+                        HapticFeedback.medium()
+                        requestLocation()
+                    }) {
                         Image(systemName: "arrow.clockwise.circle.fill")
-                            .font(.title2)
+                            .font(.system(size: 24))
                             .foregroundColor(.white)
-                            .padding()
-                            .background(Color.blue)
+                            .frame(width: 56, height: 56)
+                            .background(
+                                LinearGradient(
+                                    gradient: Gradient(colors: [Color.blue, Color.blue.opacity(0.8)]),
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
                             .clipShape(Circle())
-                            .shadow(color: Color.black.opacity(0.2), radius: 4, x: 0, y: 2)
+                            .shadow(color: Color.blue.opacity(0.4), radius: 12, x: 0, y: 6)
                     }
-                    .padding()
+                    .padding(20)
                 }
             }
         }
@@ -192,9 +202,15 @@ private struct DistancePickerCard: View {
     private let distanceOptions: [Double] = [10.0, 25.0, 50.0]
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text(L(.nearbyMaxDistance))
-                .font(.headline)
+        VStack(alignment: .leading, spacing: 14) {
+            HStack {
+                Image(systemName: "location.circle.fill")
+                    .foregroundColor(.blue)
+                    .font(.title3)
+                Text(L(.nearbyMaxDistance))
+                    .font(.headline)
+                Spacer()
+            }
             Picker(L(.nearbyMaxDistance), selection: $selectedDistance) {
                 ForEach(distanceOptions, id: \.self) { distance in
                     Text("\(Int(distance)) km").tag(distance)
@@ -202,14 +218,14 @@ private struct DistancePickerCard: View {
             }
             .pickerStyle(.segmented)
         }
-        .padding(14)
-        .background(Color(UIColor.secondarySystemBackground))
-        .cornerRadius(15)
+        .padding(16)
+        .background(.ultraThinMaterial)
+        .cornerRadius(18)
         .overlay(
-            RoundedRectangle(cornerRadius: 15)
-                .stroke(Color.gray.opacity(0.3), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 18)
+                .stroke(Color.gray.opacity(0.2), lineWidth: 1)
         )
-        .shadow(color: Color.black.opacity(0.1), radius: 8, x: 0, y: 4)
+        .shadow(color: Color.black.opacity(0.08), radius: 12, x: 0, y: 4)
         .onAppear {
             if !distanceOptions.contains(selectedDistance) {
                 selectedDistance = distanceOptions.min(by: { abs($0 - distanciaPredeterminada) < abs($1 - distanciaPredeterminada) }) ?? 10.0
@@ -221,28 +237,35 @@ private struct DistancePickerCard: View {
 private struct EmptyCard: View {
     let text: String
     var body: some View {
-        Text(text)
-            .foregroundColor(.secondary)
-            .multilineTextAlignment(.center)
-            .padding(16)
-            .frame(maxWidth: .infinity, alignment: .center)
-            .background(Color(UIColor.secondarySystemBackground))
-            .cornerRadius(15)
-            .overlay(
-                RoundedRectangle(cornerRadius: 15)
-                    .stroke(Color.gray.opacity(0.3), lineWidth: 1)
-            )
-            .shadow(color: Color.black.opacity(0.1), radius: 8, x: 0, y: 4)
+        VStack(spacing: 12) {
+            Image(systemName: "map")
+                .font(.system(size: 48))
+                .foregroundColor(.secondary)
+                .opacity(0.5)
+            Text(text)
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+        }
+        .padding(24)
+        .frame(maxWidth: .infinity)
+        .background(.ultraThinMaterial)
+        .cornerRadius(18)
+        .overlay(
+            RoundedRectangle(cornerRadius: 18)
+                .stroke(Color.gray.opacity(0.2), lineWidth: 1)
+        )
+        .shadow(color: Color.black.opacity(0.08), radius: 12, x: 0, y: 4)
     }
 }
 
-// ✅ Misma fila que en ContentView
+// Card rediseñada con mejor UX
 private struct CampoRowView_Classic: View {
     let campoWithDistance: CampoWithDistance
     private let defaultImageURL = "https://ooqdrhkzsexjnmnvpwqw.supabase.co/storage/v1/object/public/fotos-campos/sin-imagen.png"
 
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 14) {
             let imageURL = (campoWithDistance.campo.foto_url?.isEmpty == false ? campoWithDistance.campo.foto_url : nil) ?? defaultImageURL
             if let url = URL(string: imageURL) {
                 CachedAsyncImage(
@@ -252,31 +275,51 @@ private struct CampoRowView_Classic: View {
                     image
                         .resizable()
                         .scaledToFill()
-                        .frame(width: 60, height: 60)
-                        .cornerRadius(10)
+                        .frame(width: 70, height: 70)
+                        .cornerRadius(12)
                         .clipped()
                 } placeholder: {
                     Color.gray.opacity(0.3)
-                        .frame(width: 60, height: 60)
-                        .cornerRadius(10)
+                        .frame(width: 70, height: 70)
+                        .cornerRadius(12)
                 }
             }
 
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: 6) {
                 Text(campoWithDistance.campo.nombre)
-                    .font(.headline)
+                    .font(.system(size: 17, weight: .semibold))
                     .foregroundColor(.primary)
-                Text("\(campoWithDistance.campo.localidad), \(campoWithDistance.campo.provincia)")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-                Text(L(.nearbyDistance, campoWithDistance.distance))
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+                    .lineLimit(2)
+
+                HStack(spacing: 4) {
+                    Image(systemName: "mappin.circle.fill")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    Text("\(campoWithDistance.campo.localidad ?? ""), \(campoWithDistance.campo.provincia)")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                }
+
+                HStack(spacing: 4) {
+                    Image(systemName: "location.fill")
+                        .font(.caption2)
+                        .foregroundColor(.blue)
+                    Text(L(.nearbyDistance, campoWithDistance.distance))
+                        .font(.caption)
+                        .fontWeight(.medium)
+                        .foregroundColor(.blue)
+                }
             }
             Spacer()
+
+            Image(systemName: "chevron.right")
+                .font(.caption)
+                .foregroundColor(.secondary)
         }
-        .padding()
-        // Sin fondo, sin sombra, sin divisor → igual que ContentView
+        .padding(16)
+        .background(Color(UIColor.secondarySystemBackground))
+        .cornerRadius(16)
+        .shadow(color: Color.black.opacity(0.08), radius: 8, x: 0, y: 4)
     }
 }
 

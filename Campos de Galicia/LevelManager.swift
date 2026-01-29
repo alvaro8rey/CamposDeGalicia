@@ -19,11 +19,12 @@ final class LevelManager {
     func updateLevelAndXP(for userId: String) async throws {
         guard let userIdUUID = UUID(uuidString: userId) else { throw LevelManagerError.invalidUserId }
 
-        // 1) Visitas del usuario
+        // 1) Visitas del usuario (últimas 500 visitas para cálculos)
         let visitasResponse = try await supabase.from("visitas")
             .select("id_campo, created_at")
             .eq("id_usuario", value: userId)
             .order("created_at", ascending: false)
+            .limit(500)
             .execute()
 
         let visitasJSON = try JSONSerialization.jsonObject(with: visitasResponse.data, options: [])
@@ -113,10 +114,11 @@ final class LevelManager {
         }()
 
 
-        // 4) Reseñas del usuario y XP por reseñas
+        // 4) Reseñas del usuario y XP por reseñas (últimas 100 reseñas)
         let reseñasResponse = try await supabase.from("reseñas")
             .select("id, reseña, fotos, updated_at, created_at")
             .eq("user_id", value: userId)
+            .limit(100)
             .execute()
 
         let reseñasJSON = try JSONSerialization.jsonObject(with: reseñasResponse.data, options: [])

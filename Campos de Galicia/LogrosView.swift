@@ -403,10 +403,12 @@ struct LogrosView: View {
             return
         }
         do {
-            // Cargar visitas
+            // Cargar visitas (últimas 500 para cálculos de logros)
             let vResp = try await supabase.from("visitas")
                 .select("id_campo, created_at")
                 .eq("id_usuario", value: userId)
+                .order("created_at", ascending: false)
+                .limit(500)
                 .execute()
             let vData = vResp.data
             guard let vArr = try JSONSerialization.jsonObject(with: vData) as? [[String: Any]] else {
@@ -428,10 +430,11 @@ struct LogrosView: View {
                 }
             }
 
-            // Cargar reseñas
+            // Cargar reseñas (últimas 100 para conteo)
             let rResp = try await supabase.from("reseñas")
                 .select("id")
                 .eq("user_id", value: userId)
+                .limit(100)
                 .execute()
             if let rArr = try JSONSerialization.jsonObject(with: rResp.data) as? [[String: Any]] {
                 reseñasEscritas = rArr.count

@@ -93,7 +93,10 @@ struct DailyRewardCardView: View {
     @ViewBuilder
     private var actionButton: some View {
         if dailyXP > 0 && !hasClaimedToday {
-            Button(action: onClaim) {
+            Button(action: {
+                HapticFeedback.medium()
+                onClaim()
+            }) {
                 HStack(spacing: 8) {
                     if isProcessing {
                         ProgressView()

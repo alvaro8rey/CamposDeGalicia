@@ -75,12 +75,14 @@ final class SupabaseManager {
         }
     }
 
-    func fetchContribucionesAprobadas(for campoID: UUID) async throws -> [ContribucionAprobada] {
+    func fetchContribucionesAprobadas(for campoID: UUID, limit: Int = 50) async throws -> [ContribucionAprobada] {
+        // Limitar a 50 contribuciones más recientes por campo
         let response = try await client.from("campo_contribuciones")
             .select("*")
             .eq("id_campo", value: campoID.uuidString)
             .eq("aprobada", value: true)
             .order("fecha", ascending: false)
+            .limit(limit)
             .execute()
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
@@ -96,7 +98,12 @@ final class SupabaseManager {
     }
 
     private func requestCampos() async throws -> [CampoModel] {
-        let response = try await client.from("campos").select("*").execute()
+        // Sin límite para campos - necesitamos todos en el mapa
+        // Pero agregamos order para optimización
+        let response = try await client.from("campos")
+            .select("*")
+            .order("nombre", ascending: true)
+            .execute()
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
         return try decoder.decode([CampoModel].self, from: response.data)

@@ -123,45 +123,58 @@ final class GeofenceManager: NSObject, ObservableObject, CLLocationManagerDelega
     private func registerGeofences() {
         stopAllGeofences()
 
-        // Ordena por distancia a la última ubicación si la tenemos
-        let ordered: [CampoModel]
-        if let loc = lastKnownLocation {
-            ordered = allCampos
-                .sorted { a, b in
-                    guard let alat = a.latitud, let alon = a.longitud,
-                          let blat = b.latitud, let blon = b.longitud else { return false }
-                    let da = loc.distance(from: CLLocation(latitude: alat, longitude: alon))
-                    let db = loc.distance(from: CLLocation(latitude: blat, longitude: blon))
-                    return da < db
+        // Capturar valores para background thread
+        let campos = allCampos
+        let location = lastKnownLocation
+        let maxRegionsCount = maxRegions
+
+        // Mover cálculos de distancia a background thread
+        Task.detached(priority: .utility) {
+            let ordered: [CampoModel]
+            if let loc = location {
+                // Calcular distancias en background
+                let camposWithDistances = campos.compactMap { campo -> (campo: CampoModel, distance: Double)? in
+                    guard let alat = campo.latitud, let alon = campo.longitud else { return nil }
+                    let distance = loc.distance(from: CLLocation(latitude: alat, longitude: alon))
+                    return (campo, distance)
                 }
-        } else {
-            // Sin ubicación, registra primeros 20 como fallback
-            ordered = allCampos
+                // Ordenar por distancia
+                ordered = camposWithDistances
+                    .sorted { $0.distance < $1.distance }
+                    .map { $0.campo }
+            } else {
+                // Sin ubicación, usar todos los campos
+                ordered = campos
+            }
+
+            let toMonitor = Array(ordered.prefix(maxRegionsCount))
+
+            // Registrar geofences en main thread (requerido por CLLocationManager)
+            await MainActor.run {
+                print("📍 Registrando \(toMonitor.count) geofences")
+
+                for campo in toMonitor {
+                    guard let lat = campo.latitud, let lon = campo.longitud else { continue }
+                    let region = CLCircularRegion(
+                        center: CLLocationCoordinate2D(latitude: lat, longitude: lon),
+                        radius: self.regionRadius,
+                        identifier: campo.id.uuidString
+                    )
+                    region.notifyOnEntry = true
+                    region.notifyOnExit = true
+                    self.locationManager.startMonitoring(for: region)
+                    print("➡️ startMonitoring \(campo.id) radio=\(Int(self.regionRadius))m")
+                }
+
+                // Solicita estado inicial para disparar .inside si ya estás dentro al arrancar
+                for region in self.locationManager.monitoredRegions {
+                    self.locationManager.requestState(for: region)
+                }
+
+                // Marca último refresh
+                UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: self.lastRefreshKey)
+            }
         }
-
-        let toMonitor = Array(ordered.prefix(maxRegions))
-        print("📍 Registrando \(toMonitor.count) geofences")
-
-        for campo in toMonitor {
-            guard let lat = campo.latitud, let lon = campo.longitud else { continue }
-            let region = CLCircularRegion(
-                center: CLLocationCoordinate2D(latitude: lat, longitude: lon),
-                radius: regionRadius,
-                identifier: campo.id.uuidString
-            )
-            region.notifyOnEntry = true
-            region.notifyOnExit = true
-            locationManager.startMonitoring(for: region)
-            print("➡️ startMonitoring \(campo.id) radio=\(Int(regionRadius))m")
-        }
-
-        // Solicita estado inicial para disparar .inside si ya estás dentro al arrancar
-        for region in locationManager.monitoredRegions {
-            locationManager.requestState(for: region)
-        }
-
-        // Marca último refresh
-        UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: lastRefreshKey)
     }
 
     private func stopAllGeofences() {

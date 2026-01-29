@@ -53,11 +53,12 @@ final class ProgressStore: ObservableObject {
                 xpToNextLevel = nivel["xp_to_next_level"] as? Int ?? 100
             }
 
-            // 2. Cargar visitas y calcular estadísticas
+            // 2. Cargar visitas y calcular estadísticas (últimas 500 visitas)
             let visitasResponse = try await supabase.from("visitas")
                 .select("id_campo, created_at")
                 .eq("id_usuario", value: userId)
                 .order("created_at", ascending: false)
+                .limit(500)
                 .execute()
 
             if let visitasData = try? JSONSerialization.jsonObject(with: visitasResponse.data) as? [[String: Any]] {

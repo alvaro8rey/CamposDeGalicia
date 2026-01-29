@@ -128,10 +128,12 @@ class ProfileViewModel: ObservableObject {
         defer { isLoadingHistorial = false }
 
         do {
+            // Limitar a las últimas 100 visitas para mejor rendimiento
             let visitasResponse = try await supabase.from("visitas")
                 .select("id_campo, created_at")
                 .eq("id_usuario", value: userId)
                 .order("created_at", ascending: false)
+                .limit(100)
                 .execute()
 
             let jsonObject = try JSONSerialization.jsonObject(with: visitasResponse.data, options: [])

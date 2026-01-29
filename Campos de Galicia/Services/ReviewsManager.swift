@@ -15,11 +15,12 @@ class ReviewsManager: ObservableObject {
         errorMessage = nil
 
         do {
-            // 1. Obtener reseñas sin niveles
+            // 1. Obtener reseñas sin niveles (últimas 50 para mejor rendimiento)
             let response = try await supabase.from("reseñas")
                 .select("*")
                 .eq("campo_id", value: campoId.uuidString)
                 .order("created_at", ascending: false)
+                .limit(50)
                 .execute()
 
             let decoder = JSONDecoder()

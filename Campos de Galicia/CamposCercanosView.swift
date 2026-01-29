@@ -140,20 +140,35 @@ struct CamposCercanosView: View {
     // MARK: - Cálculos
     private func updateNearbyCampos() {
         guard let userLocation = userLocation else { return }
-        nearbyCampos = camposViewModel.campos
-            .compactMap { campo -> CampoWithDistance? in
+
+        // Capturar valores necesarios para el background thread
+        let campos = camposViewModel.campos
+        let maxDistance = selectedDistance
+        let userLoc = userLocation
+
+        // Mover cálculos pesados a background thread
+        Task.detached(priority: .userInitiated) {
+            // Cálculos trigonométricos en background
+            let camposWithDistances = campos.compactMap { campo -> CampoWithDistance? in
                 guard let lat = campo.latitud, let lon = campo.longitud else { return nil }
-                let dist = calculateDistance(
-                    from: userLocation,
+                let dist = Self.calculateDistanceStatic(
+                    from: userLoc,
                     to: CLLocationCoordinate2D(latitude: lat, longitude: lon)
                 )
                 return CampoWithDistance(campo: campo, distance: dist)
             }
-            .filter { $0.distance <= selectedDistance }
+            .filter { $0.distance <= maxDistance }
             .sorted { $0.distance < $1.distance }
+
+            // Actualizar UI en main thread
+            await MainActor.run {
+                self.nearbyCampos = camposWithDistances
+            }
+        }
     }
 
-    private func calculateDistance(from: CLLocationCoordinate2D, to: CLLocationCoordinate2D) -> Double {
+    // Versión estática para uso en Task.detached
+    private static func calculateDistanceStatic(from: CLLocationCoordinate2D, to: CLLocationCoordinate2D) -> Double {
         let R = 6371.0
         let φ1 = from.latitude * .pi / 180
         let φ2 = to.latitude * .pi / 180
@@ -162,6 +177,11 @@ struct CamposCercanosView: View {
         let a = sin(dφ / 2) * sin(dφ / 2) + cos(φ1) * cos(φ2) * sin(dλ / 2) * sin(dλ / 2)
         let c = 2 * atan2(sqrt(a), sqrt(1 - a))
         return R * c
+    }
+
+    // Versión de instancia (mantener por compatibilidad)
+    private func calculateDistance(from: CLLocationCoordinate2D, to: CLLocationCoordinate2D) -> Double {
+        Self.calculateDistanceStatic(from: from, to: to)
     }
 }
 

@@ -341,6 +341,7 @@ struct MapaView: View {
                 VStack(spacing: 12) {
                     if externalIsNavigating || showRouteSummary {
                         Button {
+                            HapticFeedback.light()
                             withAnimation {
                                 stopNavigation()
                             }
@@ -352,6 +353,7 @@ struct MapaView: View {
                     }
 
                     Button {
+                        HapticFeedback.light()
                         withAnimation { isSatelliteView.toggle() }
                     } label: {
                         Image(systemName: isSatelliteView ? "map.fill" : "globe.europe.africa.fill")
@@ -360,6 +362,7 @@ struct MapaView: View {
                     .liquidGlass()
 
                     Button {
+                        HapticFeedback.light()
                         showFiltros = true
                     } label: {
                         Image(systemName: "line.3.horizontal.decrease")
@@ -368,6 +371,7 @@ struct MapaView: View {
                     .liquidGlass()
 
                     Button {
+                        HapticFeedback.light()
                         toggleTracking()
                     } label: {
                         Image(systemName: trackingIcon)
@@ -483,6 +487,8 @@ struct MapaView: View {
                     Image(systemName: directionIcon(for: route.steps[currentStepIndex]))
                         .font(.system(size: 24, weight: .bold))
                         .foregroundColor(.blue)
+                        .rotationEffect(.degrees(0))
+                        .animation(.spring(response: 0.5, dampingFraction: 0.6), value: currentStepIndex)
                 }
 
                 VStack(alignment: .leading, spacing: 4) {
@@ -491,6 +497,7 @@ struct MapaView: View {
                         .font(.system(size: 16, weight: .semibold))
                         .foregroundColor(.primary)
                         .lineLimit(2)
+                        .transition(.opacity.combined(with: .move(edge: .leading)))
 
                     // Mostrar distancia restante en tiempo real
                     HStack(spacing: 4) {
@@ -502,15 +509,18 @@ struct MapaView: View {
                             Text(String(format: "En %.1f km", distanceToNextStep / 1000))
                                 .font(.system(size: 14, weight: .medium))
                                 .foregroundColor(.secondary)
+                                .transition(.opacity)
                         } else if distanceToNextStep > 0 {
                             Text(String(format: "En %d m", Int(distanceToNextStep)))
                                 .font(.system(size: 14, weight: .medium))
                                 .foregroundColor(.secondary)
+                                .transition(.opacity)
                         } else {
                             // Si la distancia es 0, mostrar "Ahora"
                             Text("Ahora")
                                 .font(.system(size: 14, weight: .medium))
                                 .foregroundColor(.green)
+                                .transition(.opacity)
                         }
                     }
                 }
@@ -521,11 +531,38 @@ struct MapaView: View {
                     Text("\(currentStepIndex + 1)")
                         .font(.system(size: 18, weight: .bold))
                         .foregroundColor(.blue)
+                        .contentTransition(.numericText())
                     Text("\(L(.mapOf)) \(route.steps.count)")
                         .font(.caption2)
                         .foregroundColor(.secondary)
                 }
             }
+
+            // Barra de progreso visual
+            GeometryReader { geometry in
+                ZStack(alignment: .leading) {
+                    // Fondo de la barra
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(Color.gray.opacity(0.2))
+                        .frame(height: 6)
+
+                    // Progreso
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(
+                            LinearGradient(
+                                colors: [.blue, .green],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
+                        .frame(
+                            width: geometry.size.width * CGFloat(currentStepIndex + 1) / CGFloat(max(1, route.steps.count)),
+                            height: 6
+                        )
+                        .animation(.spring(response: 0.5, dampingFraction: 0.7), value: currentStepIndex)
+                }
+            }
+            .frame(height: 6)
         }
         .padding(16)
         .background(
@@ -572,6 +609,7 @@ struct MapaView: View {
         VStack(spacing: 0) {
             // 📍 Header con nombre del destino
             Button {
+                HapticFeedback.light()
                 selectedCampo = destination.campo
             } label: {
                 HStack {
@@ -644,6 +682,7 @@ struct MapaView: View {
 
             // 🚀 Botón de iniciar
             Button {
+                HapticFeedback.medium()
                 startNavigation()
             } label: {
                 HStack(spacing: 10) {
@@ -1113,7 +1152,10 @@ struct CustomMapView: UIViewRepresentable {
             if remainingDistance < 20 && parent.currentStepIndex < currentRoute.steps.count - 1 {
                 print("➡️ Avanzando al paso \(parent.currentStepIndex + 2)/\(currentRoute.steps.count)")
                 DispatchQueue.main.async {
-                    withAnimation {
+                    // Feedback háptico al avanzar de paso
+                    HapticFeedback.medium()
+
+                    withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
                         self.parent.currentStepIndex += 1
                         // Recalcular distancia para el nuevo paso
                         if let userLocation = self.parent.mapView?.userLocation.location {

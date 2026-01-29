@@ -62,7 +62,10 @@ struct CampoHeroImage: View {
 
                 // Visit Badge con glassmorphism
                 if isLoggedIn {
-                    Button(action: onToggleVisit) {
+                    Button(action: {
+                        HapticFeedback.medium()
+                        onToggleVisit()
+                    }) {
                         HStack(spacing: 6) {
                             if isCheckingLocation {
                                 ProgressView()

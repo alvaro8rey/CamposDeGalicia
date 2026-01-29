@@ -16,9 +16,7 @@ struct ProfileView: View {
     @StateObject private var profileVM = ProfileViewModel()
     @State private var showEditProfile: Bool = false
     @State private var showVisitDetails: Bool = false
-    @State private var showInfoSheet: Bool = false
     @State private var showSettings: Bool = false
-    @AppStorage("auto_checkin_enabled") private var autoCheckinStored: Bool = false
 
     // MARK: - Body
     var body: some View {
@@ -42,8 +40,8 @@ struct ProfileView: View {
                     // XP Progress Bar
                     progressBarView
 
-                    // Auto Check-in Toggle
-                    autoCheckinSection
+                    // Personal Data Section
+                    personalDataSection
 
                     // Statistics
                     ProfileStatsView(
@@ -55,9 +53,6 @@ struct ProfileView: View {
 
                     // Achievements Section
                     achievementsSection
-
-                    // Personal Data Section
-                    personalDataSection
 
                     // Visit History
                     VisitHistoryView(profileVM: profileVM, onShowDetails: {
@@ -90,9 +85,6 @@ struct ProfileView: View {
                 formatDate: profileVM.formatDate
             )
         }
-        .sheet(isPresented: $showInfoSheet) {
-            InfoSheetView()
-        }
         .sheet(isPresented: $showSettings) {
             SettingsView(
                 profileVM: profileVM,
@@ -101,6 +93,10 @@ struct ProfileView: View {
             .environmentObject(localizationManager)
             .environmentObject(ThemeManager.shared)
             .environmentObject(authViewModel)
+            .environmentObject(geofenceManager)
+            .environmentObject(locationManager)
+            .environmentObject(camposViewModel)
+            .preferredColorScheme(ThemeManager.shared.currentTheme.colorScheme)
         }
         .task {
             guard let userId = authViewModel.user?.id.uuidString else { return }
@@ -195,45 +191,6 @@ struct ProfileView: View {
             }
             .frame(height: 20)
         }
-        .padding(.horizontal)
-    }
-
-    // MARK: - Auto Check-in Section
-    private var autoCheckinSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Toggle(isOn: $autoCheckinStored) {
-                VStack(alignment: .leading, spacing: 4) {
-                    HStack {
-                        Text(L(.profileAutoCheckin))
-                            .font(.headline)
-                        Button(action: { showInfoSheet = true }) {
-                            Image(systemName: "info.circle")
-                                .foregroundColor(.blue)
-                        }
-                    }
-                    Text(L(.profileAutoCheckinDesc))
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-            }
-            .onChange(of: autoCheckinStored) { oldValue, newValue in
-                geofenceManager.setAutoCheckin(newValue, campos: camposViewModel.campos)
-                if newValue {
-                    Logger.info("✅ Auto check-in activado")
-                } else {
-                    Logger.info("⏹ Auto check-in desactivado")
-                }
-            }
-
-            if locationManager.authorizationStatus != .authorizedAlways && autoCheckinStored {
-                Text(L(.profileAutoCheckinWarning))
-                    .font(.caption)
-                    .foregroundColor(.orange)
-            }
-        }
-        .padding()
-        .background(Color(UIColor.secondarySystemBackground))
-        .cornerRadius(12)
         .padding(.horizontal)
     }
 

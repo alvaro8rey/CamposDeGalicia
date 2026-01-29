@@ -7,6 +7,9 @@ struct SettingsView: View {
     @EnvironmentObject var localization: LocalizationManager
     @EnvironmentObject var themeManager: ThemeManager
     @EnvironmentObject var authViewModel: AuthViewModel
+    @EnvironmentObject var geofenceManager: GeofenceManager
+    @EnvironmentObject var locationManager: LocationManager
+    @EnvironmentObject var camposViewModel: CamposViewModel
     @Environment(\.dismiss) var dismiss
     @Environment(\.colorScheme) var colorScheme
 
@@ -17,6 +20,8 @@ struct SettingsView: View {
     // MARK: - State
     @State private var isSaving: Bool = false
     @State private var successMessage: String? = nil
+    @AppStorage("auto_checkin_enabled") private var autoCheckinStored: Bool = false
+    @State private var showInfoSheet: Bool = false
 
     // MARK: - Body
     var body: some View {
@@ -57,6 +62,12 @@ struct SettingsView: View {
 
                                 // Distancia Predeterminada
                                 distanceSection
+
+                                Divider()
+                                    .padding(.leading, 56)
+
+                                // Auto Check-in
+                                autoCheckinSection
                             }
                             .background(Color(UIColor.secondarySystemBackground))
                             .cornerRadius(12)
@@ -241,6 +252,59 @@ struct SettingsView: View {
         }
     }
 
+    // MARK: - Auto Check-in Section
+    private var autoCheckinSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 12) {
+                Image(systemName: "location.fill.viewfinder")
+                    .foregroundColor(.orange)
+                    .frame(width: 24)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(spacing: 8) {
+                        Text(L(.profileAutoCheckin))
+                            .font(.body)
+                            .fontWeight(.medium)
+
+                        Button(action: { showInfoSheet = true }) {
+                            Image(systemName: "info.circle")
+                                .foregroundColor(.blue)
+                                .font(.caption)
+                        }
+                    }
+
+                    Text(L(.profileAutoCheckinDesc))
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+
+                    if locationManager.authorizationStatus != .authorizedAlways && autoCheckinStored {
+                        Text(L(.profileAutoCheckinWarning))
+                            .font(.caption)
+                            .foregroundColor(.orange)
+                            .padding(.top, 4)
+                    }
+                }
+
+                Spacer()
+
+                Toggle("", isOn: $autoCheckinStored)
+                    .labelsHidden()
+                    .onChange(of: autoCheckinStored) { oldValue, newValue in
+                        geofenceManager.setAutoCheckin(newValue, campos: camposViewModel.campos)
+                        if newValue {
+                            Logger.info("✅ Auto check-in activado")
+                        } else {
+                            Logger.info("⏹ Auto check-in desactivado")
+                        }
+                    }
+            }
+            .padding()
+        }
+        .sheet(isPresented: $showInfoSheet) {
+            InfoSheetView()
+        }
+    }
+
     // MARK: - Logout Button
     private var logoutButton: some View {
         Button(action: { Task { await logout() } }) {
@@ -321,5 +385,8 @@ struct SettingsView_Previews: PreviewProvider {
             .environmentObject(LocalizationManager.shared)
             .environmentObject(ThemeManager.shared)
             .environmentObject(AuthViewModel.shared)
+            .environmentObject(GeofenceManager())
+            .environmentObject(LocationManager())
+            .environmentObject(CamposViewModel())
     }
 }

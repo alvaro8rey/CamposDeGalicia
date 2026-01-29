@@ -46,6 +46,16 @@ struct CampoDetalleView: View {
         }
     }
 
+    /// Contribución principal a mostrar (la marcada como principal, o la más reciente)
+    private var contribucionPrincipal: ContribucionAprobada? {
+        // Primero busca la marcada como principal
+        if let principal = contribucionesAprobadas.first(where: { $0.es_principal == true }) {
+            return principal
+        }
+        // Si no hay ninguna marcada, usa la más reciente (primera del array)
+        return contribucionesAprobadas.first
+    }
+
     // MARK: - Body
     var body: some View {
         Group {
@@ -84,7 +94,7 @@ struct CampoDetalleView: View {
                         // Details Section
                         CampoDetailsSection(
                             campo: campo,
-                            contribucionAprobada: contribucionesAprobadas.first
+                            contribucionAprobada: contribucionPrincipal
                         )
 
                         // Photos Section

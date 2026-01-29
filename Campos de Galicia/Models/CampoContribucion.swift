@@ -27,6 +27,7 @@ struct ContribucionAprobada: Codable, Equatable {
     let estado_cesped: String?
     let accesibilidad: String?
     let notas: String?
+    let es_principal: Bool?
 }
 
 /// Modelo para el perfil de usuario simplificado

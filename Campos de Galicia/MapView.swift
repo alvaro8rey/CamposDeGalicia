@@ -1166,8 +1166,8 @@ struct CustomMapView: UIViewRepresentable {
                 // Actualizar paso actual y distancia en tiempo real
                 updateCurrentStep(userLocation: location.coordinate)
 
-                // Verificar si necesitamos recalcular la ruta
-                checkIfRecalculationNeeded(userLocation: location.coordinate)
+                // Nota: No verificamos recalculación aquí para evitar llamadas duplicadas
+                // (ya se verifica en locationManager:didUpdateLocations)
             }
         }
         
@@ -1272,7 +1272,7 @@ struct CustomMapView: UIViewRepresentable {
             }
 
             // Buscar más finamente alrededor del punto más cercano
-            let searchRange = max(0, closestIndex - step)...<min(polyline.pointCount, closestIndex + step)
+            let searchRange = max(0, closestIndex - step)..<min(polyline.pointCount, closestIndex + step)
             for i in searchRange {
                 let distance = points[i].distance(to: userPoint)
                 if distance < minDistance {
@@ -1313,9 +1313,9 @@ struct CustomMapView: UIViewRepresentable {
                 return
             }
 
-            // Reducir tiempo entre recalculaciones de 15 a 3 segundos para mayor respuesta
+            // Tiempo mínimo entre recalculaciones: 10 segundos para evitar recálculos excesivos
             let timeSinceLastRecalc = Date().timeIntervalSince(lastRecalculationDate)
-            if timeSinceLastRecalc < 3 {
+            if timeSinceLastRecalc < 10 {
                 return
             }
 
@@ -1333,8 +1333,8 @@ struct CustomMapView: UIViewRepresentable {
 
             print("📏 Distancia a la ruta: \(String(format: "%.0f", minDistance))m")
 
-            // Recalcular si te desvías más de 25 metros de la ruta (más sensible)
-            if minDistance > 25 {
+            // Recalcular si te desvías más de 50 metros de la ruta (tolerante con imprecisión GPS)
+            if minDistance > 50 {
                 print("🔄 RECALCULANDO - Desviación de \(String(format: "%.0f", minDistance))m")
                 lastRecalculationDate = Date()
 

@@ -381,11 +381,10 @@ struct MapaView: View {
                 .padding(.bottom, externalIsNavigating ? 40 : (showRouteSummary ? 280 : 40))
             }
 
-            // MARK: - Botón de Filtro Visitados (esquina superior derecha, discreto)
+            // MARK: - Botón de Filtro Visitados (esquina superior izquierda, discreto)
             if !externalIsNavigating && !showRouteSummary && !isSearching {
                 VStack {
                     HStack {
-                        Spacer()
                         Button {
                             HapticFeedback.light()
                             withAnimation {
@@ -397,8 +396,9 @@ struct MapaView: View {
                                 .font(.system(size: 18))
                         }
                         .liquidGlass(color: showOnlyVisited ? .orange : .primary)
-                        .padding(.trailing, 16)
+                        .padding(.leading, 16)
                         .padding(.top, 80)
+                        Spacer()
                     }
                     Spacer()
                 }

@@ -1313,12 +1313,6 @@ struct CustomMapView: UIViewRepresentable {
                 return
             }
 
-            // Tiempo mínimo entre recalculaciones: 10 segundos para evitar recálculos excesivos
-            let timeSinceLastRecalc = Date().timeIntervalSince(lastRecalculationDate)
-            if timeSinceLastRecalc < 10 {
-                return
-            }
-
             // Calcular distancia mínima a la ruta usando todos los puntos de la polyline
             let userPoint = MKMapPoint(userLocation)
             var minDistance = Double.greatestFiniteMagnitude

@@ -540,6 +540,10 @@ struct LogrosView: View {
         do {
             try await LevelManager.shared.claimDailyReward(for: userId)
             hasClaimedToday = true
+
+            // Si se reclama antes de las 15:00, cancelar la notificación de hoy
+            // y re-programar para mañana
+            scheduleDailyRewardNotification()
         } catch {
             errorMessage = "No se pudo reclamar la recompensa: \(error.localizedDescription)"
             isButtonDisabled = false
@@ -672,29 +676,47 @@ struct LogrosView: View {
     }
 
     private func scheduleDailyRewardNotification() {
-        // Programar la notificación para que se repita todos los días a las 15:00
-        // SIEMPRE se programa, independientemente de si ya se reclamó la recompensa hoy
-        // Esto garantiza que la notificación se envíe todos los días
+        // Programar la notificación SOLO si el usuario NO ha reclamado la recompensa hoy
+        // Si ya la reclamó antes de las 15:00, no debe recibir notificación
 
         UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: ["dailyRewardNotification"])
 
-        var dateComponents = DateComponents()
-        dateComponents.hour = DAILY_HOUR
-        dateComponents.minute = DAILY_MIN
+        let now = Date()
+        let calendar = Calendar.current
+
+        // Crear la hora objetivo de hoy a las 15:00
+        var todayAt3PM = calendar.dateComponents([.year, .month, .day], from: now)
+        todayAt3PM.hour = DAILY_HOUR
+        todayAt3PM.minute = DAILY_MIN
+
+        guard let targetTimeToday = calendar.date(from: todayAt3PM) else {
+            print("❌ Error al calcular la hora de notificación")
+            return
+        }
+
+        // Determinar cuándo programar la notificación
+        let shouldScheduleForToday = !hasClaimedToday && now < targetTimeToday
+        let targetDate = shouldScheduleForToday ? targetTimeToday : calendar.date(byAdding: .day, value: 1, to: targetTimeToday)!
+
+        let triggerDate = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: targetDate)
 
         let content = UNMutableNotificationContent()
         content.title = L(.appName)
         content.body  = L(.dailyRewardNotificationBody)
         content.sound = .default
 
-        let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents, repeats: true)
+        // NO usar repeats: true, programar solo para la próxima vez válida
+        let trigger = UNCalendarNotificationTrigger(dateMatching: triggerDate, repeats: false)
         let request = UNNotificationRequest(identifier: "dailyRewardNotification", content: content, trigger: trigger)
 
         UNUserNotificationCenter.current().add(request) { err in
             if let err = err {
                 print("❌ Error al programar notificación diaria: \(err.localizedDescription)")
             } else {
-                print("✅ Notificación diaria programada para las \(DAILY_HOUR):\(String(format: "%02d", DAILY_MIN))")
+                let dateFormatter = DateFormatter()
+                dateFormatter.dateStyle = .short
+                dateFormatter.timeStyle = .short
+                print("✅ Notificación diaria programada para: \(dateFormatter.string(from: targetDate))")
             }
         }
     }

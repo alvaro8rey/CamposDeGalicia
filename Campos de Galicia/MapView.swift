@@ -1442,5 +1442,17 @@ struct CustomMapView: UIViewRepresentable {
             }
             return MKOverlayRenderer()
         }
+
+        // MARK: - Detectar cuando el usuario arrastra el mapa manualmente
+        func mapView(_ mapView: MKMapView, didChange mode: MKUserTrackingMode, animated: Bool) {
+            // Sincronizar el estado cuando el MapKit cambia el tracking mode
+            // (esto ocurre automáticamente cuando el usuario arrastra el mapa)
+            if parent.userTrackingMode != mode {
+                print("📍 Usuario arrastró el mapa - Reseteando botón de ubicación")
+                DispatchQueue.main.async {
+                    self.parent.userTrackingMode = mode
+                }
+            }
+        }
     }
 }

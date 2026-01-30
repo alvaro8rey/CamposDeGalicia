@@ -223,7 +223,7 @@ struct MapaView: View {
                 route: $route,
                 currentStepIndex: $currentStepIndex,
                 distanceToNextStep: $distanceToNextStep,
-                isNavigating: externalIsNavigating,
+                isNavigating: $externalIsNavigating,
                 visitedCampoIds: $visitedCampoIds,
                 userId: authViewModel.user?.id.uuidString,
                 onSelectCampo: { campo in
@@ -979,7 +979,7 @@ struct CustomMapView: UIViewRepresentable {
     @Binding var route: MKRoute?
     @Binding var currentStepIndex: Int
     @Binding var distanceToNextStep: Double
-    var isNavigating: Bool
+    @Binding var isNavigating: Bool
     @Binding var visitedCampoIds: Set<UUID>
     var userId: String?
     let onSelectCampo: (CampoModel) -> Void
@@ -1101,15 +1101,19 @@ struct CustomMapView: UIViewRepresentable {
             guard let location = locations.last else { return }
             print("📍 CLLocationManager actualizó ubicación: \(location.coordinate.latitude), \(location.coordinate.longitude)")
             print("   Precisión: \(location.horizontalAccuracy)m, Velocidad: \(location.speed)m/s")
+            print("   Estado navegación: \(parent.isNavigating ? "NAVEGANDO" : "NO navegando")")
 
             if parent.isNavigating {
                 print("✅ Navegando - procesando ubicación")
+                print("   Paso actual: \(parent.currentStepIndex + 1), Distancia actual: \(String(format: "%.0f", parent.distanceToNextStep))m")
 
                 // Actualizar paso actual y distancia en tiempo real
                 updateCurrentStep(userLocation: location.coordinate)
 
                 // Verificar si necesitamos recalcular la ruta
                 checkIfRecalculationNeeded(userLocation: location.coordinate)
+            } else {
+                print("⚠️ No está navegando - actualizaciones ignoradas")
             }
         }
 
@@ -1120,8 +1124,10 @@ struct CustomMapView: UIViewRepresentable {
         func mapView(_ mapView: MKMapView, didUpdate userLocation: MKUserLocation) {
             // ✅ Procesar ubicación tanto desde MapKit como desde CLLocationManager para mayor confiabilidad
             guard let location = userLocation.location else { return }
+            print("🗺️ MapView actualizó ubicación: \(location.coordinate.latitude), \(location.coordinate.longitude)")
 
             if parent.isNavigating {
+                print("✅ MapView - Navegando, procesando ubicación")
                 // Actualizar paso actual y distancia en tiempo real
                 updateCurrentStep(userLocation: location.coordinate)
 
@@ -1182,7 +1188,9 @@ struct CustomMapView: UIViewRepresentable {
 
             // Actualizar la distancia en el UI
             DispatchQueue.main.async {
-                self.parent.distanceToNextStep = max(0, remainingDistance)
+                let newDistance = max(0, remainingDistance)
+                self.parent.distanceToNextStep = newDistance
+                print("✅ Distancia actualizada en UI: \(String(format: "%.0f", newDistance))m")
             }
 
             // Avanzar al siguiente paso si estamos muy cerca del final (menos de 20 metros)

@@ -787,14 +787,13 @@ struct MapaView: View {
                 print("✅ Ruta \(self.externalIsNavigating ? "recalculada" : "calculada") - Distancia: \(String(format: "%.1f", route.distance / 1000)) km, Pasos: \(route.steps.count)")
 
                 // ✅ Si estamos navegando, actualizar inmediatamente la distancia al primer paso
-                if self.externalIsNavigating, route.steps.count > 0 {
+                if self.externalIsNavigating, route.steps.count > 0,
+                   let currentUserLocation = self.mapView?.userLocation.location?.coordinate {
                     let firstStepEndCoordinate = self.calculateStepEndCoordinate(route: route, stepIndex: 0)
                     let endLocation = CLLocation(latitude: firstStepEndCoordinate.latitude, longitude: firstStepEndCoordinate.longitude)
-                    if let userLocation = userLocation {
-                        let userCLLocation = CLLocation(latitude: userLocation.latitude, longitude: userLocation.longitude)
-                        self.distanceToNextStep = userCLLocation.distance(from: endLocation)
-                        print("📏 Distancia actualizada al primer paso después de recalcular: \(String(format: "%.0f", self.distanceToNextStep))m")
-                    }
+                    let userCLLocation = CLLocation(latitude: currentUserLocation.latitude, longitude: currentUserLocation.longitude)
+                    self.distanceToNextStep = userCLLocation.distance(from: endLocation)
+                    print("📏 Distancia actualizada al primer paso después de recalcular: \(String(format: "%.0f", self.distanceToNextStep))m")
                 }
             }
         }

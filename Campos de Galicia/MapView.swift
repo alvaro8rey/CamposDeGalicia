@@ -1137,6 +1137,7 @@ struct CustomMapView: UIViewRepresentable {
         private var locationManager: CLLocationManager?
         let mapViewContext = MapViewContext()
         private var justRecalculated = false // Flag para evitar avances inmediatos después de recalcular
+        private var lastPolylineUpdateIndex = 0 // Índice del último punto donde actualizamos la polyline
 
         init(_ parent: CustomMapView) {
             self.parent = parent
@@ -1157,6 +1158,8 @@ struct CustomMapView: UIViewRepresentable {
 
         func setCurrentDestination(_ destination: MapAnnotationItem) {
             self.currentDestination = destination
+            // Resetear índice de polyline para nueva navegación
+            self.lastPolylineUpdateIndex = 0
             // Iniciar actualizaciones de ubicación para navegación
             print("🚀 Iniciando actualizaciones de ubicación continuas...")
             locationManager?.startUpdatingLocation()
@@ -1178,6 +1181,9 @@ struct CustomMapView: UIViewRepresentable {
                 // Activar flag para evitar avances inmediatos
                 self.justRecalculated = true
                 print("   Flag 'justRecalculated' activado para evitar avances inmediatos")
+
+                // Resetear índice de polyline para empezar desde el inicio
+                self.lastPolylineUpdateIndex = 0
             }
         }
 
@@ -1334,10 +1340,26 @@ struct CustomMapView: UIViewRepresentable {
                 }
             }
 
-            // Si ya hemos recorrido más del 10% de los puntos, actualizar la polyline
-            // Esto evita actualizar demasiado frecuentemente y mejora el rendimiento
-            let traveledPercentage = Double(closestIndex) / Double(polyline.pointCount)
-            if traveledPercentage > 0.05 && closestIndex < polyline.pointCount - 1 {
+            // 🎯 Actualizar más frecuentemente para una animación fluida
+            // Calcular cuántos puntos hemos avanzado desde la última actualización
+            let pointsAdvanced = closestIndex - lastPolylineUpdateIndex
+
+            // Actualizar si hemos avanzado al menos 8 puntos (más fluido que el 5% anterior)
+            // O si la distancia en metros es significativa (más de 20 metros)
+            let shouldUpdate: Bool
+            if closestIndex > lastPolylineUpdateIndex && closestIndex < polyline.pointCount - 1 {
+                // Calcular distancia real en metros entre el último update y la posición actual
+                let lastPoint = points[lastPolylineUpdateIndex]
+                let currentPoint = points[closestIndex]
+                let distanceInMeters = lastPoint.distance(to: currentPoint)
+
+                // Actualizar si avanzamos 8+ puntos O más de 20 metros
+                shouldUpdate = pointsAdvanced >= 8 || distanceInMeters >= 20
+            } else {
+                shouldUpdate = false
+            }
+
+            if shouldUpdate {
                 // Crear nueva polyline solo con los puntos restantes
                 let remainingPoints = UnsafeMutablePointer<MKMapPoint>.allocate(capacity: polyline.pointCount - closestIndex)
                 for i in closestIndex..<polyline.pointCount {
@@ -1347,7 +1369,7 @@ struct CustomMapView: UIViewRepresentable {
                 let newPolyline = MKPolyline(points: remainingPoints, count: polyline.pointCount - closestIndex)
                 remainingPoints.deallocate()
 
-                // Actualizar en el thread principal
+                // Actualizar en el thread principal con animación suave
                 DispatchQueue.main.async {
                     // Remover todas las polylines actuales
                     let overlaysToRemove = mapView.overlays.filter { $0 is MKPolyline }
@@ -1356,8 +1378,11 @@ struct CustomMapView: UIViewRepresentable {
                     // Agregar la nueva polyline
                     mapView.addOverlay(newPolyline)
 
-                    print("🗑️ Polyline actualizada - Puntos eliminados: \(closestIndex), Puntos restantes: \(polyline.pointCount - closestIndex)")
+                    print("🗑️ Polyline actualizada - Puntos eliminados: \(closestIndex - self.lastPolylineUpdateIndex), Puntos restantes: \(polyline.pointCount - closestIndex)")
                 }
+
+                // Actualizar el índice de la última actualización
+                lastPolylineUpdateIndex = closestIndex
             }
         }
 

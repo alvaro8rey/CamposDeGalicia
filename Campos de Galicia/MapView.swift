@@ -94,6 +94,9 @@ struct MapaView: View {
     // Campos visitados por el usuario
     @State private var visitedCampoIds: Set<UUID> = []
 
+    // Filtro para mostrar solo visitados
+    @State private var showOnlyVisited: Bool = false
+
     init(externalIsNavigating: Binding<Bool>) {
         self._externalIsNavigating = externalIsNavigating
         let initialRegion = MKCoordinateRegion(
@@ -221,11 +224,16 @@ struct MapaView: View {
                 currentStepIndex: $currentStepIndex,
                 distanceToNextStep: $distanceToNextStep,
                 isNavigating: externalIsNavigating,
+                visitedCampoIds: $visitedCampoIds,
+                userId: authViewModel.user?.id.uuidString,
                 onSelectCampo: { campo in
                     selectedCampo = campo
                 },
                 onShowSummary: { annotation in
                     prepareRouteSummary(for: annotation)
+                },
+                onUpdateAnnotations: {
+                    updateAnnotations()
                 },
                 mapView: $mapView
             )
@@ -328,7 +336,7 @@ struct MapaView: View {
             // MARK: - Botones Flotantes
             ZStack(alignment: .bottomTrailing) {
                 Color.clear
-                
+
                 VStack(spacing: 12) {
                     if externalIsNavigating || showRouteSummary {
                         Button {
@@ -371,6 +379,29 @@ struct MapaView: View {
                 }
                 .padding(.trailing, 16)
                 .padding(.bottom, externalIsNavigating ? 40 : (showRouteSummary ? 280 : 40))
+            }
+
+            // MARK: - Botón de Filtro Visitados (esquina superior derecha, discreto)
+            if !externalIsNavigating && !showRouteSummary && !isSearching {
+                VStack {
+                    HStack {
+                        Spacer()
+                        Button {
+                            HapticFeedback.light()
+                            withAnimation {
+                                showOnlyVisited.toggle()
+                                applyFiltros()
+                            }
+                        } label: {
+                            Image(systemName: showOnlyVisited ? "checkmark.circle.fill" : "checkmark.circle")
+                                .font(.system(size: 18))
+                        }
+                        .liquidGlass(color: showOnlyVisited ? .orange : .primary)
+                        .padding(.trailing, 16)
+                        .padding(.top, 80)
+                    }
+                    Spacer()
+                }
             }
         }
         .navigationBarHidden(true)
@@ -875,11 +906,15 @@ struct MapaView: View {
     }
     
     private func applyFiltros() {
-        filteredCampos = camposViewModel.campos
+        if showOnlyVisited {
+            filteredCampos = camposViewModel.campos.filter { visitedCampoIds.contains($0.id) }
+        } else {
+            filteredCampos = camposViewModel.campos
+        }
         updateAnnotations()
     }
     
-    private func updateAnnotations() {
+    func updateAnnotations() {
         var newAnnotations: [MapAnnotationItem] = []
         for campo in filteredCampos {
             if let lat = campo.latitud, let lon = campo.longitud {
@@ -936,8 +971,11 @@ struct CustomMapView: UIViewRepresentable {
     @Binding var currentStepIndex: Int
     @Binding var distanceToNextStep: Double
     var isNavigating: Bool
+    @Binding var visitedCampoIds: Set<UUID>
+    var userId: String?
     let onSelectCampo: (CampoModel) -> Void
     let onShowSummary: (MapAnnotationItem) -> Void
+    let onUpdateAnnotations: () -> Void
     @Binding var mapView: MKMapView?
 
     // Clase auxiliar para guardar referencias a constraints
@@ -1289,8 +1327,16 @@ struct CustomMapView: UIViewRepresentable {
                 tag: 2
             )
 
+            // 🟠 Botón Marcar Visitado (más compacto)
+            let visitedBtn = createCalloutButton(
+                icon: campoAnno.annotationItem.isVisited ? "checkmark.circle.fill" : "checkmark.circle",
+                color: campoAnno.annotationItem.isVisited ? .systemOrange : .systemGray,
+                tag: 3
+            )
+
             buttonsStack.addArrangedSubview(detailBtn)
             buttonsStack.addArrangedSubview(routeBtn)
+            buttonsStack.addArrangedSubview(visitedBtn)
 
             mainStack.addArrangedSubview(titleLabel)
             mainStack.addArrangedSubview(buttonsStack)
@@ -1323,8 +1369,8 @@ struct CustomMapView: UIViewRepresentable {
                 // Botones con altura fija
                 buttonsStack.heightAnchor.constraint(equalToConstant: 44),
 
-                // Ancho del container
-                calloutContainer.widthAnchor.constraint(equalToConstant: 240)
+                // Ancho del container (ajustado para 3 botones)
+                calloutContainer.widthAnchor.constraint(equalToConstant: 300)
             ])
 
             view?.detailCalloutAccessoryView = calloutContainer
@@ -1380,7 +1426,7 @@ struct CustomMapView: UIViewRepresentable {
                   let annotation = mapView.selectedAnnotations.first as? CampoAnnotation else {
                 return
             }
-            
+
             if sender.tag == 1 {
                 parent.onSelectCampo(annotation.annotationItem.campo)
             } else if sender.tag == 2 {
@@ -1389,6 +1435,76 @@ struct CustomMapView: UIViewRepresentable {
                 self.currentDestination = annotation.annotationItem
                 DispatchQueue.main.async {
                     self.parent.onShowSummary(annotation.annotationItem)
+                }
+            } else if sender.tag == 3 {
+                // Marcar/desmarcar como visitado
+                toggleVisitedStatus(for: annotation.annotationItem.campo, mapView: mapView)
+            }
+        }
+
+        private func toggleVisitedStatus(for campo: CampoModel, mapView: MKMapView) {
+            let campoId = campo.id
+            let isCurrentlyVisited = parent.visitedCampoIds.contains(campoId)
+
+            HapticFeedback.medium()
+
+            if isCurrentlyVisited {
+                // Desmarcar como visitado
+                DispatchQueue.main.async {
+                    self.parent.visitedCampoIds.remove(campoId)
+                    self.parent.onUpdateAnnotations()
+                }
+                removeVisitFromDatabase(campoId: campoId)
+            } else {
+                // Marcar como visitado
+                DispatchQueue.main.async {
+                    self.parent.visitedCampoIds.insert(campoId)
+                    self.parent.onUpdateAnnotations()
+                }
+                addVisitToDatabase(campoId: campoId)
+            }
+
+            // Cerrar el callout
+            if let annotation = mapView.selectedAnnotations.first {
+                mapView.deselectAnnotation(annotation, animated: true)
+            }
+        }
+
+        private func addVisitToDatabase(campoId: UUID) {
+            guard let userId = parent.userId else { return }
+
+            Task {
+                do {
+                    let visitData: [String: Any] = [
+                        "id_usuario": userId,
+                        "id_campo": campoId.uuidString
+                    ]
+
+                    _ = try await supabase.from("visitas")
+                        .insert(visitData)
+                        .execute()
+
+                    Logger.info("✅ Campo marcado como visitado: \(campoId)")
+                } catch {
+                    Logger.error("❌ Error al marcar campo como visitado: \(error.localizedDescription)")
+                }
+            }
+        }
+
+        private func removeVisitFromDatabase(campoId: UUID) {
+            guard let userId = parent.userId else { return }
+
+            Task {
+                do {
+                    _ = try await supabase.from("visitas")
+                        .delete()
+                        .eq("id_usuario", value: userId)
+                        .eq("id_campo", value: campoId.uuidString)
+                        .execute()
+
+                    Logger.info("✅ Campo desmarcado como visitado: \(campoId)")
+                } catch {
+                    Logger.error("❌ Error al desmarcar campo como visitado: \(error.localizedDescription)")
                 }
             }
         }

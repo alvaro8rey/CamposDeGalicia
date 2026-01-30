@@ -820,20 +820,45 @@ struct MapaView: View {
 
                 print("✅ [PrepareRoute] Ruta \(self.externalIsNavigating ? "recalculada" : "calculada") - Distancia: \(String(format: "%.1f", route.distance / 1000)) km, Pasos: \(route.steps.count)")
 
-                // ✅ Si estamos navegando, actualizar inmediatamente la distancia al primer paso
+                // ✅ Si estamos navegando, encontrar el paso correcto basado en la ubicación actual
                 if self.externalIsNavigating, route.steps.count > 0,
                    let currentUserLocation = self.mapView?.userLocation.location?.coordinate {
-                    let firstStepEndCoordinate = self.calculateStepEndCoordinate(route: route, stepIndex: 0)
-                    let endLocation = CLLocation(latitude: firstStepEndCoordinate.latitude, longitude: firstStepEndCoordinate.longitude)
-                    let userCLLocation = CLLocation(latitude: currentUserLocation.latitude, longitude: currentUserLocation.longitude)
-                    let newDistance = userCLLocation.distance(from: endLocation)
-                    print("📏 [PrepareRoute] Calculando distancia al paso 1 después de recalcular: \(String(format: "%.0f", newDistance))m")
 
-                    // 🚨 IMPORTANTE: Si la distancia es muy pequeña (< 30m), no avanzar automáticamente
-                    // Esto previene el salto inmediato al paso 2
-                    if newDistance < 30 {
-                        print("⚠️ [PrepareRoute] Distancia muy pequeña (\(String(format: "%.0f", newDistance))m) - usuario podría estar en el paso 1")
-                        print("   No se avanzará automáticamente hasta que la lógica normal lo determine")
+                    let userCLLocation = CLLocation(latitude: currentUserLocation.latitude, longitude: currentUserLocation.longitude)
+
+                    // 🎯 Encontrar el paso correcto: aquel cuyo final esté más adelante que la posición actual
+                    var correctStepIndex = 0
+                    var minDistanceToStepEnd = Double.greatestFiniteMagnitude
+
+                    for stepIndex in 0..<route.steps.count {
+                        let stepEndCoordinate = self.calculateStepEndCoordinate(route: route, stepIndex: stepIndex)
+                        let endLocation = CLLocation(latitude: stepEndCoordinate.latitude, longitude: stepEndCoordinate.longitude)
+                        let distanceToEnd = userCLLocation.distance(from: endLocation)
+
+                        // Saltar pasos con distancia 0 o negativos (ya completados)
+                        if route.steps[stepIndex].distance < 5 {
+                            print("⏭️ [PrepareRoute] Saltando paso \(stepIndex + 1) (distancia del paso: \(String(format: "%.0f", route.steps[stepIndex].distance))m)")
+                            continue
+                        }
+
+                        // El primer paso válido con distancia hacia adelante es el correcto
+                        if distanceToEnd < minDistanceToStepEnd && distanceToEnd > 0 {
+                            correctStepIndex = stepIndex
+                            minDistanceToStepEnd = distanceToEnd
+                            break
+                        }
+                    }
+
+                    // Calcular distancia al paso correcto
+                    let correctStepEndCoordinate = self.calculateStepEndCoordinate(route: route, stepIndex: correctStepIndex)
+                    let endLocation = CLLocation(latitude: correctStepEndCoordinate.latitude, longitude: correctStepEndCoordinate.longitude)
+                    let newDistance = userCLLocation.distance(from: endLocation)
+
+                    print("📏 [PrepareRoute] Paso correcto después de recalcular: \(correctStepIndex + 1), Distancia: \(String(format: "%.0f", newDistance))m")
+
+                    // Actualizar al paso correcto en el Coordinator
+                    if let coordinator = (self.mapView?.delegate as? CustomMapView.Coordinator) {
+                        coordinator.setCorrectStepAfterRecalculation(correctStepIndex)
                     }
 
                     self.distanceToNextStep = newDistance
@@ -1144,6 +1169,18 @@ struct CustomMapView: UIViewRepresentable {
             locationManager?.stopUpdatingHeading()
         }
 
+        func setCorrectStepAfterRecalculation(_ stepIndex: Int) {
+            DispatchQueue.main.async {
+                let previousStep = self.parent.currentStepIndex
+                self.parent.currentStepIndex = stepIndex
+                print("   Paso actualizado después de recalcular: \(previousStep + 1) → \(stepIndex + 1)")
+
+                // Activar flag para evitar avances inmediatos
+                self.justRecalculated = true
+                print("   Flag 'justRecalculated' activado para evitar avances inmediatos")
+            }
+        }
+
         // MARK: - CLLocationManagerDelegate
         func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
             guard let location = locations.last else { return }
@@ -1353,15 +1390,8 @@ struct CustomMapView: UIViewRepresentable {
                 HapticFeedback.light()
 
                 DispatchQueue.main.async {
-                    // Resetear al primer paso al recalcular
-                    let previousStep = self.parent.currentStepIndex
-                    self.parent.currentStepIndex = 0
-                    print("   Paso reseteado: \(previousStep + 1) → 1")
-
-                    // Activar flag para evitar avances inmediatos
-                    self.justRecalculated = true
-                    print("   Flag 'justRecalculated' activado para evitar avances inmediatos")
-
+                    // ✅ NO resetear el paso aquí - se calculará automáticamente en prepareRouteSummary
+                    // basado en la ubicación actual del usuario
                     self.parent.onShowSummary(destination)
                 }
             }

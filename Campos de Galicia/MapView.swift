@@ -631,8 +631,8 @@ struct MapaView: View {
                                      instruction.contains("rotonda")
 
             if isImportantManeuver {
-                // Si es una maniobra importante pero está lejos, mostrar "Sigue recto"
-                return "Sigue recto"
+                // Si es una maniobra importante pero está lejos, mostrar la indicación de seguir recto
+                return L(.mapContinueStraight)
             }
         }
 

@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1"
+     creator="Xcode"
+     xmlns="http://www.topografix.com/GPX/1/1"
+     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+     xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd">
+    <trk>
+        <name>Test Route - Campos de Galicia</name>
+        <trkseg>
+            <!-- Punto inicial -->
+            <trkpt lat="42.66965164799244" lon="-8.716856983499463">
+                <ele>100</ele>
+                <time>2024-01-01T10:00:00Z</time>
+            </trkpt>
+
+            <!-- Puntos intermedios para simular conducción -->
+            <trkpt lat="42.66500" lon="-8.72000">
+                <ele>100</ele>
+                <time>2024-01-01T10:01:00Z</time>
+            </trkpt>
+
+            <trkpt lat="42.66000" lon="-8.72500">
+                <ele>100</ele>
+                <time>2024-01-01T10:02:00Z</time>
+            </trkpt>
+
+            <trkpt lat="42.65500" lon="-8.73000">
+                <ele>100</ele>
+                <time>2024-01-01T10:03:00Z</time>
+            </trkpt>
+
+            <trkpt lat="42.65000" lon="-8.73500">
+                <ele>100</ele>
+                <time>2024-01-01T10:04:00Z</time>
+            </trkpt>
+
+            <trkpt lat="42.64500" lon="-8.74000">
+                <ele>100</ele>
+                <time>2024-01-01T10:05:00Z</time>
+            </trkpt>
+
+            <trkpt lat="42.64000" lon="-8.74500">
+                <ele>100</ele>
+                <time>2024-01-01T10:06:00Z</time>
+            </trkpt>
+
+            <trkpt lat="42.63500" lon="-8.74800">
+                <ele>100</ele>
+                <time>2024-01-01T10:07:00Z</time>
+            </trkpt>
+
+            <trkpt lat="42.63000" lon="-8.75000">
+                <ele>100</ele>
+                <time>2024-01-01T10:08:00Z</time>
+            </trkpt>
+
+            <trkpt lat="42.62500" lon="-8.75200">
+                <ele>100</ele>
+                <time>2024-01-01T10:09:00Z</time>
+            </trkpt>
+
+            <trkpt lat="42.62000" lon="-8.75400">
+                <ele>100</ele>
+                <time>2024-01-01T10:10:00Z</time>
+            </trkpt>
+
+            <trkpt lat="42.61500" lon="-8.75450">
+                <ele>100</ele>
+                <time>2024-01-01T10:11:00Z</time>
+            </trkpt>
+
+            <trkpt lat="42.61000" lon="-8.75500">
+                <ele>100</ele>
+                <time>2024-01-01T10:12:00Z</time>
+            </trkpt>
+
+            <!-- Punto final -->
+            <trkpt lat="42.60630486093848" lon="-8.750524227594457">
+                <ele>100</ele>
+                <time>2024-01-01T10:13:00Z</time>
+            </trkpt>
+        </trkseg>
+    </trk>
+</gpx>

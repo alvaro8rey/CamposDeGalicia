@@ -46,6 +46,7 @@ class ProfileViewModel: ObservableObject {
 
     // MARK: - Private Properties
     private var lastUpdatedFromNotification: Date? = nil
+    private var hasLoadedInitialData: Bool = false
 
     // MARK: - Initialization
     init() {
@@ -73,24 +74,33 @@ class ProfileViewModel: ObservableObject {
                     // Usa valores actuales si hay notificación reciente
                     Logger.debug("Usando valores de notificación reciente")
                 } else {
-                    level = newLevel
-                    currentXP = newCurrentXP
-                    xpToNextLevel = newXPToNextLevel
+                    // Solo actualizar si los valores han cambiado para evitar parpadeo
+                    if level != newLevel || currentXP != newCurrentXP || xpToNextLevel != newXPToNextLevel {
+                        level = newLevel
+                        currentXP = newCurrentXP
+                        xpToNextLevel = newXPToNextLevel
+                    }
                 }
 
                 Logger.debug("Level data loaded: Level \(newLevel), XP \(newCurrentXP)/\(newXPToNextLevel)")
             } else {
-                errorMessage = "Error: No se encontraron datos de nivel"
+                // Solo establecer valores por defecto si aún no se han cargado
+                if !hasLoadedInitialData {
+                    errorMessage = "Error: No se encontraron datos de nivel"
+                    level = 1
+                    currentXP = 0
+                    xpToNextLevel = 100
+                }
+            }
+        } catch {
+            // Solo establecer valores por defecto si aún no se han cargado
+            if !hasLoadedInitialData {
+                errorMessage = "Error al cargar datos de nivel: \(error.localizedDescription)"
+                Logger.error("Error loading level data: \(error.localizedDescription)")
                 level = 1
                 currentXP = 0
                 xpToNextLevel = 100
             }
-        } catch {
-            errorMessage = "Error al cargar datos de nivel: \(error.localizedDescription)"
-            Logger.error("Error loading level data: \(error.localizedDescription)")
-            level = 1
-            currentXP = 0
-            xpToNextLevel = 100
         }
     }
 
@@ -406,6 +416,23 @@ class ProfileViewModel: ObservableObject {
 
     /// Carga todos los datos del perfil
     func loadAllData(for userId: String, campos: [CampoModel]) async {
+        // Solo cargar datos si no se han cargado antes
+        guard !hasLoadedInitialData else { return }
+
+        await loadLevelData(for: userId)
+        await loadAchievementsCount(for: userId)
+        await loadVisitHistory(for: userId, campos: campos)
+        await loadPreferences(for: userId)
+        await loadAllAchievements()
+        await loadUnlockedAchievements(for: userId)
+        await loadAdditionalStats(for: userId)
+        updateClosestAchievement()
+
+        hasLoadedInitialData = true
+    }
+
+    /// Fuerza la recarga de todos los datos (útil después de cambios)
+    func forceReloadAllData(for userId: String, campos: [CampoModel]) async {
         await loadLevelData(for: userId)
         await loadAchievementsCount(for: userId)
         await loadVisitHistory(for: userId, campos: campos)

@@ -135,12 +135,6 @@ struct ProfileView: View {
         .onAppear {
             AnalyticsManager.shared.trackScreen("Profile")
         }
-        .onChange(of: themeManager.currentTheme) { _, _ in
-            // Cerrar el modal de ajustes cuando cambia el tema
-            if showSettings {
-                showSettings = false
-            }
-        }
     }
 
     // MARK: - Welcome Section

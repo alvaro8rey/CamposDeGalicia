@@ -1280,28 +1280,39 @@ struct CustomMapView: UIViewRepresentable {
             let previousDistance = parent.distanceToNextStep
             DispatchQueue.main.async {
                 let newDistance = max(0, remainingDistance)
-                self.parent.distanceToNextStep = newDistance
-                print("✅ [\(source)] Distancia UI: \(String(format: "%.0f", previousDistance))m → \(String(format: "%.0f", newDistance))m")
+
+                // 🎯 FIX: Si acabamos de recalcular, NO permitir que la distancia SUBA
+                // Solo actualizar si la nueva distancia es menor (usuario se acerca)
+                if self.justRecalculated && newDistance > previousDistance {
+                    print("⏸️ [\(source)] Acabamos de recalcular - Ignorando aumento de distancia: \(String(format: "%.0f", previousDistance))m → \(String(format: "%.0f", newDistance))m")
+                    self.justRecalculated = false // Resetear flag para próximas actualizaciones
+                } else {
+                    // Actualización normal: permitir cambios de distancia
+                    self.parent.distanceToNextStep = newDistance
+                    print("✅ [\(source)] Distancia UI: \(String(format: "%.0f", previousDistance))m → \(String(format: "%.0f", newDistance))m")
+
+                    // Si la distancia bajó después de un recálculo, resetear el flag
+                    if self.justRecalculated {
+                        self.justRecalculated = false
+                        print("   Flag 'justRecalculated' reseteado (distancia bajó correctamente)")
+                    }
+                }
             }
 
             // Avanzar al siguiente paso si estamos muy cerca del final (menos de 15 metros)
             // PERO: No avanzar si acabamos de recalcular la ruta (evitar saltos inmediatos)
-            if remainingDistance < 15 && parent.currentStepIndex < currentRoute.steps.count - 1 {
-                if justRecalculated {
-                    print("⏸️ [\(source)] Distancia < 15m pero acabamos de recalcular - esperando siguiente actualización")
-                    justRecalculated = false // Resetear el flag para la próxima vez
-                } else {
-                    print("➡️ [\(source)] Avanzando al paso \(parent.currentStepIndex + 2)/\(currentRoute.steps.count) (distancia < 15m)")
-                    DispatchQueue.main.async {
-                        // Feedback háptico al avanzar de paso
-                        HapticFeedback.medium()
+            // Nota: El flag justRecalculated se maneja en el bloque anterior al actualizar la distancia
+            if remainingDistance < 15 && parent.currentStepIndex < currentRoute.steps.count - 1 && !justRecalculated {
+                print("➡️ [\(source)] Avanzando al paso \(parent.currentStepIndex + 2)/\(currentRoute.steps.count) (distancia < 15m)")
+                DispatchQueue.main.async {
+                    // Feedback háptico al avanzar de paso
+                    HapticFeedback.medium()
 
-                        withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
-                            self.parent.currentStepIndex += 1
-                            // Recalcular distancia para el nuevo paso
-                            if let userLocation = self.parent.mapView?.userLocation.location {
-                                self.updateCurrentStep(userLocation: userLocation.coordinate, source: "\(source)-NextStep")
-                            }
+                    withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
+                        self.parent.currentStepIndex += 1
+                        // Recalcular distancia para el nuevo paso
+                        if let userLocation = self.parent.mapView?.userLocation.location {
+                            self.updateCurrentStep(userLocation: userLocation.coordinate, source: "\(source)-NextStep")
                         }
                     }
                 }

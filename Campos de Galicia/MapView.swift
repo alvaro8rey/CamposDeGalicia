@@ -87,6 +87,7 @@ struct MapaView: View {
     @State private var distanceToNextStep: Double = 0
     @State private var showRouteSummary: Bool = false
     @State private var pendingDestination: MapAnnotationItem?
+    @State private var traveledCoordinates: [CLLocationCoordinate2D] = [] // Para rastrear el camino recorrido
 
     @State private var userTrackingMode: MKUserTrackingMode = .none
     @State private var mapView: MKMapView?
@@ -482,6 +483,7 @@ struct MapaView: View {
             self.userTrackingMode = .none
             self.currentStepIndex = 0
             self.distanceToNextStep = 0
+            self.traveledCoordinates = [] // Limpiar coordenadas recorridas
         }
 
         applyFiltros()
@@ -504,8 +506,10 @@ struct MapaView: View {
                 }
 
                 VStack(alignment: .leading, spacing: 4) {
-                    let step = route.steps[currentStepIndex]
-                    Text(step.instructions.isEmpty ? L(.mapContinueStraight) : step.instructions)
+                    // 🎯 Lógica mejorada: mostrar "sigue recto" solo si la maniobra está lejos
+                    let displayInstruction = getDisplayInstruction(for: route)
+
+                    Text(displayInstruction)
                         .font(.system(size: 16, weight: .semibold))
                         .foregroundColor(.primary)
                         .lineLimit(2)
@@ -604,6 +608,36 @@ struct MapaView: View {
         } else {
             return "arrow.up.circle.fill"
         }
+    }
+
+    // 🎯 Helper mejorado: decidir qué instrucción mostrar según la distancia
+    private func getDisplayInstruction(for route: MKRoute) -> String {
+        guard currentStepIndex < route.steps.count else {
+            return L(.mapContinueStraight)
+        }
+
+        let currentStep = route.steps[currentStepIndex]
+        let instruction = currentStep.instructions.lowercased()
+
+        // Si la distancia a la próxima maniobra es mayor a 1.5 km (~1500m)
+        // mostrar solo "Sigue recto" en lugar de la instrucción específica
+        if distanceToNextStep > 1500 {
+            // Verificar si la instrucción actual es una maniobra importante
+            let isImportantManeuver = instruction.contains("toma") ||
+                                     instruction.contains("salida") ||
+                                     instruction.contains("gira") ||
+                                     instruction.contains("derecha") ||
+                                     instruction.contains("izquierda") ||
+                                     instruction.contains("rotonda")
+
+            if isImportantManeuver {
+                // Si es una maniobra importante pero está lejos, mostrar "Sigue recto"
+                return "Sigue recto"
+            }
+        }
+
+        // Si la maniobra está cerca (< 1.5 km) o no es importante, mostrar la instrucción original
+        return currentStep.instructions.isEmpty ? L(.mapContinueStraight) : currentStep.instructions
     }
     
     private func formatTime(seconds: TimeInterval) -> String {
@@ -877,6 +911,7 @@ struct MapaView: View {
         self.route = nil
         self.currentStepIndex = 0
         self.distanceToNextStep = 0
+        self.traveledCoordinates = [] // Limpiar coordenadas recorridas
 
         // Detener actualizaciones de ubicación
         if let mapView = self.mapView {
@@ -1186,6 +1221,9 @@ struct CustomMapView: UIViewRepresentable {
 
             print("📍 Distancia restante desde ubicación actual hasta fin del paso: \(String(format: "%.0f", remainingDistance))m")
 
+            // 🎯 Actualizar la polyline para borrar el camino recorrido
+            updatePolylineToRemoveTraveledPath(userLocation: userLocation, currentRoute: currentRoute)
+
             // Actualizar la distancia en el UI
             DispatchQueue.main.async {
                 let newDistance = max(0, remainingDistance)
@@ -1207,6 +1245,65 @@ struct CustomMapView: UIViewRepresentable {
                             self.updateCurrentStep(userLocation: userLocation.coordinate)
                         }
                     }
+                }
+            }
+        }
+
+        // 🎯 Nueva función: Actualizar polyline para borrar el camino recorrido
+        private func updatePolylineToRemoveTraveledPath(userLocation: CLLocationCoordinate2D, currentRoute: MKRoute) {
+            guard let mapView = parent.mapView else { return }
+
+            let polyline = currentRoute.polyline
+            let points = polyline.points()
+            let userPoint = MKMapPoint(userLocation)
+
+            // Encontrar el punto más cercano en la polyline al usuario
+            var closestIndex = 0
+            var minDistance = Double.greatestFiniteMagnitude
+
+            // Optimización: verificar cada 3 puntos para rutas largas
+            let step = max(1, polyline.pointCount / 200)
+            for i in stride(from: 0, to: polyline.pointCount, by: step) {
+                let distance = points[i].distance(to: userPoint)
+                if distance < minDistance {
+                    minDistance = distance
+                    closestIndex = i
+                }
+            }
+
+            // Buscar más finamente alrededor del punto más cercano
+            let searchRange = max(0, closestIndex - step)...<min(polyline.pointCount, closestIndex + step)
+            for i in searchRange {
+                let distance = points[i].distance(to: userPoint)
+                if distance < minDistance {
+                    minDistance = distance
+                    closestIndex = i
+                }
+            }
+
+            // Si ya hemos recorrido más del 10% de los puntos, actualizar la polyline
+            // Esto evita actualizar demasiado frecuentemente y mejora el rendimiento
+            let traveledPercentage = Double(closestIndex) / Double(polyline.pointCount)
+            if traveledPercentage > 0.05 && closestIndex < polyline.pointCount - 1 {
+                // Crear nueva polyline solo con los puntos restantes
+                let remainingPoints = UnsafeMutablePointer<MKMapPoint>.allocate(capacity: polyline.pointCount - closestIndex)
+                for i in closestIndex..<polyline.pointCount {
+                    remainingPoints[i - closestIndex] = points[i]
+                }
+
+                let newPolyline = MKPolyline(points: remainingPoints, count: polyline.pointCount - closestIndex)
+                remainingPoints.deallocate()
+
+                // Actualizar en el thread principal
+                DispatchQueue.main.async {
+                    // Remover todas las polylines actuales
+                    let overlaysToRemove = mapView.overlays.filter { $0 is MKPolyline }
+                    mapView.removeOverlays(overlaysToRemove)
+
+                    // Agregar la nueva polyline
+                    mapView.addOverlay(newPolyline)
+
+                    print("🗑️ Polyline actualizada - Puntos eliminados: \(closestIndex), Puntos restantes: \(polyline.pointCount - closestIndex)")
                 }
             }
         }

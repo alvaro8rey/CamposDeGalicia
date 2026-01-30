@@ -785,6 +785,17 @@ struct MapaView: View {
                 }
 
                 print("✅ Ruta \(self.externalIsNavigating ? "recalculada" : "calculada") - Distancia: \(String(format: "%.1f", route.distance / 1000)) km, Pasos: \(route.steps.count)")
+
+                // ✅ Si estamos navegando, actualizar inmediatamente la distancia al primer paso
+                if self.externalIsNavigating, route.steps.count > 0 {
+                    let firstStepEndCoordinate = self.calculateStepEndCoordinate(route: route, stepIndex: 0)
+                    let endLocation = CLLocation(latitude: firstStepEndCoordinate.latitude, longitude: firstStepEndCoordinate.longitude)
+                    if let userLocation = userLocation {
+                        let userCLLocation = CLLocation(latitude: userLocation.latitude, longitude: userLocation.longitude)
+                        self.distanceToNextStep = userCLLocation.distance(from: endLocation)
+                        print("📏 Distancia actualizada al primer paso después de recalcular: \(String(format: "%.0f", self.distanceToNextStep))m")
+                    }
+                }
             }
         }
     }
@@ -1065,11 +1076,11 @@ struct CustomMapView: UIViewRepresentable {
             locationManager = CLLocationManager()
             locationManager?.delegate = self
             locationManager?.desiredAccuracy = kCLLocationAccuracyBestForNavigation
-            locationManager?.distanceFilter = 5 // Actualizar cada 5 metros
+            locationManager?.distanceFilter = kCLDistanceFilterNone // Actualizar continuamente sin filtro de distancia
             locationManager?.activityType = .automotiveNavigation
             locationManager?.allowsBackgroundLocationUpdates = true
             locationManager?.pausesLocationUpdatesAutomatically = false
-            print("📱 Location Manager configurado para navegación")
+            print("📱 Location Manager configurado para navegación continua")
         }
 
         func setCurrentDestination(_ destination: MapAnnotationItem) {
@@ -1108,8 +1119,16 @@ struct CustomMapView: UIViewRepresentable {
         }
 
         func mapView(_ mapView: MKMapView, didUpdate userLocation: MKUserLocation) {
-            // ✅ OPTIMIZACIÓN: Ya no procesamos aquí porque CLLocationManager lo hace mejor
-            // Este método se mantiene para compatibilidad pero no duplica lógica
+            // ✅ Procesar ubicación tanto desde MapKit como desde CLLocationManager para mayor confiabilidad
+            guard let location = userLocation.location else { return }
+
+            if parent.isNavigating {
+                // Actualizar paso actual y distancia en tiempo real
+                updateCurrentStep(userLocation: location.coordinate)
+
+                // Verificar si necesitamos recalcular la ruta
+                checkIfRecalculationNeeded(userLocation: location.coordinate)
+            }
         }
         
         private func updateCurrentStep(userLocation: CLLocationCoordinate2D) {
@@ -1187,35 +1206,40 @@ struct CustomMapView: UIViewRepresentable {
 
         private func checkIfRecalculationNeeded(userLocation: CLLocationCoordinate2D) {
             guard parent.isNavigating, let currentRoute = parent.route, let destination = currentDestination else {
-                print("⚠️ No se puede verificar recalculación: isNavigating=\(parent.isNavigating), route=\(parent.route != nil), destination=\(currentDestination != nil)")
                 return
             }
 
-            // Reducir tiempo entre recalculaciones de 15 a 5 segundos
+            // Reducir tiempo entre recalculaciones de 15 a 3 segundos para mayor respuesta
             let timeSinceLastRecalc = Date().timeIntervalSince(lastRecalculationDate)
-            if timeSinceLastRecalc < 5 {
-                print("⏳ Muy pronto para recalcular (pasaron \(String(format: "%.1f", timeSinceLastRecalc))s)")
+            if timeSinceLastRecalc < 3 {
                 return
             }
 
+            // Calcular distancia mínima a la ruta usando todos los puntos de la polyline
             let userPoint = MKMapPoint(userLocation)
             var minDistance = Double.greatestFiniteMagnitude
             let points = currentRoute.polyline.points()
-            for i in 0..<currentRoute.polyline.pointCount {
+
+            // Optimización: verificar solo cada 5 puntos para rutas muy largas
+            let step = max(1, currentRoute.polyline.pointCount / 100)
+            for i in stride(from: 0, to: currentRoute.polyline.pointCount, by: step) {
                 let distance = points[i].distance(to: userPoint)
                 if distance < minDistance { minDistance = distance }
             }
 
-            print("📏 Distancia mínima a la ruta: \(String(format: "%.1f", minDistance))m")
+            print("📏 Distancia a la ruta: \(String(format: "%.0f", minDistance))m")
 
-            // Recalcular si te desvías más de 30 metros de la ruta (antes 50m)
-            if minDistance > 30 {
-                print("🔄 RECALCULANDO RUTA - Usuario se desvió \(String(format: "%.1f", minDistance))m de la ruta")
+            // Recalcular si te desvías más de 25 metros de la ruta (más sensible)
+            if minDistance > 25 {
+                print("🔄 RECALCULANDO - Desviación de \(String(format: "%.0f", minDistance))m")
                 lastRecalculationDate = Date()
+
+                // Feedback háptico para indicar recalculación
+                HapticFeedback.light()
+
                 DispatchQueue.main.async {
-                    // Resetear el índice del paso actual al recalcular
+                    // Resetear al primer paso al recalcular
                     self.parent.currentStepIndex = 0
-                    self.parent.distanceToNextStep = 0
                     self.parent.onShowSummary(destination)
                 }
             }

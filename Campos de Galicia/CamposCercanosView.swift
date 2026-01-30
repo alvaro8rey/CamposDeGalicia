@@ -63,7 +63,7 @@ struct CamposCercanosView: View {
                 ScrollView {
                     VStack(spacing: 0) {
                         if isLoadingLocation {
-                            LoadingView(message: L(.loadingLocation), style: .spinner)
+                            LoadingView(message: L(.loadingLocation), style: .skeleton)
                                 .padding(.top, 40)
                         } else if let errorMessage = errorMessage {
                             EmptyCard(text: errorMessage)
@@ -95,6 +95,9 @@ struct CamposCercanosView: View {
                         }
                     }
                 }
+                .refreshable {
+                    requestLocation()
+                }
             }
             .navigationTitle(L(.nearbyCamposTitle))
             .navigationBarTitleDisplayMode(.inline)
@@ -116,33 +119,6 @@ struct CamposCercanosView: View {
                 let validDistance = distanceOptions.min(by: { abs($0 - newDistance) < abs($1 - newDistance) }) ?? 10.0
                 selectedDistance = validDistance
                 updateNearbyCampos()
-            }
-
-            // Botón flotante para actualizar ubicación
-            VStack {
-                Spacer()
-                HStack {
-                    Spacer()
-                    Button(action: {
-                        HapticFeedback.medium()
-                        requestLocation()
-                    }) {
-                        Image(systemName: "arrow.clockwise.circle.fill")
-                            .font(.system(size: 24))
-                            .foregroundColor(.white)
-                            .frame(width: 56, height: 56)
-                            .background(
-                                LinearGradient(
-                                    gradient: Gradient(colors: [Color.blue, Color.blue.opacity(0.8)]),
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
-                            )
-                            .clipShape(Circle())
-                            .shadow(color: Color.blue.opacity(0.4), radius: 12, x: 0, y: 6)
-                    }
-                    .padding(20)
-                }
             }
         }
     }

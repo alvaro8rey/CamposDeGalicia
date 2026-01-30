@@ -10,6 +10,7 @@ struct ProfileView: View {
     @EnvironmentObject var locationManager: LocationManager
     @EnvironmentObject var camposViewModel: CamposViewModel
     @EnvironmentObject var localizationManager: LocalizationManager
+    @EnvironmentObject var themeManager: ThemeManager
     @Environment(\.colorScheme) var colorScheme
 
     // MARK: - State
@@ -133,6 +134,12 @@ struct ProfileView: View {
         }
         .onAppear {
             AnalyticsManager.shared.trackScreen("Profile")
+        }
+        .onChange(of: themeManager.currentTheme) { _, _ in
+            // Cerrar el modal de ajustes cuando cambia el tema
+            if showSettings {
+                showSettings = false
+            }
         }
     }
 

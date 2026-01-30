@@ -98,6 +98,7 @@ struct ProfileView: View {
             .environmentObject(locationManager)
             .environmentObject(camposViewModel)
             .preferredColorScheme(ThemeManager.shared.currentTheme.colorScheme)
+            .id("settings-modal")
         }
         .task {
             guard let userId = authViewModel.user?.id.uuidString else { return }

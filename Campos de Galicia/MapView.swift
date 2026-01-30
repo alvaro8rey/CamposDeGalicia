@@ -1475,10 +1475,15 @@ struct CustomMapView: UIViewRepresentable {
 
             Task {
                 do {
-                    let visitData: [String: Any] = [
-                        "id_usuario": userId,
-                        "id_campo": campoId.uuidString
-                    ]
+                    struct VisitData: Encodable {
+                        let id_usuario: String
+                        let id_campo: String
+                    }
+
+                    let visitData = VisitData(
+                        id_usuario: userId,
+                        id_campo: campoId.uuidString
+                    )
 
                     _ = try await supabase.from("visitas")
                         .insert(visitData)

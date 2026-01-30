@@ -409,7 +409,6 @@ struct MapaView: View {
             CampoDetalleView(campoID: campo.id)
         }
         .onAppear {
-            applyFiltros()
             loadVisitedCampos()
         }
         .onChange(of: externalIsNavigating) { wasNavigating, navigating in
@@ -949,7 +948,7 @@ struct MapaView: View {
                         return UUID(uuidString: idString)
                     }
                     visitedCampoIds = Set(ids)
-                    updateAnnotations()
+                    applyFiltros()
                 }
             } catch {
                 Logger.error("Error loading visited campos: \(error.localizedDescription)")

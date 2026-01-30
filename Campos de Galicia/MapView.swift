@@ -1340,14 +1340,19 @@ struct CustomMapView: UIViewRepresentable {
                 }
             }
 
-            // 🎯 Actualizar más frecuentemente para una animación fluida
+            // 🎯 IMPORTANTE: El closestIndex nunca debe retroceder (solo puede avanzar o quedarse igual)
+            // Esto evita recreaciones innecesarias que causan parpadeos
+            if closestIndex < lastPolylineUpdateIndex {
+                closestIndex = lastPolylineUpdateIndex
+            }
+
             // Calcular cuántos puntos hemos avanzado desde la última actualización
             let pointsAdvanced = closestIndex - lastPolylineUpdateIndex
 
             // Actualizar si hemos avanzado al menos 8 puntos (más fluido que el 5% anterior)
             // O si la distancia en metros es significativa (más de 20 metros)
             let shouldUpdate: Bool
-            if closestIndex > lastPolylineUpdateIndex && closestIndex < polyline.pointCount - 1 {
+            if pointsAdvanced > 0 && closestIndex < polyline.pointCount - 1 {
                 // Calcular distancia real en metros entre el último update y la posición actual
                 let lastPoint = points[lastPolylineUpdateIndex]
                 let currentPoint = points[closestIndex]
@@ -1369,16 +1374,19 @@ struct CustomMapView: UIViewRepresentable {
                 let newPolyline = MKPolyline(points: remainingPoints, count: polyline.pointCount - closestIndex)
                 remainingPoints.deallocate()
 
-                // Actualizar en el thread principal con animación suave
+                // 🎯 CRÍTICO: Agregar PRIMERO la nueva polyline, LUEGO eliminar la vieja
+                // Esto evita que haya un frame sin polyline (causa del parpadeo)
                 DispatchQueue.main.async {
-                    // Remover todas las polylines actuales
-                    let overlaysToRemove = mapView.overlays.filter { $0 is MKPolyline }
-                    mapView.removeOverlays(overlaysToRemove)
-
-                    // Agregar la nueva polyline
+                    // 1. Agregar la nueva polyline PRIMERO
                     mapView.addOverlay(newPolyline)
 
-                    print("🗑️ Polyline actualizada - Puntos eliminados: \(closestIndex - self.lastPolylineUpdateIndex), Puntos restantes: \(polyline.pointCount - closestIndex)")
+                    // 2. LUEGO eliminar las polylines viejas (dejando solo la nueva)
+                    let overlaysToRemove = mapView.overlays.filter { overlay in
+                        overlay is MKPolyline && overlay !== newPolyline
+                    }
+                    mapView.removeOverlays(overlaysToRemove)
+
+                    print("🗑️ Polyline actualizada - Puntos eliminados: \(pointsAdvanced), Puntos restantes: \(polyline.pointCount - closestIndex)")
                 }
 
                 // Actualizar el índice de la última actualización

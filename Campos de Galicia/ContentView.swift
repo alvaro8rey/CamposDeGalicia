@@ -117,23 +117,16 @@ struct ContentView: View {
                     .font(.title3)
                     .foregroundColor(.primary)
             }
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Button {
-                    Task {
-                        await camposViewModel.refreshCampos()
-                        filteredCampos = camposViewModel.campos
-                        camposMostrados = filteredCampos.count
-                    }
-                } label: {
-                    Image(systemName: "arrow.clockwise")
-                }
-                .disabled(camposViewModel.isLoading)
-            }
         }
         .onChange(of: camposViewModel.campos) { oldCampos, newCampos in
             print("Campos cambió, actualizando filteredCampos: \(newCampos.count) campos")
-            filteredCampos = newCampos
-            camposMostrados = filteredCampos.count
+            // Si no hay filtros activos, ordenar alfabéticamente
+            if hasActiveFilters {
+                applyFilters()
+            } else {
+                filteredCampos = sortCamposAlphabetically(newCampos)
+                camposMostrados = filteredCampos.count
+            }
         }
         .onChange(of: camposViewModel.errorMessage) { oldMessage, message in
             if let message = message {
@@ -145,7 +138,7 @@ struct ContentView: View {
             if selectedProvincia.isEmpty {
                 selectedProvincia = L(.contentAllProvinces)
             }
-            filteredCampos = camposViewModel.campos
+            filteredCampos = sortCamposAlphabetically(camposViewModel.campos)
             camposMostrados = filteredCampos.count
             showOnboarding = !hasSeenOnboarding
         }
@@ -159,6 +152,16 @@ struct ContentView: View {
     }
 
     func applyFilters() {
+        // Si no hay filtros activos, ordenar alfabéticamente
+        if !hasActiveFilters {
+            filteredCampos = sortCamposAlphabetically(camposViewModel.campos)
+            withAnimation(.easeInOut) {
+                isFilterExpanded = false
+                camposMostrados = filteredCampos.count
+            }
+            return
+        }
+
         // Calcular similitud para cada campo y filtrar
         let camposConSimilitud = camposViewModel.campos.compactMap { campo -> (campo: CampoModel, score: Double)? in
             // Normalizar strings para comparación (sin acentos ni diferencias de mayúsculas)
@@ -375,8 +378,17 @@ struct ContentView: View {
         searchNombre = ""
         searchLocalidad = ""
         selectedProvincia = L(.contentAllProvinces)
-        filteredCampos = camposViewModel.campos
+        filteredCampos = sortCamposAlphabetically(camposViewModel.campos)
         camposMostrados = filteredCampos.count
+    }
+
+    /// Ordena los campos alfabéticamente por nombre, ignorando tildes y diferencias de mayúsculas
+    private func sortCamposAlphabetically(_ campos: [CampoModel]) -> [CampoModel] {
+        return campos.sorted { campo1, campo2 in
+            let nombre1 = campo1.nombre.folding(options: [.diacriticInsensitive, .caseInsensitive], locale: .current)
+            let nombre2 = campo2.nombre.folding(options: [.diacriticInsensitive, .caseInsensitive], locale: .current)
+            return nombre1 < nombre2
+        }
     }
 }
 
@@ -738,21 +750,6 @@ struct CampoListView: View {
                                         Text("\(campo.localidad ?? ""), \(campo.provincia)")
                                             .font(.subheadline)
                                             .foregroundColor(.secondary)
-                                    }
-
-                                    if !campo.tipo.isEmpty {
-                                        HStack(spacing: 4) {
-                                            Image(systemName: "soccerball")
-                                                .font(.caption2)
-                                                .foregroundColor(.green)
-                                            Text(campo.tipo)
-                                                .font(.caption)
-                                                .foregroundColor(.green)
-                                                .padding(.horizontal, 8)
-                                                .padding(.vertical, 3)
-                                                .background(Color.green.opacity(0.15))
-                                                .cornerRadius(6)
-                                        }
                                     }
                                 }
                                 Spacer()

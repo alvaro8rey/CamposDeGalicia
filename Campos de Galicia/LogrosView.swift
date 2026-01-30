@@ -85,9 +85,6 @@ struct LogrosView: View {
         .onAppear {
             Task { await boot() }
         }
-        .onChange(of: hasClaimedToday) { wasClaimed, isClaimed in
-            scheduleDailyRewardNotification() // reprograma/cancela según estado
-        }
         .alert(isPresented: $showPermissionAlert) {
             Alert(
                 title: Text(L(.notifDisabledTitle)),
@@ -124,9 +121,6 @@ struct LogrosView: View {
             isProcessing: isProcessingClaim,
             onClaim: {
                 Task { await claimDailyReward() }
-            },
-            onTestNotification: {
-                scheduleOneOffTest(after: 20)
             }
         )
     }
@@ -678,10 +672,9 @@ struct LogrosView: View {
     }
 
     private func scheduleDailyRewardNotification() {
-        guard !hasClaimedToday && !isButtonDisabled else {
-            UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: ["dailyRewardNotification"])
-            return
-        }
+        // Programar la notificación para que se repita todos los días a las 15:00
+        // SIEMPRE se programa, independientemente de si ya se reclamó la recompensa hoy
+        // Esto garantiza que la notificación se envíe todos los días
 
         UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: ["dailyRewardNotification"])
 
@@ -699,22 +692,10 @@ struct LogrosView: View {
 
         UNUserNotificationCenter.current().add(request) { err in
             if let err = err {
-                print("❌ Error al programar diaria: \(err.localizedDescription)")
+                print("❌ Error al programar notificación diaria: \(err.localizedDescription)")
+            } else {
+                print("✅ Notificación diaria programada para las \(DAILY_HOUR):\(String(format: "%02d", DAILY_MIN))")
             }
-        }
-    }
-
-    private func scheduleOneOffTest(after seconds: TimeInterval = 20) {
-        UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: ["test_oneoff"])
-        let content = UNMutableNotificationContent()
-        content.title = L(.testNotificationTitle)
-        content.body  = L(.testNotificationBody, Int(seconds))
-        content.sound = .default
-
-        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: seconds, repeats: false)
-        let req = UNNotificationRequest(identifier: "test_oneoff", content: content, trigger: trigger)
-        UNUserNotificationCenter.current().add(req) { err in
-            if let err = err { print("❌ Error test: \(err.localizedDescription)") }
         }
     }
 

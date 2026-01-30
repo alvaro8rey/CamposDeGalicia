@@ -7,7 +7,6 @@ struct DailyRewardCardView: View {
     let hasClaimedToday: Bool
     let isProcessing: Bool
     let onClaim: () -> Void
-    let onTestNotification: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
@@ -19,11 +18,6 @@ struct DailyRewardCardView: View {
 
             // Action Button
             actionButton
-
-            // Test button (opcional, puedes quitarlo en producción)
-            #if DEBUG
-            testButton
-            #endif
         }
         .padding(20)
         .background(cardBackground)
@@ -147,23 +141,6 @@ struct DailyRewardCardView: View {
         }
     }
 
-    // MARK: - Test Button (Debug)
-    #if DEBUG
-    private var testButton: some View {
-        Button(action: onTestNotification) {
-            HStack(spacing: 4) {
-                Image(systemName: "bell.badge")
-                    .font(.caption)
-                Text(L(.dailyRewardTestNotif))
-                    .font(.caption)
-            }
-            .foregroundColor(.blue)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.top, 4)
-    }
-    #endif
-
     // MARK: - Card Background
     private var cardBackground: some View {
         RoundedRectangle(cornerRadius: 20)
@@ -286,8 +263,7 @@ struct DailyRewardCardView_Previews: PreviewProvider {
                 dailyXP: 30,
                 hasClaimedToday: false,
                 isProcessing: false,
-                onClaim: {},
-                onTestNotification: {}
+                onClaim: {}
             )
 
             // Already claimed
@@ -296,8 +272,7 @@ struct DailyRewardCardView_Previews: PreviewProvider {
                 dailyXP: 75,
                 hasClaimedToday: true,
                 isProcessing: false,
-                onClaim: {},
-                onTestNotification: {}
+                onClaim: {}
             )
 
             // Processing
@@ -306,8 +281,7 @@ struct DailyRewardCardView_Previews: PreviewProvider {
                 dailyXP: 20,
                 hasClaimedToday: false,
                 isProcessing: true,
-                onClaim: {},
-                onTestNotification: {}
+                onClaim: {}
             )
         }
         .padding()

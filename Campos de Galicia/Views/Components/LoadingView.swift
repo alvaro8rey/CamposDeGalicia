@@ -40,7 +40,7 @@ struct LoadingView: View {
                     .padding(.horizontal)
             }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
     }
 }
 
@@ -53,7 +53,8 @@ struct SkeletonLoadingView: View {
             }
         }
         .padding(.horizontal, 16)
-        .padding(.vertical, 8)
+        .padding(.top, 20)
+        .padding(.bottom, 8)
     }
 }
 
@@ -152,6 +153,7 @@ struct SkeletonGridView: View {
             }
         }
         .padding(.horizontal, 16)
+        .padding(.top, 20)
     }
 }
 

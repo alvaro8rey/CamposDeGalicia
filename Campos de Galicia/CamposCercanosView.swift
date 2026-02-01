@@ -65,7 +65,6 @@ struct CamposCercanosView: View {
                     VStack(spacing: 0) {
                         if isLoadingLocation {
                             LoadingView(message: L(.loadingLocation), style: .skeleton)
-                                .padding(.top, 40)
                         } else if let errorMessage = errorMessage {
                             EmptyCard(text: errorMessage)
                                 .padding(.horizontal, 16)

@@ -29,6 +29,7 @@
 		<string>fetch</string>
 		<string>remote-notification</string>
 		<string>location</string>
+		<string>processing</string>
 	</array>
 </dict>
 </plist>

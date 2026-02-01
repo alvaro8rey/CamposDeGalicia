@@ -9,6 +9,8 @@ extension Notification.Name {
 
 @main
 struct AppMain: App {
+    @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
+
     @StateObject private var camposViewModel: CamposViewModel
     @StateObject private var authViewModel = AuthViewModel.shared
     @StateObject private var locationManager = LocationManager()

@@ -28,6 +28,7 @@ struct AppMain: App {
     // Navegación desde notificaciones (deep linking)
     @State private var notificationCampoID: UUID? = nil
     @State private var shouldShowLogros: Bool = false
+    @State private var isProcessingDeepLink: Bool = false
 
     // Task de limpieza periódica
     @State private var cleanupTask: Task<Void, Never>?
@@ -197,6 +198,15 @@ struct AppMain: App {
                     dismissButton: .default(Text(L(.navAccept)))
                 )
             }
+            // Overlay para ocultar transiciones durante navegación desde notificaciones
+            .overlay(
+                Group {
+                    if isProcessingDeepLink {
+                        Color(.systemBackground)
+                            .ignoresSafeArea()
+                    }
+                }
+            )
         }
     }
 
@@ -213,26 +223,47 @@ struct AppMain: App {
 
         print("📱 Manejando acción de notificación: \(action)")
 
-        switch action {
-        case "showCampoDetail":
-            // Navegar a detalle del campo
-            if let campoID = userInfo["campoID"] as? UUID {
-                print("🎯 Navegando a campo: \(campoID)")
-                // Establecer el campo a mostrar
-                notificationCampoID = campoID
-                // Cambiar al tab de inicio (donde está ContentView con la navegación)
-                selectedTab = 0
+        // Activar overlay para ocultar la transición
+        isProcessingDeepLink = true
+
+        // Pequeño delay para permitir que la UI se inicialice antes de navegar
+        // Esto evita el parpadeo visual al cambiar de tab y navegar
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            switch action {
+            case "showCampoDetail":
+                // Navegar a detalle del campo
+                if let campoID = userInfo["campoID"] as? UUID {
+                    print("🎯 Navegando a campo: \(campoID)")
+                    // Cambiar al tab primero
+                    self.selectedTab = 0
+                    // Pequeño delay adicional para que el tab se active antes de navegar
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                        self.notificationCampoID = campoID
+                        // Ocultar overlay después de activar la navegación
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                            self.isProcessingDeepLink = false
+                        }
+                    }
+                }
+
+            case "showLogros":
+                // Navegar a pantalla de logros
+                print("🏆 Navegando a logros")
+                // Cambiar al tab primero
+                self.selectedTab = 3
+                // Pequeño delay adicional para que el tab se active antes de navegar
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                    self.shouldShowLogros = true
+                    // Ocultar overlay después de activar la navegación
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                        self.isProcessingDeepLink = false
+                    }
+                }
+
+            default:
+                print("⚠️ Acción desconocida: \(action)")
+                self.isProcessingDeepLink = false
             }
-
-        case "showLogros":
-            // Navegar a pantalla de logros
-            print("🏆 Navegando a logros")
-            shouldShowLogros = true
-            // Cambiar al tab de perfil (donde está LogrosView)
-            selectedTab = 3
-
-        default:
-            print("⚠️ Acción desconocida: \(action)")
         }
     }
 }

@@ -564,11 +564,33 @@ final class GeofenceManager: NSObject, ObservableObject, CLLocationManagerDelega
 
         print("✅ Dwell completado para \(campo.nombre) - Verificando visita en Supabase...")
 
+        // CRÍTICO: Solicitar tiempo de ejecución en background para completar la tarea
+        // Esto evita que iOS suspenda la app antes de insertar en Supabase y enviar la notificación
+        var backgroundTaskID: UIBackgroundTaskIdentifier = .invalid
+        backgroundTaskID = UIApplication.shared.beginBackgroundTask(withName: "CompleteDwell-\(campo.nombre)") {
+            // Este bloque se ejecuta si se acaba el tiempo (raro, pero posible)
+            print("⚠️ Background task expirado para \(campo.nombre)")
+            UIApplication.shared.endBackgroundTask(backgroundTaskID)
+            backgroundTaskID = .invalid
+        }
+
+        print("🔄 Background task iniciado (ID: \(backgroundTaskID.rawValue)) para procesar dwell de \(campo.nombre)")
+
         Task { [weak self] in
-            guard let self else { return }
+            guard let self else {
+                // Si self es nil, terminar background task
+                if backgroundTaskID != .invalid {
+                    UIApplication.shared.endBackgroundTask(backgroundTaskID)
+                }
+                return
+            }
+
             do {
                 guard let user = supabase.auth.currentUser else {
                     print("❌ No hay usuario autenticado")
+                    if backgroundTaskID != .invalid {
+                        UIApplication.shared.endBackgroundTask(backgroundTaskID)
+                    }
                     return
                 }
                 let userId = user.id.uuidString
@@ -580,6 +602,9 @@ final class GeofenceManager: NSObject, ObservableObject, CLLocationManagerDelega
                 let alreadyVisited = try await self.hasVisit(userId: userId, campoId: campoId)
                 if alreadyVisited {
                     print("ℹ️ Campo \(campo.nombre) ya fue visitado previamente; auto check-in solo funciona para campos nuevos.")
+                    if backgroundTaskID != .invalid {
+                        UIApplication.shared.endBackgroundTask(backgroundTaskID)
+                    }
                     return
                 }
 
@@ -590,17 +615,28 @@ final class GeofenceManager: NSObject, ObservableObject, CLLocationManagerDelega
                 print("✅ Visita registrada exitosamente para \(campo.nombre)")
 
                 // Notificación local
+                print("📲 Enviando notificación para \(campo.nombre)...")
                 await self.notifyAutoCheckin(name: campo.nombre, campoID: campo.id)
+                print("✅ Notificación enviada para \(campo.nombre)")
 
                 // Avisar a la app (para refrescar UI/logros)
                 DispatchQueue.main.async {
                     NotificationCenter.default.post(name: .didUpdateVisits, object: nil)
                 }
+
+                print("✅ Auto check-in completado exitosamente para \(campo.nombre)")
             } catch {
                 print("❌ Error al completar dwell: \(error.localizedDescription)")
                 print("❌ Detalles del error: \(error)")
                 // Notificar al usuario del error
                 await self.notifyAutoCheckinError(name: campo.nombre, error: error)
+            }
+
+            // IMPORTANTE: Terminar background task cuando todo esté completo
+            if backgroundTaskID != .invalid {
+                print("🏁 Background task finalizado (ID: \(backgroundTaskID.rawValue)) para \(campo.nombre)")
+                UIApplication.shared.endBackgroundTask(backgroundTaskID)
+                backgroundTaskID = .invalid
             }
         }
     }

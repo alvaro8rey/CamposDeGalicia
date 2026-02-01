@@ -18,6 +18,12 @@
 	</array>
 	<key>NSUserNotificationsUsageDescription</key>
 	<string>Esta app usa notificaciones para recordarte tus recompensas diarias.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Necesitamos tu ubicación para mostrarte los campos de fútbol cercanos y habilitar el auto check-in.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>Necesitamos acceso a tu ubicación siempre para poder registrar automáticamente tus visitas a los campos incluso cuando la app está en segundo plano.</string>
+	<key>NSLocationAlwaysUsageDescription</key>
+	<string>Necesitamos acceso a tu ubicación siempre para el auto check-in en segundo plano.</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>fetch</string>

@@ -452,7 +452,7 @@ struct InfoSheetView: View {
 struct ProfileView_Previews: PreviewProvider {
     static var previews: some View {
         NavigationView {
-            ProfileView()
+            ProfileView(shouldShowLogros: .constant(false))
                 .environmentObject(AuthViewModel.shared)
                 .environmentObject(GeofenceManager())
                 .environmentObject(LocationManager())

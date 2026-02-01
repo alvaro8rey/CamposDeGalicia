@@ -52,7 +52,10 @@ struct UserView: View {
 // MARK: - Preview
 struct UserView_Previews: PreviewProvider {
     static var previews: some View {
-        UserView(distanciaPredeterminada: .constant(10.0))
+        UserView(
+            distanciaPredeterminada: .constant(10.0),
+            shouldShowLogros: .constant(false)
+        )
             .environmentObject(GeofenceManager())
             .environmentObject(LocationManager())
             .environmentObject(CamposViewModel())

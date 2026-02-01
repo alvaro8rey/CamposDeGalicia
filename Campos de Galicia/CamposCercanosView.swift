@@ -21,6 +21,7 @@ struct CamposCercanosView: View {
     @State private var nearbyCampos: [CampoWithDistance] = []
     @State private var errorMessage: String? = nil
     @State private var selectedDistance: Double
+    @State private var visitedCampoIds: Set<UUID> = []
 
     private let distanceOptions: [Double] = [10.0, 25.0, 50.0]
 
@@ -80,7 +81,7 @@ struct CamposCercanosView: View {
                                     ForEach(nearbyCampos, id: \.campo.id) { item in
                                         NavigationLink(destination: CampoDetalleView(campoID: item.campo.id)
                                             .environmentObject(authViewModel)) {
-                                            CampoRowView_Classic(campoWithDistance: item)
+                                            CampoRowView_Classic(campoWithDistance: item, visitedCampoIds: visitedCampoIds)
                                         }
                                         .buttonStyle(PlainButtonStyle())
                                     }
@@ -111,6 +112,7 @@ struct CamposCercanosView: View {
             .onAppear {
                 updateNearbyCampos()
                 if userLocation == nil { requestLocation() }
+                loadVisitedCampos()
             }
             .onChange(of: userLocation) { oldLocation, newLocation in updateNearbyCampos() }
             .onChange(of: camposViewModel.campos) { oldCampos, newCampos in updateNearbyCampos() }
@@ -168,6 +170,29 @@ struct CamposCercanosView: View {
     // Versión de instancia (mantener por compatibilidad)
     private func calculateDistance(from: CLLocationCoordinate2D, to: CLLocationCoordinate2D) -> Double {
         Self.calculateDistanceStatic(from: from, to: to)
+    }
+
+    private func loadVisitedCampos() {
+        guard let userId = authViewModel.user?.id.uuidString else { return }
+
+        Task {
+            do {
+                let response = try await supabase.from("visitas")
+                    .select("id_campo")
+                    .eq("id_usuario", value: userId)
+                    .execute()
+
+                if let jsonData = try? JSONSerialization.jsonObject(with: response.data) as? [[String: Any]] {
+                    let ids = jsonData.compactMap { dict -> UUID? in
+                        guard let idString = dict["id_campo"] as? String else { return nil }
+                        return UUID(uuidString: idString)
+                    }
+                    visitedCampoIds = Set(ids)
+                }
+            } catch {
+                Logger.error("Error loading visited campos: \(error.localizedDescription)")
+            }
+        }
     }
 }
 
@@ -238,26 +263,42 @@ private struct EmptyCard: View {
 // Card rediseñada con mejor UX
 private struct CampoRowView_Classic: View {
     let campoWithDistance: CampoWithDistance
+    let visitedCampoIds: Set<UUID>
     private let defaultImageURL = "https://ooqdrhkzsexjnmnvpwqw.supabase.co/storage/v1/object/public/fotos-campos/sin-imagen.png"
 
     var body: some View {
         HStack(spacing: 14) {
             let imageURL = (campoWithDistance.campo.foto_url?.isEmpty == false ? campoWithDistance.campo.foto_url : nil) ?? defaultImageURL
             if let url = URL(string: imageURL) {
-                CachedAsyncImage(
-                    url: url,
-                    targetSize: CGSize(width: 120, height: 120)
-                ) { image in
-                    image
-                        .resizable()
-                        .scaledToFill()
-                        .frame(width: 70, height: 70)
-                        .cornerRadius(12)
-                        .clipped()
-                } placeholder: {
-                    Color.gray.opacity(0.3)
-                        .frame(width: 70, height: 70)
-                        .cornerRadius(12)
+                ZStack(alignment: .topTrailing) {
+                    CachedAsyncImage(
+                        url: url,
+                        targetSize: CGSize(width: 120, height: 120)
+                    ) { image in
+                        image
+                            .resizable()
+                            .scaledToFill()
+                            .frame(width: 70, height: 70)
+                            .cornerRadius(12)
+                            .clipped()
+                    } placeholder: {
+                        Color.gray.opacity(0.3)
+                            .frame(width: 70, height: 70)
+                            .cornerRadius(12)
+                    }
+
+                    // Indicador de campo visitado
+                    if visitedCampoIds.contains(campoWithDistance.campo.id) {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.system(size: 20))
+                            .foregroundColor(.orange)
+                            .background(
+                                Circle()
+                                    .fill(Color.white)
+                                    .frame(width: 16, height: 16)
+                            )
+                            .offset(x: 6, y: -6)
+                    }
                 }
             }
 

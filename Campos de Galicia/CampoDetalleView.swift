@@ -29,7 +29,7 @@ struct CampoDetalleView: View {
     @State private var visitSuccessMessage = ""
 
     // MARK: - Constants
-    private let visitRadiusMeters: CLLocationDistance = 500
+    private let visitRadiusMeters: CLLocationDistance = 200
     private let maxAllowedAccuracy: CLLocationAccuracy = 100
     private let defaultImageURL = "https://ooqdrhkzsexjnmnvpwqw.supabase.co/storage/v1/object/public/fotos-campos/sin-imagen.png"
 

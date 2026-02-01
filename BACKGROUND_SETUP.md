@@ -124,7 +124,7 @@ El simulador NO puede probar geofencing real. Para testing básico:
 3. Otorga permiso "Always"
 4. Cierra la app completamente (desliza hacia arriba)
 5. Camina hacia un campo de fútbol
-6. Al entrar en el radio de 500m, iOS despertará la app
+6. Al entrar en el radio de 200m, iOS despertará la app
 7. Después de 120s dentro, recibirás la notificación
 
 ### Debugging en Background
@@ -173,7 +173,7 @@ Busca estos mensajes en la consola:
 
 1. **Verifica que hay campos cargados**: Revisa logs "configurando geovallas para X campos"
 2. **Verifica que las regiones están monitorizadas**: Logs "Total de regiones monitorizadas"
-3. **Asegúrate de estar dentro del radio**: 500 metros del campo
+3. **Asegúrate de estar dentro del radio**: 200 metros del campo
 4. **Espera los 120 segundos completos**: No salgas antes de tiempo
 
 ### La app consume mucha batería

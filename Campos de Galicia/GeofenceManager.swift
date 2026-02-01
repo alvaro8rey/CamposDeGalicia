@@ -7,7 +7,7 @@ import UIKit
 /// Administra geovallas y auto check-in con permanencia (dwell) sin usar GPS continuo.
 /// - Usa requestLocation() puntualmente y Significant Location Changes (muy bajo consumo) para priorizar las 20 geovallas más cercanas.
 /// - El dwell se activa al entrar/estar dentro de la región. Si al completar los 120s ya estaba visitado **hoy**, no inserta.
-/// - Radio: 500 m. Dwell: 120 s.
+/// - Radio: 200 m. Dwell: 120 s.
 final class GeofenceManager: NSObject, ObservableObject, CLLocationManagerDelegate {
 
     // Estado público (solo lectura desde fuera)
@@ -17,7 +17,7 @@ final class GeofenceManager: NSObject, ObservableObject, CLLocationManagerDelega
     private let locationManager = CLLocationManager()
 
     // Config
-    private let regionRadius: CLLocationDistance = 500
+    private let regionRadius: CLLocationDistance = 200
     private let dwellSeconds: TimeInterval = 120
     private let maxRegions: Int = 20
 

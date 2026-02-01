@@ -48,12 +48,6 @@ struct CachedAsyncImage<Content: View, Placeholder: View>: View {
                     }
             }
         }
-        .onDisappear {
-            // Liberar memoria cuando la vista desaparece
-            if loadedImage != nil {
-                loadedImage = nil
-            }
-        }
     }
 
     private func loadImage() {

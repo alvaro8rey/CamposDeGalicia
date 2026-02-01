@@ -64,6 +64,7 @@ final class GeofenceManager: NSObject, ObservableObject, CLLocationManagerDelega
         autoCheckinEnabled = enabled
 
         if enabled {
+            print("🔔 Auto check-in ACTIVADO - configurando geovallas para \(campos.count) campos")
             allCampos = campos
             startMonitoringIfAuthorized()
 
@@ -76,6 +77,7 @@ final class GeofenceManager: NSObject, ObservableObject, CLLocationManagerDelega
             // Refresco en arranque si han pasado >6h
             refreshMonitoredRegionsIfNeeded()
         } else {
+            print("🔕 Auto check-in DESACTIVADO - limpiando geovallas")
             stopAllGeofences()
             invalidateAllDwells()
             recentlyCheckedIn.removeAll()
@@ -202,6 +204,12 @@ final class GeofenceManager: NSObject, ObservableObject, CLLocationManagerDelega
 
         if dayChanged || timeElapsed {
             print("🔄 Geovallas refrescadas automáticamente (dayChanged=\(dayChanged), timeElapsed=\(timeElapsed))")
+            if dayChanged {
+                // Limpiar el Set de campos recientemente visitados al cambiar de día
+                // para permitir nuevas visitas automáticas
+                print("🗓️ Día cambiado - Limpiando campos recientemente visitados")
+                recentlyCheckedIn.removeAll()
+            }
             registerGeofences()
         }
     }
@@ -211,10 +219,16 @@ final class GeofenceManager: NSObject, ObservableObject, CLLocationManagerDelega
     private func startDwell(for campo: CampoModel) {
         let id = campo.id
         // Si ya se disparó recientemente (o ya hay dwell corriendo), no duplicar
-        if recentlyCheckedIn.contains(id) { return }
-        if pendingDwells[id] != nil { return }
+        if recentlyCheckedIn.contains(id) {
+            print("⏭️ Campo \(campo.nombre) ya marcado en recentlyCheckedIn - ignorando dwell")
+            return
+        }
+        if pendingDwells[id] != nil {
+            print("⏭️ Ya hay dwell en curso para \(campo.nombre) - ignorando")
+            return
+        }
 
-        print("⏱️ Empezando dwell para \(campo.nombre)")
+        print("⏱️ Empezando dwell de \(Int(dwellSeconds))s para \(campo.nombre) (ID: \(id))")
         let timer = Timer.scheduledTimer(withTimeInterval: dwellSeconds, repeats: false) { [weak self] _ in
             self?.completeDwell(for: campo)
         }
@@ -233,25 +247,33 @@ final class GeofenceManager: NSObject, ObservableObject, CLLocationManagerDelega
     private func completeDwell(for campo: CampoModel) {
         // El dwell se ha cumplido; valida en Supabase antes de insertar
         pendingDwells.removeValue(forKey: campo.id)
+        print("✅ Dwell completado para \(campo.nombre) - Verificando visita en Supabase...")
+
         Task { [weak self] in
             guard let self else { return }
             do {
-                guard let user = supabase.auth.currentUser else { return }
+                guard let user = supabase.auth.currentUser else {
+                    print("❌ No hay usuario autenticado")
+                    return
+                }
                 let userId = user.id.uuidString
                 let campoId = campo.id.uuidString
 
-                // 1) ¿Ya hay visita registrada?
+                print("🔍 Verificando si ya existe visita HOY para usuario \(userId) en campo \(campoId)")
+
+                // 1) ¿Ya hay visita registrada HOY?
                 let alreadyVisited = try await self.hasVisit(userId: userId, campoId: campoId)
                 if alreadyVisited {
-                    print("ℹ️ Ya existía visita para \(campo.nombre); no se duplica.")
+                    print("ℹ️ Ya existía visita HOY para \(campo.nombre); no se duplica.")
                     self.recentlyCheckedIn.insert(campo.id)
                     return
                 }
 
                 // 2) Insertar visita
+                print("💾 Insertando nueva visita para \(campo.nombre)...")
                 let visita: [String: String] = ["id_usuario": userId, "id_campo": campoId]
                 _ = try await supabase.from("visitas").insert(visita).execute()
-                print("✅ Visita registrada para \(campo.nombre)")
+                print("✅ Visita registrada exitosamente para \(campo.nombre)")
 
                 // Evita repetir mientras sigas dentro
                 self.recentlyCheckedIn.insert(campo.id)
@@ -265,6 +287,7 @@ final class GeofenceManager: NSObject, ObservableObject, CLLocationManagerDelega
                 }
             } catch {
                 print("❌ Error al completar dwell: \(error.localizedDescription)")
+                print("❌ Detalles del error: \(error)")
                 // Notificar al usuario del error
                 await self.notifyAutoCheckinError(name: campo.nombre, error: error)
             }
@@ -273,18 +296,39 @@ final class GeofenceManager: NSObject, ObservableObject, CLLocationManagerDelega
 
     // MARK: - Supabase helpers
 
-    /// Comprueba si existe ya una visita para (usuario, campo) sin importar la fecha.
+    /// Comprueba si existe ya una visita para (usuario, campo) HOY.
     private func hasVisit(userId: String, campoId: String) async throws -> Bool {
+        // Calcular inicio y fin del día actual en UTC
+        let calendar = Calendar.current
+        let now = Date()
+        guard let startOfDay = calendar.startOfDay(for: now) as Date?,
+              let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay) else {
+            print("❌ Error calculando inicio/fin del día")
+            return false
+        }
+
+        // Formatear fechas en ISO 8601 para Supabase
+        let isoFormatter = ISO8601DateFormatter()
+        isoFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        let startISO = isoFormatter.string(from: startOfDay)
+        let endISO = isoFormatter.string(from: endOfDay)
+
+        print("🔍 Verificando visita HOY entre \(startISO) y \(endISO)")
+
         let resp = try await supabase
             .from("visitas")
-            .select("id", head: false, count: .exact)
+            .select("id, created_at", head: false, count: .exact)
             .eq("id_usuario", value: userId)
             .eq("id_campo", value: campoId)
+            .gte("created_at", value: startISO)
+            .lt("created_at", value: endISO)
             .limit(1)
             .execute()
 
         if let json = try? JSONSerialization.jsonObject(with: resp.data) as? [[String: Any]] {
-            return !json.isEmpty
+            let hasVisitToday = !json.isEmpty
+            print(hasVisitToday ? "✅ Ya existe visita HOY" : "ℹ️ No existe visita HOY")
+            return hasVisitToday
         }
         return false
     }
@@ -366,33 +410,52 @@ final class GeofenceManager: NSObject, ObservableObject, CLLocationManagerDelega
     }
 
     func locationManager(_ manager: CLLocationManager, didDetermineState state: CLRegionState, for region: CLRegion) {
-        guard let campo = campo(for: region.identifier) else { return }
+        guard let campo = campo(for: region.identifier) else {
+            print("⚠️ Campo no encontrado para región \(region.identifier)")
+            return
+        }
+        print("📍 didDetermineState: \(state.rawValue == 1 ? "INSIDE" : state.rawValue == 2 ? "OUTSIDE" : "UNKNOWN") para \(campo.nombre)")
         switch state {
         case .inside:
             if !recentlyCheckedIn.contains(campo.id) {
+                print("✅ Usuario DENTRO de \(campo.nombre) - iniciando dwell")
                 startDwell(for: campo)
+            } else {
+                print("ℹ️ Usuario DENTRO de \(campo.nombre) pero ya está en recentlyCheckedIn")
             }
         case .outside:
+            print("🚪 Usuario FUERA de \(campo.nombre) - cancelando dwell")
             cancelDwell(for: campo)
             recentlyCheckedIn.remove(campo.id)
         case .unknown:
+            print("❓ Estado desconocido para \(campo.nombre)")
             break
         @unknown default:
             break
         }
-        print("ℹ️ didDetermineState=\(state.rawValue): \(region.identifier)")
     }
 
     func locationManager(_ manager: CLLocationManager, didEnterRegion region: CLRegion) {
-        guard let campo = campo(for: region.identifier) else { return }
+        guard let campo = campo(for: region.identifier) else {
+            print("⚠️ Campo no encontrado para región \(region.identifier)")
+            return
+        }
+        print("🚶 didEnterRegion: Usuario ENTRÓ en \(campo.nombre)")
         if !recentlyCheckedIn.contains(campo.id) {
             startDwell(for: campo)
+        } else {
+            print("ℹ️ Campo \(campo.nombre) ya está en recentlyCheckedIn - no iniciando dwell")
         }
     }
 
     func locationManager(_ manager: CLLocationManager, didExitRegion region: CLRegion) {
-        guard let campo = campo(for: region.identifier) else { return }
+        guard let campo = campo(for: region.identifier) else {
+            print("⚠️ Campo no encontrado para región \(region.identifier)")
+            return
+        }
+        print("🚶‍♂️ didExitRegion: Usuario SALIÓ de \(campo.nombre)")
         cancelDwell(for: campo)
         recentlyCheckedIn.remove(campo.id)
+        print("🗑️ Campo \(campo.nombre) removido de recentlyCheckedIn")
     }
 }

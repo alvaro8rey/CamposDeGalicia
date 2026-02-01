@@ -705,6 +705,11 @@ struct LogrosView: View {
         content.body  = L(.dailyRewardNotificationBody)
         content.sound = .default
 
+        // Agregar datos para deep linking
+        content.userInfo = [
+            "type": "dailyReward"
+        ]
+
         // NO usar repeats: true, programar solo para la próxima vez válida
         let trigger = UNCalendarNotificationTrigger(dateMatching: triggerDate, repeats: false)
         let request = UNNotificationRequest(identifier: "dailyRewardNotification", content: content, trigger: trigger)

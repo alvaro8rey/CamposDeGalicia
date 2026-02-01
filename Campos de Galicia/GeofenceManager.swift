@@ -355,7 +355,7 @@ final class GeofenceManager: NSObject, ObservableObject, CLLocationManagerDelega
                 self.recentlyCheckedIn.insert(campo.id)
 
                 // Notificación local
-                await self.notifyAutoCheckin(name: campo.nombre)
+                await self.notifyAutoCheckin(name: campo.nombre, campoID: campo.id)
 
                 // Avisar a la app (para refrescar UI/logros)
                 DispatchQueue.main.async {
@@ -395,11 +395,18 @@ final class GeofenceManager: NSObject, ObservableObject, CLLocationManagerDelega
     }
 
     @MainActor
-    private func notifyAutoCheckin(name: String) async {
+    private func notifyAutoCheckin(name: String, campoID: UUID) async {
         let content = UNMutableNotificationContent()
         content.title = L(.notifAutoCheckinTitle)
         content.body = L(.notifAutoCheckinBody, name)
         content.sound = .default
+
+        // Agregar datos para deep linking
+        content.userInfo = [
+            "type": "autoCheckin",
+            "campoID": campoID.uuidString,
+            "campoName": name
+        ]
 
         let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false)
         let req = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: trigger)

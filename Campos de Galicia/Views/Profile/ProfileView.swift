@@ -19,6 +19,9 @@ struct ProfileView: View {
     @State private var showVisitDetails: Bool = false
     @State private var showSettings: Bool = false
 
+    // MARK: - Bindings (para navegación desde notificaciones)
+    @Binding var shouldShowLogros: Bool
+
     // MARK: - Body
     var body: some View {
         ZStack {
@@ -196,9 +199,12 @@ struct ProfileView: View {
 
     // MARK: - Achievements Section
     private var achievementsSection: some View {
-        NavigationLink(destination: LogrosView().onAppear {
-            profileVM.resetNewAchievementsCount()
-        }) {
+        NavigationLink(
+            destination: LogrosView().onAppear {
+                profileVM.resetNewAchievementsCount()
+            },
+            isActive: $shouldShowLogros
+        ) {
             VStack(alignment: .leading, spacing: 16) {
                 HStack {
                     Text(L(.logrosTitle))

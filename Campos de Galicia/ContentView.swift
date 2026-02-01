@@ -21,6 +21,9 @@ struct ContentView: View {
     // Lista de campos y estado de carga gestionados por el view model
     @Binding var distanciaPredeterminada: Double // Añadimos el binding
 
+    // Binding para navegación desde notificaciones
+    @Binding var notificationCampoID: UUID?
+
     // Lista de campos filtrada
     @State private var filteredCampos: [CampoModel] = []
 
@@ -149,6 +152,19 @@ struct ContentView: View {
         .fullScreenCover(isPresented: $showOnboarding) {
             OnboardingView() // Este view marca hasSeenOnboarding = true al terminar
         }
+        // NavigationLink invisible para navegación desde notificaciones
+        .background(
+            NavigationLink(
+                destination: notificationCampoID.map { CampoDetalleView(campoID: $0) },
+                isActive: Binding(
+                    get: { notificationCampoID != nil },
+                    set: { if !$0 { notificationCampoID = nil } }
+                )
+            ) {
+                EmptyView()
+            }
+            .hidden()
+        )
     }
 
     func applyFilters() {

@@ -12,6 +12,7 @@ struct UserView: View {
 
     // MARK: - Binding
     @Binding var distanciaPredeterminada: Double
+    @Binding var shouldShowLogros: Bool
 
     // MARK: - Body
     var body: some View {
@@ -19,7 +20,7 @@ struct UserView: View {
             if authViewModel.isAuthenticated, let _ = authViewModel.user {
                 // Authenticated View - Show Profile
                 NavigationView {
-                    ProfileView()
+                    ProfileView(shouldShowLogros: $shouldShowLogros)
                         .environmentObject(authViewModel)
                         .environmentObject(geofenceManager)
                         .environmentObject(locationManager)

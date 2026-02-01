@@ -25,6 +25,10 @@ struct AppMain: App {
     @State private var showExitRouteAlert: Bool = false
     @State private var pendingTab: Int = 0
 
+    // Navegación desde notificaciones (deep linking)
+    @State private var notificationCampoID: UUID? = nil
+    @State private var shouldShowLogros: Bool = false
+
     // Task de limpieza periódica
     @State private var cleanupTask: Task<Void, Never>?
 
@@ -70,7 +74,10 @@ struct AppMain: App {
             )) {
                 // TAB 0: INICIO
                 NavigationView {
-                    ContentView(distanciaPredeterminada: $distanciaPredeterminada)
+                    ContentView(
+                        distanciaPredeterminada: $distanciaPredeterminada,
+                        notificationCampoID: $notificationCampoID
+                    )
                         .environmentObject(camposViewModel)
                         .environmentObject(authViewModel)
                 }
@@ -115,7 +122,10 @@ struct AppMain: App {
 
                 // TAB 3: USUARIO
                 NavigationView {
-                    UserView(distanciaPredeterminada: $distanciaPredeterminada)
+                    UserView(
+                        distanciaPredeterminada: $distanciaPredeterminada,
+                        shouldShowLogros: $shouldShowLogros
+                    )
                         .environmentObject(camposViewModel)
                         .environmentObject(authViewModel)
                 }
@@ -156,6 +166,10 @@ struct AppMain: App {
             .onOpenURL { url in
                 handleDeepLink(url: url)
             }
+            // Manejar navegación desde notificaciones
+            .onReceive(NotificationCenter.default.publisher(for: .didTapNotification)) { notification in
+                handleNotificationNavigation(notification: notification)
+            }
             // Alerta de seguridad para rutas activas
             .alert(L(.navRouteInProgress), isPresented: $showExitRouteAlert) {
                 Button(L(.navContinueRoute), role: .cancel) {
@@ -189,6 +203,37 @@ struct AppMain: App {
     func handleDeepLink(url: URL) {
         guard url.scheme == "camposdegalicia" else { return }
         // ... (Lógica de autenticación mantenida)
+    }
+
+    func handleNotificationNavigation(notification: Notification) {
+        guard let userInfo = notification.userInfo,
+              let action = userInfo["action"] as? String else {
+            return
+        }
+
+        print("📱 Manejando acción de notificación: \(action)")
+
+        switch action {
+        case "showCampoDetail":
+            // Navegar a detalle del campo
+            if let campoID = userInfo["campoID"] as? UUID {
+                print("🎯 Navegando a campo: \(campoID)")
+                // Establecer el campo a mostrar
+                notificationCampoID = campoID
+                // Cambiar al tab de inicio (donde está ContentView con la navegación)
+                selectedTab = 0
+            }
+
+        case "showLogros":
+            // Navegar a pantalla de logros
+            print("🏆 Navegando a logros")
+            shouldShowLogros = true
+            // Cambiar al tab de perfil (donde está LogrosView)
+            selectedTab = 3
+
+        default:
+            print("⚠️ Acción desconocida: \(action)")
+        }
     }
 }
 

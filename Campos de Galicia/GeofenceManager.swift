@@ -27,23 +27,14 @@ final class GeofenceManager: NSObject, ObservableObject, CLLocationManagerDelega
     // Datos
     private var allCampos: [CampoModel] = []
     private var lastKnownLocation: CLLocation?
-
-    // NUEVO: Sistema de dwell sin timers, usando persistencia en disco
-    // Esto permite que funcione incluso si iOS suspende/mata la app
-    private let dwellStartTimesKey = "gf_dwell_start_times"
-    private let recentlyCheckedInKey = "gf_recently_checked_in"
-    private let completedDwellsKey = "gf_completed_dwells"  // Campos que ya completaron dwell y están esperando salida
-
-    // Timer para verificación activa en foreground (mejora UX)
-    // En background se usa solo el sistema de persistencia
-    private var dwellCheckTimer: Timer?
-    private let dwellCheckInterval: TimeInterval = 15 // Verifica cada 15s en foreground
+    private var pendingDwells: [UUID: Timer] = [:]
+    private var dwellStartTimes: [UUID: Date] = [:]  // Timestamp de entrada para verificación alternativa
+    private var recentlyCheckedIn: Set<UUID> = []   // Evita múltiples registros mientras permaneces en el área
 
     // Auto-refresh
     private let refreshInterval: TimeInterval = 6 * 60 * 60 // 6h
     private let lastRefreshKey = "gf_last_refresh_ts"
     private var appActiveObserver: NSObjectProtocol?
-    private var appBackgroundObserver: NSObjectProtocol?
 
     override init() {
         super.init()
@@ -64,38 +55,14 @@ final class GeofenceManager: NSObject, ObservableObject, CLLocationManagerDelega
             object: nil,
             queue: .main
         ) { [weak self] _ in
-            print("📱 App activada - verificando dwells pendientes y activando timer de foreground")
+            print("📱 App activada - verificando dwells pendientes")
             self?.checkPendingDwells()
             self?.refreshMonitoredRegionsIfNeeded()
-
-            // Iniciar timer de verificación en foreground si hay auto check-in activo
-            if self?.autoCheckinEnabled == true {
-                self?.startDwellCheckTimer()
-            }
-        }
-
-        // Observa cuando la app va a background para detener el timer (optimiza batería)
-        appBackgroundObserver = NotificationCenter.default.addObserver(
-            forName: UIApplication.willResignActiveNotification,
-            object: nil,
-            queue: .main
-        ) { [weak self] _ in
-            print("📱 App yendo a background - deteniendo timer de foreground (se usará sistema de persistencia)")
-            self?.stopDwellCheckTimer()
-        }
-
-        // Si el auto check-in ya estaba habilitado, iniciar el timer
-        if autoCheckinEnabled {
-            startDwellCheckTimer()
         }
     }
 
     deinit {
-        stopDwellCheckTimer()
         if let obs = appActiveObserver {
-            NotificationCenter.default.removeObserver(obs)
-        }
-        if let obs = appBackgroundObserver {
             NotificationCenter.default.removeObserver(obs)
         }
     }
@@ -112,16 +79,6 @@ final class GeofenceManager: NSObject, ObservableObject, CLLocationManagerDelega
         if enabled {
             print("🔔 Auto check-in ACTIVADO - configurando geovallas para \(campos.count) campos")
             allCampos = campos
-
-            // CRÍTICO: Intentar usar la ubicación en caché del sistema antes de registrar geovallas
-            // Esto evita el problema de registrar sin ordenar cuando la app arranca
-            if let cachedLocation = locationManager.location {
-                lastKnownLocation = cachedLocation
-                print("📍 Usando ubicación en caché: lat=\(cachedLocation.coordinate.latitude), lon=\(cachedLocation.coordinate.longitude)")
-            } else {
-                print("⚠️ No hay ubicación en caché - esperando requestLocation()")
-            }
-
             startMonitoringIfAuthorized()
 
             // Posición puntual para priorizar las más cercanas (una sola vez)
@@ -132,17 +89,12 @@ final class GeofenceManager: NSObject, ObservableObject, CLLocationManagerDelega
 
             // Refresco en arranque si han pasado >6h
             refreshMonitoredRegionsIfNeeded()
-
-            // Iniciar timer de verificación activa en foreground
-            startDwellCheckTimer()
         } else {
             print("🔕 Auto check-in DESACTIVADO - limpiando geovallas")
             stopAllGeofences()
             invalidateAllDwells()
+            recentlyCheckedIn.removeAll()
             locationManager.stopMonitoringSignificantLocationChanges()
-
-            // Detener timer de verificación
-            stopDwellCheckTimer()
         }
     }
 
@@ -154,12 +106,14 @@ final class GeofenceManager: NSObject, ObservableObject, CLLocationManagerDelega
         registerGeofences()
     }
 
-    /// Cancela el dwell para un campo (llamar cuando se marca manualmente)
+    /// Cancela el temporizador de dwell para un campo (llamar cuando se marca manualmente)
     func cancelPendingDwell(for campoId: UUID) {
-        removeDwellStartTime(for: campoId)
-        removeCompletedDwell(for: campoId)
-        addToRecentlyCheckedIn(campoId)
-        print("🛑 Dwell cancelado para campo \(campoId) (marca manual)")
+        if let timer = pendingDwells.removeValue(forKey: campoId) {
+            timer.invalidate()
+            print("🛑 Dwell cancelado para campo \(campoId) (marca manual)")
+        }
+        // Marcar como recientemente visitado para evitar que se reactive
+        recentlyCheckedIn.insert(campoId)
     }
 
     /// Diagnóstico: Muestra el estado actual del sistema de geovallas
@@ -176,34 +130,20 @@ final class GeofenceManager: NSObject, ObservableObject, CLLocationManagerDelega
                 print("  - \(campo.nombre) (ID: \(region.identifier))")
             }
         }
-
-        let dwellTimes = getDwellStartTimes()
-        print("Dwells pendientes: \(dwellTimes.count)")
-        for (idString, timestamp) in dwellTimes {
-            guard let id = UUID(uuidString: idString),
-                  let campo = allCampos.first(where: { $0.id == id }) else { continue }
-            let startTime = Date(timeIntervalSince1970: timestamp)
-            let elapsed = Int(Date().timeIntervalSince(startTime))
-            let remaining = max(0, Int(dwellSeconds) - elapsed)
-            print("  - \(campo.nombre) (transcurridos: \(elapsed)s, restantes: \(remaining)s)")
+        print("Dwells pendientes: \(pendingDwells.count)")
+        for (id, _) in pendingDwells {
+            if let campo = allCampos.first(where: { $0.id == id }) {
+                let elapsed = dwellStartTimes[id].map { Int(Date().timeIntervalSince($0)) } ?? 0
+                let remaining = max(0, Int(dwellSeconds) - elapsed)
+                print("  - \(campo.nombre) (transcurridos: \(elapsed)s, restantes: \(remaining)s)")
+            }
         }
-
-        let recentlyChecked = getRecentlyCheckedIn()
-        print("Campos en recentlyCheckedIn: \(recentlyChecked.count)")
-        for idString in recentlyChecked {
-            guard let id = UUID(uuidString: idString),
-                  let campo = allCampos.first(where: { $0.id == id }) else { continue }
-            print("  - \(campo.nombre)")
+        print("Campos en recentlyCheckedIn: \(recentlyCheckedIn.count)")
+        for id in recentlyCheckedIn {
+            if let campo = allCampos.first(where: { $0.id == id }) {
+                print("  - \(campo.nombre)")
+            }
         }
-
-        let completed = getCompletedDwells()
-        print("Dwells completados (esperando salida): \(completed.count)")
-        for idString in completed {
-            guard let id = UUID(uuidString: idString),
-                  let campo = allCampos.first(where: { $0.id == id }) else { continue }
-            print("  - \(campo.nombre)")
-        }
-
         print("Autorización ubicación: \(locationManager.authorizationStatus.rawValue)")
         print("━━━━━━━━━━━━━━━━━━━━━━━━━━━\n")
     }
@@ -237,15 +177,12 @@ final class GeofenceManager: NSObject, ObservableObject, CLLocationManagerDelega
 
         // Mover cálculos de distancia a background thread
         Task.detached(priority: .utility) {
-            // SIEMPRE filtrar campos sin coordenadas
-            let camposValidos = campos.filter { $0.latitud != nil && $0.longitud != nil }
-
             let ordered: [CampoModel]
             if let loc = location {
                 // Calcular distancias en background
-                let camposWithDistances = camposValidos.map { campo -> (campo: CampoModel, distance: Double) in
-                    let campoLoc = CLLocation(latitude: campo.latitud!, longitude: campo.longitud!)
-                    let distance = loc.distance(from: campoLoc)
+                let camposWithDistances = campos.compactMap { campo -> (campo: CampoModel, distance: Double)? in
+                    guard let alat = campo.latitud, let alon = campo.longitud else { return nil }
+                    let distance = loc.distance(from: CLLocation(latitude: alat, longitude: alon))
                     return (campo, distance)
                 }
                 // Ordenar por distancia
@@ -253,34 +190,24 @@ final class GeofenceManager: NSObject, ObservableObject, CLLocationManagerDelega
                     .sorted { $0.distance < $1.distance }
                     .map { $0.campo }
             } else {
-                // Sin ubicación, usar campos válidos sin ordenar
-                ordered = camposValidos
+                // Sin ubicación, usar todos los campos
+                ordered = campos
             }
 
             let toMonitor = Array(ordered.prefix(maxRegionsCount))
 
             // Registrar geofences en main thread (requerido por CLLocationManager)
             await MainActor.run {
-                let camposValidos = campos.filter { $0.latitud != nil && $0.longitud != nil }
-                let camposSinCoordenadas = campos.count - camposValidos.count
-
-                print("📍 Registrando \(toMonitor.count) geofences de \(camposValidos.count) campos con coordenadas")
-                if camposSinCoordenadas > 0 {
-                    print("ℹ️ Ignorados \(camposSinCoordenadas) campos sin coordenadas")
-                }
+                print("📍 Registrando \(toMonitor.count) geofences de \(campos.count) campos totales")
 
                 if let loc = location {
                     print("📍 Ubicación actual: lat=\(loc.coordinate.latitude), lon=\(loc.coordinate.longitude)")
-                    print("📍 Campos ordenados por distancia (más cercano primero)")
                 } else {
-                    print("⚠️ No hay ubicación conocida - usando campos sin ordenar por distancia")
+                    print("⚠️ No hay ubicación conocida - usando todos los campos sin priorizar")
                 }
 
                 for (index, campo) in toMonitor.enumerated() {
-                    guard let lat = campo.latitud, let lon = campo.longitud else {
-                        print("⚠️ ADVERTENCIA: Campo \(campo.nombre) no tiene coordenadas - saltando")
-                        continue
-                    }
+                    guard let lat = campo.latitud, let lon = campo.longitud else { continue }
                     let campoLoc = CLLocation(latitude: lat, longitude: lon)
                     let distance = location?.distance(from: campoLoc) ?? 0
 
@@ -318,85 +245,9 @@ final class GeofenceManager: NSObject, ObservableObject, CLLocationManagerDelega
     }
 
     private func invalidateAllDwells() {
-        // Limpiar toda la persistencia de dwells
-        UserDefaults.standard.removeObject(forKey: dwellStartTimesKey)
-        UserDefaults.standard.removeObject(forKey: recentlyCheckedInKey)
-        UserDefaults.standard.removeObject(forKey: completedDwellsKey)
-        print("🗑️ Limpiados todos los dwells persistentes")
-    }
-
-    // MARK: - Persistencia de Dwell (sin Timers, funciona en background)
-
-    /// Guarda el timestamp de entrada a una geovalla
-    private func saveDwellStartTime(for campoId: UUID, at time: Date) {
-        var times = getDwellStartTimes()
-        times[campoId.uuidString] = time.timeIntervalSince1970
-        UserDefaults.standard.set(times, forKey: dwellStartTimesKey)
-        print("💾 Guardado timestamp de entrada para \(campoId): \(time)")
-    }
-
-    /// Obtiene todos los timestamps de entrada guardados
-    private func getDwellStartTimes() -> [String: TimeInterval] {
-        return UserDefaults.standard.dictionary(forKey: dwellStartTimesKey) as? [String: TimeInterval] ?? [:]
-    }
-
-    /// Obtiene el timestamp de entrada para un campo específico
-    private func getDwellStartTime(for campoId: UUID) -> Date? {
-        let times = getDwellStartTimes()
-        guard let timestamp = times[campoId.uuidString] else { return nil }
-        return Date(timeIntervalSince1970: timestamp)
-    }
-
-    /// Elimina el timestamp de entrada
-    private func removeDwellStartTime(for campoId: UUID) {
-        var times = getDwellStartTimes()
-        times.removeValue(forKey: campoId.uuidString)
-        UserDefaults.standard.set(times, forKey: dwellStartTimesKey)
-    }
-
-    /// Marca un campo como que ya completó el dwell (esperando salida para limpiar)
-    private func markDwellCompleted(for campoId: UUID) {
-        var completed = getCompletedDwells()
-        completed.insert(campoId.uuidString)
-        UserDefaults.standard.set(Array(completed), forKey: completedDwellsKey)
-    }
-
-    /// Obtiene los campos que ya completaron dwell
-    private func getCompletedDwells() -> Set<String> {
-        let array = UserDefaults.standard.array(forKey: completedDwellsKey) as? [String] ?? []
-        return Set(array)
-    }
-
-    /// Limpia el estado de dwell completado
-    private func removeCompletedDwell(for campoId: UUID) {
-        var completed = getCompletedDwells()
-        completed.remove(campoId.uuidString)
-        UserDefaults.standard.set(Array(completed), forKey: completedDwellsKey)
-    }
-
-    /// Guarda un campo en recently checked in
-    private func addToRecentlyCheckedIn(_ campoId: UUID) {
-        var recent = getRecentlyCheckedIn()
-        recent.insert(campoId.uuidString)
-        UserDefaults.standard.set(Array(recent), forKey: recentlyCheckedInKey)
-    }
-
-    /// Obtiene los campos en recently checked in
-    private func getRecentlyCheckedIn() -> Set<String> {
-        let array = UserDefaults.standard.array(forKey: recentlyCheckedInKey) as? [String] ?? []
-        return Set(array)
-    }
-
-    /// Verifica si un campo está en recently checked in
-    private func isRecentlyCheckedIn(_ campoId: UUID) -> Bool {
-        return getRecentlyCheckedIn().contains(campoId.uuidString)
-    }
-
-    /// Limpia recently checked in para un campo (cuando sale de la geovalla)
-    private func removeFromRecentlyCheckedIn(_ campoId: UUID) {
-        var recent = getRecentlyCheckedIn()
-        recent.remove(campoId.uuidString)
-        UserDefaults.standard.set(Array(recent), forKey: recentlyCheckedInKey)
+        pendingDwells.values.forEach { $0.invalidate() }
+        pendingDwells.removeAll()
+        dwellStartTimes.removeAll()
     }
 
     // Refresca geovallas si han pasado > refreshInterval o cambió el día
@@ -416,181 +267,79 @@ final class GeofenceManager: NSObject, ObservableObject, CLLocationManagerDelega
         }
     }
 
-    // MARK: - Dwell (Sistema sin Timers, funciona en background)
+    // MARK: - Dwell
 
-    /// Inicia el seguimiento de permanencia para un campo (INSIDE)
     private func startDwell(for campo: CampoModel) {
         let id = campo.id
-
-        // Si ya completó el dwell, no hacer nada
-        if getCompletedDwells().contains(id.uuidString) {
-            print("⏭️ Campo \(campo.nombre) ya completó dwell - esperando salida para limpiar")
+        // Si ya se disparó recientemente (o ya hay dwell corriendo), no duplicar
+        if recentlyCheckedIn.contains(id) {
+            print("⏭️ Campo \(campo.nombre) ya marcado en recentlyCheckedIn - ignorando dwell")
+            return
+        }
+        if pendingDwells[id] != nil {
+            print("⏭️ Ya hay dwell en curso para \(campo.nombre) - ignorando")
             return
         }
 
-        // Si ya se registró recientemente, no duplicar
-        if isRecentlyCheckedIn(id) {
-            print("⏭️ Campo \(campo.nombre) ya en recentlyCheckedIn - ignorando")
-            return
-        }
-
-        // Si ya tiene timestamp de inicio, verificar si cumplió el tiempo
-        if let startTime = getDwellStartTime(for: id) {
-            let elapsed = Date().timeIntervalSince(startTime)
-            print("⏱️ Dwell en curso para \(campo.nombre) - Transcurridos: \(Int(elapsed))s de \(Int(dwellSeconds))s")
-
-            if elapsed >= dwellSeconds {
-                print("✅ Dwell cumplido para \(campo.nombre) - ejecutando auto check-in")
-                completeDwell(for: campo)
-            }
-            return
-        }
-
-        // Primera vez que entra: guardar timestamp
         let now = Date()
-        saveDwellStartTime(for: id, at: now)
-        print("⏱️ Iniciando dwell para \(campo.nombre) - se completará en \(Int(dwellSeconds))s")
+        dwellStartTimes[id] = now
+        print("⏱️ Empezando dwell de \(Int(dwellSeconds))s para \(campo.nombre) (ID: \(id)) - Inicio: \(now)")
+
+        let timer = Timer.scheduledTimer(withTimeInterval: dwellSeconds, repeats: false) { [weak self] _ in
+            self?.completeDwell(for: campo)
+        }
+        // Añade a run loop común para mayor fiabilidad
+        RunLoop.main.add(timer, forMode: .common)
+        pendingDwells[id] = timer
+
+        // IMPORTANTE: Programar verificación alternativa usando background task
+        // para casos donde el timer no funcione en background
+        scheduleBackgroundVerification(for: campo)
     }
 
-    /// Cancela el dwell al salir de la geovalla (OUTSIDE)
     private func cancelDwell(for campo: CampoModel) {
-        let id = campo.id
-
-        // Si ya completó el dwell, verificar si fue hace poco
-        if getCompletedDwells().contains(id.uuidString) {
-            print("🚪 Saliendo de \(campo.nombre) - dwell ya completado, limpiando estado")
-            removeCompletedDwell(for: id)
-            removeFromRecentlyCheckedIn(id)
-            removeDwellStartTime(for: id)
-            return
+        if let t = pendingDwells.removeValue(forKey: campo.id) {
+            t.invalidate()
+            print("🛑 Cancel dwell \(campo.nombre)")
         }
-
-        // Si estaba en dwell pero no completó, verificar el tiempo antes de cancelar
-        if let startTime = getDwellStartTime(for: id) {
-            let elapsed = Date().timeIntervalSince(startTime)
-            print("🚪 Saliendo de \(campo.nombre) - Tiempo dentro: \(Int(elapsed))s de \(Int(dwellSeconds))s requeridos")
-
-            // Si estuvo dentro el tiempo suficiente justo antes de salir, completar el dwell
-            if elapsed >= dwellSeconds {
-                print("✅ Cumplió el tiempo justo antes de salir - ejecutando auto check-in")
-                completeDwell(for: campo)
-                return
-            }
-
-            // No cumplió el tiempo, limpiar
-            print("❌ No cumplió el tiempo mínimo - cancelando dwell")
-            removeDwellStartTime(for: id)
-        }
-
-        // Limpiar recentlyCheckedIn al salir
-        removeFromRecentlyCheckedIn(id)
+        dwellStartTimes.removeValue(forKey: campo.id)
     }
 
-    /// Verifica todos los dwells pendientes (llamado al activar app o en eventos de ubicación)
+    /// Programa una verificación en background por si el timer no funciona
+    private func scheduleBackgroundVerification(for campo: CampoModel) {
+        // Esta función se llamará cuando volvamos a recibir actualizaciones de ubicación
+        // o cuando se detecte de nuevo el estado de la región
+        print("📝 Programada verificación alternativa para \(campo.nombre)")
+    }
+
+    /// Verifica si algún campo ha cumplido el dwell time sin que se haya disparado el timer
     private func checkPendingDwells() {
         let now = Date()
-        let times = getDwellStartTimes()
-
-        print("🔍 Verificando \(times.count) dwells pendientes...")
-
-        for (campoIdString, timestamp) in times {
-            guard let campoId = UUID(uuidString: campoIdString),
-                  let campo = allCampos.first(where: { $0.id == campoId }) else {
-                continue
-            }
-
-            let startTime = Date(timeIntervalSince1970: timestamp)
+        for (campoId, startTime) in dwellStartTimes {
             let elapsed = now.timeIntervalSince(startTime)
-
-            // Si ya completó el dwell, skip
-            if getCompletedDwells().contains(campoIdString) {
-                continue
-            }
-
             if elapsed >= dwellSeconds {
-                print("⏰ Dwell cumplido para \(campo.nombre) (\(Int(elapsed))s) - ejecutando auto check-in")
-                completeDwell(for: campo)
-            } else {
-                print("⏳ Dwell pendiente para \(campo.nombre) - \(Int(elapsed))s / \(Int(dwellSeconds))s")
+                // El tiempo ha pasado, verificar si el timer no se disparó
+                if pendingDwells[campoId] != nil {
+                    print("⚠️ Timer no se disparó para campo \(campoId) - ejecutando manualmente")
+                    if let campo = allCampos.first(where: { $0.id == campoId }) {
+                        completeDwell(for: campo)
+                    }
+                }
             }
         }
     }
 
-    // MARK: - Timer de verificación en foreground
-
-    /// Inicia el timer que verifica dwells pendientes periódicamente (solo en foreground)
-    /// Esto mejora la UX haciendo el auto check-in más preciso cuando la app está abierta
-    private func startDwellCheckTimer() {
-        // Evitar duplicados
-        stopDwellCheckTimer()
-
-        print("⏰ Iniciando timer de verificación en foreground (cada \(Int(dwellCheckInterval))s)")
-        dwellCheckTimer = Timer.scheduledTimer(withTimeInterval: dwellCheckInterval, repeats: true) { [weak self] _ in
-            self?.checkPendingDwells()
-        }
-        // Añadir al run loop común para mayor fiabilidad
-        if let timer = dwellCheckTimer {
-            RunLoop.main.add(timer, forMode: .common)
-        }
-    }
-
-    /// Detiene el timer de verificación (al ir a background o desactivar auto check-in)
-    private func stopDwellCheckTimer() {
-        if let timer = dwellCheckTimer {
-            timer.invalidate()
-            dwellCheckTimer = nil
-            print("⏸️ Timer de verificación en foreground detenido")
-        }
-    }
-
-    /// Completa el dwell y registra la visita automáticamente
     private func completeDwell(for campo: CampoModel) {
-        let id = campo.id
-
-        // Evitar ejecuciones duplicadas
-        if getCompletedDwells().contains(id.uuidString) {
-            print("⏭️ Dwell ya completado para \(campo.nombre) - ignorando")
-            return
-        }
-
-        if isRecentlyCheckedIn(id) {
-            print("⏭️ Campo \(campo.nombre) ya en recentlyCheckedIn - ignorando")
-            return
-        }
-
-        // Marcar como completado inmediatamente para evitar duplicados
-        markDwellCompleted(for: id)
-        addToRecentlyCheckedIn(id)
-
+        // El dwell se ha cumplido; valida en Supabase antes de insertar
+        pendingDwells.removeValue(forKey: campo.id)
+        dwellStartTimes.removeValue(forKey: campo.id)
         print("✅ Dwell completado para \(campo.nombre) - Verificando visita en Supabase...")
 
-        // CRÍTICO: Solicitar tiempo de ejecución en background para completar la tarea
-        // Esto evita que iOS suspenda la app antes de insertar en Supabase y enviar la notificación
-        var backgroundTaskID: UIBackgroundTaskIdentifier = .invalid
-        backgroundTaskID = UIApplication.shared.beginBackgroundTask(withName: "CompleteDwell-\(campo.nombre)") {
-            // Este bloque se ejecuta si se acaba el tiempo (raro, pero posible)
-            print("⚠️ Background task expirado para \(campo.nombre)")
-            UIApplication.shared.endBackgroundTask(backgroundTaskID)
-            backgroundTaskID = .invalid
-        }
-
-        print("🔄 Background task iniciado (ID: \(backgroundTaskID.rawValue)) para procesar dwell de \(campo.nombre)")
-
         Task { [weak self] in
-            guard let self else {
-                // Si self es nil, terminar background task
-                if backgroundTaskID != .invalid {
-                    UIApplication.shared.endBackgroundTask(backgroundTaskID)
-                }
-                return
-            }
-
+            guard let self else { return }
             do {
                 guard let user = supabase.auth.currentUser else {
                     print("❌ No hay usuario autenticado")
-                    if backgroundTaskID != .invalid {
-                        UIApplication.shared.endBackgroundTask(backgroundTaskID)
-                    }
                     return
                 }
                 let userId = user.id.uuidString
@@ -602,9 +351,7 @@ final class GeofenceManager: NSObject, ObservableObject, CLLocationManagerDelega
                 let alreadyVisited = try await self.hasVisit(userId: userId, campoId: campoId)
                 if alreadyVisited {
                     print("ℹ️ Campo \(campo.nombre) ya fue visitado previamente; auto check-in solo funciona para campos nuevos.")
-                    if backgroundTaskID != .invalid {
-                        UIApplication.shared.endBackgroundTask(backgroundTaskID)
-                    }
+                    self.recentlyCheckedIn.insert(campo.id)
                     return
                 }
 
@@ -614,29 +361,21 @@ final class GeofenceManager: NSObject, ObservableObject, CLLocationManagerDelega
                 _ = try await supabase.from("visitas").insert(visita).execute()
                 print("✅ Visita registrada exitosamente para \(campo.nombre)")
 
+                // Evita repetir mientras sigas dentro
+                self.recentlyCheckedIn.insert(campo.id)
+
                 // Notificación local
-                print("📲 Enviando notificación para \(campo.nombre)...")
                 await self.notifyAutoCheckin(name: campo.nombre, campoID: campo.id)
-                print("✅ Notificación enviada para \(campo.nombre)")
 
                 // Avisar a la app (para refrescar UI/logros)
                 DispatchQueue.main.async {
                     NotificationCenter.default.post(name: .didUpdateVisits, object: nil)
                 }
-
-                print("✅ Auto check-in completado exitosamente para \(campo.nombre)")
             } catch {
                 print("❌ Error al completar dwell: \(error.localizedDescription)")
                 print("❌ Detalles del error: \(error)")
                 // Notificar al usuario del error
                 await self.notifyAutoCheckinError(name: campo.nombre, error: error)
-            }
-
-            // IMPORTANTE: Terminar background task cuando todo esté completo
-            if backgroundTaskID != .invalid {
-                print("🏁 Background task finalizado (ID: \(backgroundTaskID.rawValue)) para \(campo.nombre)")
-                UIApplication.shared.endBackgroundTask(backgroundTaskID)
-                backgroundTaskID = .invalid
             }
         }
     }
@@ -725,40 +464,26 @@ final class GeofenceManager: NSObject, ObservableObject, CLLocationManagerDelega
 
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
         // Se llamará tras requestLocation() y también con Significant Location Changes.
-        guard let loc = locations.last else {
-            print("⚠️ didUpdateLocations sin ubicación válida")
-            return
-        }
+        if let loc = locations.last {
+            lastKnownLocation = loc
+            print("📍 Ubicación actualizada: lat=\(loc.coordinate.latitude), lon=\(loc.coordinate.longitude)")
 
-        let isFirstLocation = lastKnownLocation == nil
-        lastKnownLocation = loc
-        print("📍 Ubicación actualizada: lat=\(loc.coordinate.latitude), lon=\(loc.coordinate.longitude) (accuracy: \(loc.horizontalAccuracy)m)")
+            if autoCheckinEnabled {
+                // Verificar dwells pendientes por si los timers no funcionaron
+                checkPendingDwells()
 
-        if isFirstLocation {
-            print("✨ Primera ubicación obtenida - re-registrando geovallas ordenadas por distancia")
-        }
-
-        if autoCheckinEnabled {
-            // Verificar dwells pendientes por si los timers no funcionaron
-            checkPendingDwells()
-
-            // Reprioriza por cercanía con esta ubicación
-            print("🔄 Re-priorizando geovallas con nueva ubicación...")
-            registerGeofences()
-            // Y pide estado por si ya estás dentro de alguna recién activada
-            for region in manager.monitoredRegions {
-                manager.requestState(for: region)
+                // Reprioriza por cercanía con esta ubicación
+                registerGeofences()
+                // Y pide estado por si ya estás dentro de alguna recién activada
+                for region in manager.monitoredRegions {
+                    manager.requestState(for: region)
+                }
             }
         }
     }
 
     func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
-        let clError = error as? CLError
         print("❌ Error ubicación: \(error.localizedDescription)")
-        print("   Código: \(clError?.code.rawValue ?? -1)")
-        if clError?.code == .locationUnknown {
-            print("   → Ubicación aún no disponible, Core Location seguirá intentando")
-        }
     }
 
     func locationManager(_ manager: CLLocationManager, didStartMonitoringFor region: CLRegion) {
@@ -774,24 +499,24 @@ final class GeofenceManager: NSObject, ObservableObject, CLLocationManagerDelega
         }
         print("📍 didDetermineState: \(state.rawValue == 1 ? "INSIDE" : state.rawValue == 2 ? "OUTSIDE" : "UNKNOWN") para \(campo.nombre)")
 
-        // CRÍTICO: Verificar dwells pendientes en cada evento
-        // Esto permite que el auto check-in funcione incluso si la app estaba suspendida
+        // Verificar dwells pendientes por si los timers no funcionaron
         checkPendingDwells()
 
         switch state {
         case .inside:
-            // Siempre intentar startDwell, que internamente verificará si debe proceder
-            print("✅ Usuario DENTRO de \(campo.nombre) - verificando/iniciando dwell")
-            startDwell(for: campo)
-
+            if !recentlyCheckedIn.contains(campo.id) {
+                print("✅ Usuario DENTRO de \(campo.nombre) - iniciando dwell")
+                startDwell(for: campo)
+            } else {
+                print("ℹ️ Usuario DENTRO de \(campo.nombre) pero ya está en recentlyCheckedIn")
+            }
         case .outside:
             print("🚪 Usuario FUERA de \(campo.nombre) - cancelando dwell")
             cancelDwell(for: campo)
-
+            recentlyCheckedIn.remove(campo.id)
         case .unknown:
             print("❓ Estado desconocido para \(campo.nombre)")
             break
-
         @unknown default:
             break
         }
@@ -803,12 +528,11 @@ final class GeofenceManager: NSObject, ObservableObject, CLLocationManagerDelega
             return
         }
         print("🚶 didEnterRegion: Usuario ENTRÓ en \(campo.nombre)")
-
-        // Verificar dwells pendientes por si acaso
-        checkPendingDwells()
-
-        // Iniciar dwell (la función verificará internamente si debe proceder)
-        startDwell(for: campo)
+        if !recentlyCheckedIn.contains(campo.id) {
+            startDwell(for: campo)
+        } else {
+            print("ℹ️ Campo \(campo.nombre) ya está en recentlyCheckedIn - no iniciando dwell")
+        }
     }
 
     func locationManager(_ manager: CLLocationManager, didExitRegion region: CLRegion) {
@@ -817,8 +541,8 @@ final class GeofenceManager: NSObject, ObservableObject, CLLocationManagerDelega
             return
         }
         print("🚶‍♂️ didExitRegion: Usuario SALIÓ de \(campo.nombre)")
-
-        // Cancelar dwell (verificará si cumplió el tiempo antes de limpiar)
         cancelDwell(for: campo)
+        recentlyCheckedIn.remove(campo.id)
+        print("🗑️ Campo \(campo.nombre) removido de recentlyCheckedIn")
     }
 }

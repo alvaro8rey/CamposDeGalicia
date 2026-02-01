@@ -191,12 +191,15 @@ final class GeofenceManager: NSObject, ObservableObject, CLLocationManagerDelega
 
         // Mover cálculos de distancia a background thread
         Task.detached(priority: .utility) {
+            // SIEMPRE filtrar campos sin coordenadas
+            let camposValidos = campos.filter { $0.latitud != nil && $0.longitud != nil }
+
             let ordered: [CampoModel]
             if let loc = location {
                 // Calcular distancias en background
-                let camposWithDistances = campos.compactMap { campo -> (campo: CampoModel, distance: Double)? in
-                    guard let alat = campo.latitud, let alon = campo.longitud else { return nil }
-                    let distance = loc.distance(from: CLLocation(latitude: alat, longitude: alon))
+                let camposWithDistances = camposValidos.map { campo -> (campo: CampoModel, distance: Double) in
+                    let campoLoc = CLLocation(latitude: campo.latitud!, longitude: campo.longitud!)
+                    let distance = loc.distance(from: campoLoc)
                     return (campo, distance)
                 }
                 // Ordenar por distancia
@@ -204,24 +207,34 @@ final class GeofenceManager: NSObject, ObservableObject, CLLocationManagerDelega
                     .sorted { $0.distance < $1.distance }
                     .map { $0.campo }
             } else {
-                // Sin ubicación, usar todos los campos
-                ordered = campos
+                // Sin ubicación, usar campos válidos sin ordenar
+                ordered = camposValidos
             }
 
             let toMonitor = Array(ordered.prefix(maxRegionsCount))
 
             // Registrar geofences en main thread (requerido por CLLocationManager)
             await MainActor.run {
-                print("📍 Registrando \(toMonitor.count) geofences de \(campos.count) campos totales")
+                let camposValidos = campos.filter { $0.latitud != nil && $0.longitud != nil }
+                let camposSinCoordenadas = campos.count - camposValidos.count
+
+                print("📍 Registrando \(toMonitor.count) geofences de \(camposValidos.count) campos con coordenadas")
+                if camposSinCoordenadas > 0 {
+                    print("ℹ️ Ignorados \(camposSinCoordenadas) campos sin coordenadas")
+                }
 
                 if let loc = location {
                     print("📍 Ubicación actual: lat=\(loc.coordinate.latitude), lon=\(loc.coordinate.longitude)")
+                    print("📍 Campos ordenados por distancia (más cercano primero)")
                 } else {
-                    print("⚠️ No hay ubicación conocida - usando todos los campos sin priorizar")
+                    print("⚠️ No hay ubicación conocida - usando campos sin ordenar por distancia")
                 }
 
                 for (index, campo) in toMonitor.enumerated() {
-                    guard let lat = campo.latitud, let lon = campo.longitud else { continue }
+                    guard let lat = campo.latitud, let lon = campo.longitud else {
+                        print("⚠️ ADVERTENCIA: Campo \(campo.nombre) no tiene coordenadas - saltando")
+                        continue
+                    }
                     let campoLoc = CLLocation(latitude: lat, longitude: lon)
                     let distance = location?.distance(from: campoLoc) ?? 0
 

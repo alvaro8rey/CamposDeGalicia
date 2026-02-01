@@ -21,6 +21,9 @@ final class GeofenceManager: NSObject, ObservableObject, CLLocationManagerDelega
     private let dwellSeconds: TimeInterval = 120
     private let maxRegions: Int = 20
 
+    // UserDefaults key para persistir estado
+    private let autoCheckinKey = "auto_checkin_enabled"
+
     // Datos
     private var allCampos: [CampoModel] = []
     private var lastKnownLocation: CLLocation?
@@ -35,6 +38,10 @@ final class GeofenceManager: NSObject, ObservableObject, CLLocationManagerDelega
 
     override init() {
         super.init()
+
+        // Leer estado guardado de auto check-in
+        autoCheckinEnabled = UserDefaults.standard.bool(forKey: autoCheckinKey)
+
         locationManager.delegate = self
         // No activamos GPS continuo -> optimiza batería
         // Usamos precisión de 10m para mejor detección de geovallas (balance consumo/precisión)
@@ -65,6 +72,9 @@ final class GeofenceManager: NSObject, ObservableObject, CLLocationManagerDelega
     /// Activa/desactiva el auto check-in y prepara geovallas.
     func setAutoCheckin(_ enabled: Bool, campos: [CampoModel]) {
         autoCheckinEnabled = enabled
+
+        // Persistir estado en UserDefaults
+        UserDefaults.standard.set(enabled, forKey: autoCheckinKey)
 
         if enabled {
             print("🔔 Auto check-in ACTIVADO - configurando geovallas para \(campos.count) campos")

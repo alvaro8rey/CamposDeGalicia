@@ -33,6 +33,9 @@ struct AppMain: App {
     // Task de limpieza periódica
     @State private var cleanupTask: Task<Void, Never>?
 
+    // Bandera para activar auto check-in solo una vez al inicio
+    @State private var hasInitializedAutoCheckin: Bool = false
+
     init() {
         let viewModel = CamposViewModel()
         _camposViewModel = StateObject(wrappedValue: viewModel)
@@ -147,9 +150,6 @@ struct AppMain: App {
             .withToast()
             .onAppear {
                 locationManager.requestLocation()
-                if geofenceManager.autoCheckinEnabled {
-                    geofenceManager.refreshWith(campos: camposViewModel.campos)
-                }
 
                 // Limpiar cache expirado periódicamente para liberar memoria (cada 5 minutos)
                 cleanupTask = Task {
@@ -158,6 +158,17 @@ struct AppMain: App {
                         guard !Task.isCancelled else { break }
                         await camposViewModel.cleanExpiredExtras()
                     }
+                }
+            }
+            .onChange(of: camposViewModel.campos) { oldValue, newValue in
+                // Cuando los campos se cargan por primera vez, activar auto check-in si estaba habilitado
+                if !hasInitializedAutoCheckin && !newValue.isEmpty && geofenceManager.autoCheckinEnabled {
+                    print("🚀 Campos cargados (\(newValue.count)) - activando auto check-in al arranque")
+                    hasInitializedAutoCheckin = true
+                    geofenceManager.setAutoCheckin(true, campos: newValue)
+                } else if hasInitializedAutoCheckin && geofenceManager.autoCheckinEnabled {
+                    // Si ya estaba inicializado y hay cambios en campos, refrescar geovallas
+                    geofenceManager.refreshWith(campos: newValue)
                 }
             }
             .onDisappear {

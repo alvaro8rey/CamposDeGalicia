@@ -11,6 +11,7 @@ struct ReviewsSectionView: View {
     @State private var showAllReviews: Bool = false
     @State private var reviewToEdit: Review?
     @State private var canUserReview: Bool = true
+    @State private var isVisible: Bool = false
 
     private let maxFeaturedReviews = 5
 
@@ -165,8 +166,18 @@ struct ReviewsSectionView: View {
                     .padding(.horizontal)
             }
 
+            // Marcador invisible para detectar cuando la sección está visible
+            Color.clear
+                .frame(height: 1)
+                .onAppear {
+                    if !isVisible {
+                        isVisible = true
+                        Task { await loadReviews() }
+                    }
+                }
+
             // Loading / Error / Empty States
-            if reviewsManager.isLoading {
+            if isVisible && reviewsManager.isLoading {
                 LoadingView(message: "Cargando reseñas...", style: .skeleton)
                     .frame(height: 300)
                     .padding(.horizontal)
@@ -179,9 +190,6 @@ struct ReviewsSectionView: View {
                 EmptyReviewsView()
                     .padding(.horizontal)
             }
-        }
-        .onAppear {
-            Task { await loadReviews() }
         }
         .sheet(isPresented: $showAddReview) {
             AddReviewView(

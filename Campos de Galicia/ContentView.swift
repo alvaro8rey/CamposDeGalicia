@@ -5,6 +5,7 @@ struct ContentView: View {
     @EnvironmentObject var camposViewModel: CamposViewModel
     @EnvironmentObject var authViewModel: AuthViewModel
     @EnvironmentObject var localizationManager: LocalizationManager
+    @EnvironmentObject var geofenceManager: GeofenceManager
     @Environment(\.colorScheme) var colorScheme
 
     // Estados para los filtros
@@ -155,7 +156,13 @@ struct ContentView: View {
         // NavigationLink invisible para navegación desde notificaciones
         .background(
             NavigationLink(
-                destination: notificationCampoID.map { CampoDetalleView(campoID: $0) },
+                destination: notificationCampoID.map {
+                    CampoDetalleView(campoID: $0)
+                        .environmentObject(camposViewModel)
+                        .environmentObject(authViewModel)
+                        .environmentObject(geofenceManager)
+                        .environmentObject(localizationManager)
+                },
                 isActive: Binding(
                     get: { notificationCampoID != nil },
                     set: { if !$0 { notificationCampoID = nil } }

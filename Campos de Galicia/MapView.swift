@@ -69,6 +69,7 @@ struct MapaView: View {
     @EnvironmentObject var camposViewModel: CamposViewModel
     @EnvironmentObject var authViewModel: AuthViewModel
     @EnvironmentObject var localizationManager: LocalizationManager
+    @EnvironmentObject var geofenceManager: GeofenceManager
 
     @Binding var externalIsNavigating: Bool
 
@@ -408,6 +409,10 @@ struct MapaView: View {
         .navigationBarHidden(true)
         .sheet(item: $selectedCampo) { campo in
             CampoDetalleView(campoID: campo.id)
+                .environmentObject(camposViewModel)
+                .environmentObject(authViewModel)
+                .environmentObject(geofenceManager)
+                .environmentObject(localizationManager)
         }
         .onAppear {
             loadVisitedCampos()

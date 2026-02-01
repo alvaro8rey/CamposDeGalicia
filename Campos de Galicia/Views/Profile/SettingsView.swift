@@ -18,8 +18,6 @@ struct SettingsView: View {
     var userId: String
 
     // MARK: - State
-    @State private var isSaving: Bool = false
-    @State private var successMessage: String? = nil
     @AppStorage("auto_checkin_enabled") private var autoCheckinStored: Bool = false
     @State private var showInfoSheet: Bool = false
 
@@ -88,18 +86,6 @@ struct SettingsView: View {
                             .background(Color(UIColor.secondarySystemBackground))
                             .cornerRadius(12)
                             .padding(.horizontal)
-                        }
-
-                        // Botón Guardar Preferencias
-                        saveButton
-                            .padding(.horizontal)
-
-                        // Success/Error message
-                        if let successMessage = successMessage {
-                            Text(successMessage)
-                                .font(.callout)
-                                .foregroundColor(profileVM.errorMessage != nil ? .red : .green)
-                                .padding()
                         }
                     }
                     .padding(.vertical)
@@ -243,7 +229,11 @@ struct SettingsView: View {
                         Text(L(.preferencesDistanceKm, 20)).tag(20.0)
                     }
                     .pickerStyle(SegmentedPickerStyle())
-                    .disabled(isSaving)
+                    .onChange(of: profileVM.distanciaPredeterminada) { oldValue, newValue in
+                        Task {
+                            await profileVM.savePreferences(for: userId)
+                        }
+                    }
                 }
 
                 Spacer()
@@ -325,48 +315,7 @@ struct SettingsView: View {
         .buttonStyle(.plain)
     }
 
-    // MARK: - Save Button
-    private var saveButton: some View {
-        Button(action: { Task { await savePreferences() } }) {
-            HStack {
-                if isSaving {
-                    ProgressView()
-                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                }
-                Text(isSaving ? L(.preferencesButtonSaving) : L(.preferencesButtonSave))
-                    .font(.headline)
-            }
-            .frame(maxWidth: .infinity)
-            .padding()
-            .background(isSaving ? Color.gray : Color.blue)
-            .foregroundColor(.white)
-            .cornerRadius(12)
-        }
-        .disabled(isSaving)
-    }
-
     // MARK: - Methods
-    private func savePreferences() async {
-        isSaving = true
-        successMessage = nil
-
-        await profileVM.savePreferences(for: userId)
-
-        if profileVM.errorMessage == nil {
-            successMessage = L(.successPreferencesSaved)
-        } else {
-            successMessage = profileVM.errorMessage
-        }
-
-        isSaving = false
-
-        // Clear success message after 3 seconds
-        if profileVM.errorMessage == nil {
-            try? await Task.sleep(nanoseconds: 3_000_000_000)
-            successMessage = nil
-        }
-    }
-
     private func logout() async {
         do {
             try await authViewModel.logout()

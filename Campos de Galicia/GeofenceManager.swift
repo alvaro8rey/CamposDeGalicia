@@ -34,10 +34,16 @@ final class GeofenceManager: NSObject, ObservableObject, CLLocationManagerDelega
     private let recentlyCheckedInKey = "gf_recently_checked_in"
     private let completedDwellsKey = "gf_completed_dwells"  // Campos que ya completaron dwell y están esperando salida
 
+    // Timer para verificación activa en foreground (mejora UX)
+    // En background se usa solo el sistema de persistencia
+    private var dwellCheckTimer: Timer?
+    private let dwellCheckInterval: TimeInterval = 15 // Verifica cada 15s en foreground
+
     // Auto-refresh
     private let refreshInterval: TimeInterval = 6 * 60 * 60 // 6h
     private let lastRefreshKey = "gf_last_refresh_ts"
     private var appActiveObserver: NSObjectProtocol?
+    private var appBackgroundObserver: NSObjectProtocol?
 
     override init() {
         super.init()
@@ -58,14 +64,38 @@ final class GeofenceManager: NSObject, ObservableObject, CLLocationManagerDelega
             object: nil,
             queue: .main
         ) { [weak self] _ in
-            print("📱 App activada - verificando dwells pendientes")
+            print("📱 App activada - verificando dwells pendientes y activando timer de foreground")
             self?.checkPendingDwells()
             self?.refreshMonitoredRegionsIfNeeded()
+
+            // Iniciar timer de verificación en foreground si hay auto check-in activo
+            if self?.autoCheckinEnabled == true {
+                self?.startDwellCheckTimer()
+            }
+        }
+
+        // Observa cuando la app va a background para detener el timer (optimiza batería)
+        appBackgroundObserver = NotificationCenter.default.addObserver(
+            forName: UIApplication.willResignActiveNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            print("📱 App yendo a background - deteniendo timer de foreground (se usará sistema de persistencia)")
+            self?.stopDwellCheckTimer()
+        }
+
+        // Si el auto check-in ya estaba habilitado, iniciar el timer
+        if autoCheckinEnabled {
+            startDwellCheckTimer()
         }
     }
 
     deinit {
+        stopDwellCheckTimer()
         if let obs = appActiveObserver {
+            NotificationCenter.default.removeObserver(obs)
+        }
+        if let obs = appBackgroundObserver {
             NotificationCenter.default.removeObserver(obs)
         }
     }
@@ -102,11 +132,17 @@ final class GeofenceManager: NSObject, ObservableObject, CLLocationManagerDelega
 
             // Refresco en arranque si han pasado >6h
             refreshMonitoredRegionsIfNeeded()
+
+            // Iniciar timer de verificación activa en foreground
+            startDwellCheckTimer()
         } else {
             print("🔕 Auto check-in DESACTIVADO - limpiando geovallas")
             stopAllGeofences()
             invalidateAllDwells()
             locationManager.stopMonitoringSignificantLocationChanges()
+
+            // Detener timer de verificación
+            stopDwellCheckTimer()
         }
     }
 
@@ -477,6 +513,33 @@ final class GeofenceManager: NSObject, ObservableObject, CLLocationManagerDelega
             } else {
                 print("⏳ Dwell pendiente para \(campo.nombre) - \(Int(elapsed))s / \(Int(dwellSeconds))s")
             }
+        }
+    }
+
+    // MARK: - Timer de verificación en foreground
+
+    /// Inicia el timer que verifica dwells pendientes periódicamente (solo en foreground)
+    /// Esto mejora la UX haciendo el auto check-in más preciso cuando la app está abierta
+    private func startDwellCheckTimer() {
+        // Evitar duplicados
+        stopDwellCheckTimer()
+
+        print("⏰ Iniciando timer de verificación en foreground (cada \(Int(dwellCheckInterval))s)")
+        dwellCheckTimer = Timer.scheduledTimer(withTimeInterval: dwellCheckInterval, repeats: true) { [weak self] _ in
+            self?.checkPendingDwells()
+        }
+        // Añadir al run loop común para mayor fiabilidad
+        if let timer = dwellCheckTimer {
+            RunLoop.main.add(timer, forMode: .common)
+        }
+    }
+
+    /// Detiene el timer de verificación (al ir a background o desactivar auto check-in)
+    private func stopDwellCheckTimer() {
+        if let timer = dwellCheckTimer {
+            timer.invalidate()
+            dwellCheckTimer = nil
+            print("⏸️ Timer de verificación en foreground detenido")
         }
     }
 

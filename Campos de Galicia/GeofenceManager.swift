@@ -82,6 +82,16 @@ final class GeofenceManager: NSObject, ObservableObject, CLLocationManagerDelega
         if enabled {
             print("🔔 Auto check-in ACTIVADO - configurando geovallas para \(campos.count) campos")
             allCampos = campos
+
+            // CRÍTICO: Intentar usar la ubicación en caché del sistema antes de registrar geovallas
+            // Esto evita el problema de registrar sin ordenar cuando la app arranca
+            if let cachedLocation = locationManager.location {
+                lastKnownLocation = cachedLocation
+                print("📍 Usando ubicación en caché: lat=\(cachedLocation.coordinate.latitude), lon=\(cachedLocation.coordinate.longitude)")
+            } else {
+                print("⚠️ No hay ubicación en caché - esperando requestLocation()")
+            }
+
             startMonitoringIfAuthorized()
 
             // Posición puntual para priorizar las más cercanas (una sola vez)
@@ -616,26 +626,40 @@ final class GeofenceManager: NSObject, ObservableObject, CLLocationManagerDelega
 
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
         // Se llamará tras requestLocation() y también con Significant Location Changes.
-        if let loc = locations.last {
-            lastKnownLocation = loc
-            print("📍 Ubicación actualizada: lat=\(loc.coordinate.latitude), lon=\(loc.coordinate.longitude)")
+        guard let loc = locations.last else {
+            print("⚠️ didUpdateLocations sin ubicación válida")
+            return
+        }
 
-            if autoCheckinEnabled {
-                // Verificar dwells pendientes por si los timers no funcionaron
-                checkPendingDwells()
+        let isFirstLocation = lastKnownLocation == nil
+        lastKnownLocation = loc
+        print("📍 Ubicación actualizada: lat=\(loc.coordinate.latitude), lon=\(loc.coordinate.longitude) (accuracy: \(loc.horizontalAccuracy)m)")
 
-                // Reprioriza por cercanía con esta ubicación
-                registerGeofences()
-                // Y pide estado por si ya estás dentro de alguna recién activada
-                for region in manager.monitoredRegions {
-                    manager.requestState(for: region)
-                }
+        if isFirstLocation {
+            print("✨ Primera ubicación obtenida - re-registrando geovallas ordenadas por distancia")
+        }
+
+        if autoCheckinEnabled {
+            // Verificar dwells pendientes por si los timers no funcionaron
+            checkPendingDwells()
+
+            // Reprioriza por cercanía con esta ubicación
+            print("🔄 Re-priorizando geovallas con nueva ubicación...")
+            registerGeofences()
+            // Y pide estado por si ya estás dentro de alguna recién activada
+            for region in manager.monitoredRegions {
+                manager.requestState(for: region)
             }
         }
     }
 
     func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
+        let clError = error as? CLError
         print("❌ Error ubicación: \(error.localizedDescription)")
+        print("   Código: \(clError?.code.rawValue ?? -1)")
+        if clError?.code == .locationUnknown {
+            print("   → Ubicación aún no disponible, Core Location seguirá intentando")
+        }
     }
 
     func locationManager(_ manager: CLLocationManager, didStartMonitoringFor region: CLRegion) {

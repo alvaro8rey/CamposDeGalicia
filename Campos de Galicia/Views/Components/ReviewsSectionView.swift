@@ -93,12 +93,8 @@ struct ReviewsSectionView: View {
             .buttonStyle(.plain)
             .padding(.horizontal)
 
-            // Loading / Error / Empty States
-            if isVisible && reviewsManager.isLoading {
-                LoadingView(message: "Cargando reseñas...", style: .skeleton)
-                    .frame(height: 300)
-                    .padding(.horizontal)
-            } else if let errorMessage = reviewsManager.errorMessage {
+            // Error / Empty States
+            if let errorMessage = reviewsManager.errorMessage {
                 ErrorView(message: errorMessage) {
                     Task { await loadReviews() }
                 }

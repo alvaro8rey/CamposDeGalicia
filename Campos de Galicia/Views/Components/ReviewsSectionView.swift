@@ -93,15 +93,30 @@ struct ReviewsSectionView: View {
             .buttonStyle(.plain)
             .padding(.horizontal)
 
-            // SLIDER DE RESEÑAS DESTACADAS
-            if !reviewsManager.reviews.isEmpty && !featuredReviews.isEmpty {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 12) {
-                        ForEach(featuredReviews) { review in
-                            CompactReviewCardView(review: review)
-                        }
-                    }
+            // Loading / Error / Empty States
+            if isVisible && reviewsManager.isLoading {
+                LoadingView(message: "Cargando reseñas...", style: .skeleton)
+                    .frame(height: 300)
                     .padding(.horizontal)
+            } else if let errorMessage = reviewsManager.errorMessage {
+                ErrorView(message: errorMessage) {
+                    Task { await loadReviews() }
+                }
+                .padding(.horizontal)
+            } else if reviewsManager.reviews.isEmpty {
+                EmptyReviewsView()
+                    .padding(.horizontal)
+            } else {
+                // SLIDER DE RESEÑAS DESTACADAS
+                if !reviewsManager.reviews.isEmpty && !featuredReviews.isEmpty {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 12) {
+                            ForEach(featuredReviews) { review in
+                                CompactReviewCardView(review: review)
+                            }
+                        }
+                        .padding(.horizontal)
+                    }
                 }
             }
 
@@ -175,21 +190,6 @@ struct ReviewsSectionView: View {
                         Task { await loadReviews() }
                     }
                 }
-
-            // Loading / Error / Empty States
-            if isVisible && reviewsManager.isLoading {
-                LoadingView(message: "Cargando reseñas...", style: .skeleton)
-                    .frame(height: 300)
-                    .padding(.horizontal)
-            } else if let errorMessage = reviewsManager.errorMessage {
-                ErrorView(message: errorMessage) {
-                    Task { await loadReviews() }
-                }
-                .padding(.horizontal)
-            } else if reviewsManager.reviews.isEmpty {
-                EmptyReviewsView()
-                    .padding(.horizontal)
-            }
         }
         .sheet(isPresented: $showAddReview) {
             AddReviewView(

@@ -277,7 +277,7 @@ struct CampoDetalleView: View {
                 isVisited = false
             }
         } catch {
-            Logger.debug("Error checking visit:", error)
+            Logger.debug("Error checking visit: \(error.localizedDescription)")
         }
     }
 
@@ -348,7 +348,7 @@ struct CampoDetalleView: View {
             contribucionesAprobadas = extras.contribuciones
             await preloadUserNames(for: extras.contribuciones)
         } catch {
-            Logger.debug("Error fetching contribuciones:", error)
+            Logger.debug("Error fetching contribuciones: \(error.localizedDescription)")
         }
     }
 
@@ -372,7 +372,7 @@ struct CampoDetalleView: View {
                 userNames[id] = L(.campoUnknownUser)
             }
         } catch {
-            Logger.debug("Error loading user names:", error)
+            Logger.debug("Error loading user names: \(error.localizedDescription)")
             for id in uniqueUserIds {
                 userNames[id] = L(.campoUnknownUser)
             }

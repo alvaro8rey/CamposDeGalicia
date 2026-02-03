@@ -488,7 +488,7 @@ struct LogrosView: View {
             dec.dateDecodingStrategy = .iso8601
             let data = try dec.decode([AccesoDiario].self, from: response.data)
 
-            if data.isEmpty {
+            guard let row = data.first else {
                 guard let userUUID = UUID(uuidString: userId) else {
                     print("⚠️ Error: userId inválido '\(userId)'")
                     return
@@ -508,7 +508,6 @@ struct LogrosView: View {
                 return
             }
 
-            let row = data[0]
             currentDay = row.dias_consecutivos
             dailyXP = dailyXPValue(for: currentDay)
 
@@ -618,12 +617,12 @@ struct LogrosView: View {
         }
 
         var fechas = rawDates.compactMap(parseDate)
-        guard !fechas.isEmpty else { return 0 }
+        guard let firstDate = fechas.first else { return 0 }
         fechas.sort(by: >)
 
         let cal = Calendar.current
         var count = 1
-        var currentDay = cal.startOfDay(for: fechas[0])
+        var currentDay = cal.startOfDay(for: firstDate)
         for i in 1..<fechas.count {
             let prevDay = cal.startOfDay(for: fechas[i])
             let diff = cal.dateComponents([.day], from: prevDay, to: currentDay).day ?? 0

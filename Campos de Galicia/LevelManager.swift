@@ -99,10 +99,10 @@ final class LevelManager {
             .sorted(by: >)
 
         let diasConsecutivos: Int = {
-            guard !fechasVisitas.isEmpty else { return 0 }
+            guard let firstDate = fechasVisitas.first else { return 0 }
             let cal = Calendar.current
             var count = 1
-            var currentDay = cal.startOfDay(for: fechasVisitas[0])
+            var currentDay = cal.startOfDay(for: firstDate)
             for i in 1..<fechasVisitas.count {
                 let prevDay = cal.startOfDay(for: fechasVisitas[i])
                 let diff = cal.dateComponents([.day], from: prevDay, to: currentDay).day ?? 0
@@ -433,7 +433,9 @@ final class LevelManager {
             if !idsToDelete.isEmpty {
                 _ = try await supabase.from("accesos_diarios").delete().in("id", values: idsToDelete).execute()
             }
-            records = [records.first!]
+            if let firstRecord = records.first {
+                records = [firstRecord]
+            }
         }
 
         let accessData: AccesoDiario

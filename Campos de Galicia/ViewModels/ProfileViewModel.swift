@@ -64,8 +64,8 @@ class ProfileViewModel: ObservableObject {
                 .execute()
 
             let jsonObject = try JSONSerialization.jsonObject(with: response.data, options: [])
-            if let array = jsonObject as? [[String: Any]], !array.isEmpty {
-                let dict = array[0]
+            if let array = jsonObject as? [[String: Any]],
+               let dict = array.first {
                 let newLevel = dict["level"] as? Int ?? 1
                 let newCurrentXP = dict["current_xp"] as? Int ?? 0
                 let newXPToNextLevel = dict["xp_to_next_level"] as? Int ?? 100
@@ -214,8 +214,8 @@ class ProfileViewModel: ObservableObject {
                 .eq("id_usuario", value: userId)
                 .execute()
             if let accesosArr = try JSONSerialization.jsonObject(with: accesosResponse.data) as? [[String: Any]],
-               !accesosArr.isEmpty,
-               let dias = accesosArr[0]["dias_consecutivos"] as? Int {
+               let firstAcceso = accesosArr.first,
+               let dias = firstAcceso["dias_consecutivos"] as? Int {
                 diasConsecutivos = dias
             }
 
@@ -355,14 +355,14 @@ class ProfileViewModel: ObservableObject {
                         await fallbackLoadPreferences(userId)
                     }
                 } else if array.count == 1 {
-                    let dict = array[0]
-                    if let distancia = dict["distancia_predeterminada"] as? Double {
+                    if let dict = array.first,
+                       let distancia = dict["distancia_predeterminada"] as? Double {
                         distanciaPredeterminada = distancia
                     }
                 } else {
                     errorMessage = L(.errorMultiplePreferences)
-                    let dict = array[0]
-                    if let distancia = dict["distancia_predeterminada"] as? Double {
+                    if let dict = array.first,
+                       let distancia = dict["distancia_predeterminada"] as? Double {
                         distanciaPredeterminada = distancia
                     }
                 }
@@ -385,8 +385,8 @@ class ProfileViewModel: ObservableObject {
                 .execute()
 
             if let array = try JSONSerialization.jsonObject(with: response.data, options: []) as? [[String: Any]],
-               !array.isEmpty,
-               let distancia = array[0]["distancia_predeterminada"] as? Double {
+               let firstItem = array.first,
+               let distancia = firstItem["distancia_predeterminada"] as? Double {
                 distanciaPredeterminada = distancia
             }
         } catch {

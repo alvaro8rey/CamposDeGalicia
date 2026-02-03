@@ -32,7 +32,12 @@ class AppDelegate: NSObject, UIApplicationDelegate {
             using: nil
         ) { task in
             print("🌙 Ejecutando tarea de background: verificación de dwells")
-            self.handleDwellCheckTask(task: task as! BGProcessingTask)
+            guard let processingTask = task as? BGProcessingTask else {
+                print("❌ Error: La tarea no es del tipo BGProcessingTask")
+                task.setTaskCompleted(success: false)
+                return
+            }
+            self.handleDwellCheckTask(task: processingTask)
         }
         print("✅ Tarea de background registrada: \(AppDelegate.backgroundTaskIdentifier)")
     }

@@ -240,14 +240,14 @@ class ReviewsManager: ObservableObject {
             decoder.dateDecodingStrategy = .iso8601
             let updatedReviews = try decoder.decode([Review].self, from: response.data)
 
-            if updatedReviews.isEmpty {
+            guard let updatedReview = updatedReviews.first else {
                 Logger.error("❌ No se encontró ninguna reseña con ID: \(reviewId)")
                 errorMessage = L(.errorCouldNotUpdateReview)
                 return false
             }
 
             Logger.success("✅ Reseña actualizada en la base de datos")
-            Logger.debug("✅ Nueva reseña: \(updatedReviews[0].reseña.prefix(30))...")
+            Logger.debug("✅ Nueva reseña: \(updatedReview.reseña.prefix(30))...")
 
             // Actualizar el array local para reflejar cambios inmediatamente
             if let index = reviews.firstIndex(where: { $0.id == reviewId }) {

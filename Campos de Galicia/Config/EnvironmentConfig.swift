@@ -56,13 +56,26 @@ struct EnvironmentConfig {
             return
         }
 
-        // 3. Usar valores por defecto (SOLO PARA DESARROLLO)
-        // ⚠️ IMPORTANTE: Estas credenciales deben ser rotadas antes de producción
+        // 3. En desarrollo, si no hay credenciales, mostrar error informativo
         if environment == .development {
-            self.supabaseURL = "https://ooqdrhkzsexjnmnvpwqw.supabase.co"
-            self.supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9vcWRyaGt6c2V4am5tbnZwd3F3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDYwMjk0MjEsImV4cCI6MjA2MTYwNTQyMX0.8jinhwjNaktc111FhV-_MEEiuCXynPiU88_7hMb6zcA"
-            Logger.warning("⚠️ Usando credenciales por defecto (solo desarrollo)")
-            return
+            Logger.error("❌ No se encontraron credenciales de Supabase en desarrollo")
+            fatalError("""
+                ❌ No se encontraron credenciales de Supabase.
+
+                Por favor configura las credenciales de una de estas formas:
+
+                1. Variables de entorno:
+                   export SUPABASE_URL="tu_url"
+                   export SUPABASE_KEY="tu_key"
+
+                2. Archivo Config.plist con:
+                   - SUPABASE_URL (String)
+                   - SUPABASE_KEY (String)
+
+                3. Copia Config.plist.example a Config.plist y actualiza tus credenciales
+
+                Ver README.md para más información.
+                """)
         }
 
         // Si llegamos aquí en producción, es un error fatal

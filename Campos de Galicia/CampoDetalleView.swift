@@ -128,7 +128,7 @@ struct CampoDetalleView: View {
                         .padding(.top, 8)
                         .padding(.horizontal, 16)
 
-                        Spacer(minLength: 80)
+                        Spacer(minLength: 60)
                     }
                 }
                 .background(Color(UIColor.systemBackground))

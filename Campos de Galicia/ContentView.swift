@@ -720,7 +720,7 @@ struct CampoListView: View {
                 }
                 .padding(.horizontal, 12)
                 .padding(.top, 8)
-                .padding(.bottom, 80)
+                .padding(.bottom, 60)
             } else {
                 // Vista en lista con diseño mejorado
                 LazyVStack(spacing: 12) {
@@ -792,7 +792,7 @@ struct CampoListView: View {
                 }
                 .padding(.horizontal, 12)
                 .padding(.top, 8)
-                .padding(.bottom, 80)
+                .padding(.bottom, 60)
             }
         }
         .refreshable {

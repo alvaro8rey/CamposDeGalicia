@@ -380,7 +380,7 @@ struct MapaView: View {
                     )
                 }
                 .padding(.trailing, 16)
-                .padding(.bottom, externalIsNavigating ? 80 : (showRouteSummary ? 280 : 80))
+                .padding(.bottom, externalIsNavigating ? 60 : (showRouteSummary ? 280 : 60))
             }
 
             // MARK: - Botón de Filtro Visitados (esquina superior izquierda, discreto)

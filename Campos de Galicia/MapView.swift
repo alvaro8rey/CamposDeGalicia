@@ -800,7 +800,7 @@ struct MapaView: View {
         let directions = MKDirections(request: request)
         directions.calculate { response, error in
             if let error = error {
-                print("❌ Error calculando ruta: \(error.localizedDescription)")
+                Logger.debug("❌ Error calculando ruta: \(error.localizedDescription)")
                 return
             }
             guard let route = response?.routes.first else { return }
@@ -823,7 +823,7 @@ struct MapaView: View {
                     }
                 }
 
-                print("✅ [PrepareRoute] Ruta \(self.externalIsNavigating ? "recalculada" : "calculada") - Distancia: \(String(format: "%.1f", route.distance / 1000)) km, Pasos: \(route.steps.count)")
+                Logger.debug("✅ [PrepareRoute] Ruta \(self.externalIsNavigating ? "recalculada" : "calculada") - Distancia: \(String(format: "%.1f", route.distance / 1000)) km, Pasos: \(route.steps.count)")
 
                 // ✅ Si estamos navegando, encontrar el paso correcto basado en la ubicación actual
                 if self.externalIsNavigating, route.steps.count > 0,
@@ -842,7 +842,7 @@ struct MapaView: View {
 
                         // Saltar pasos con distancia 0 o negativos (ya completados)
                         if route.steps[stepIndex].distance < 5 {
-                            print("⏭️ [PrepareRoute] Saltando paso \(stepIndex + 1) (distancia del paso: \(String(format: "%.0f", route.steps[stepIndex].distance))m)")
+                            Logger.debug("⏭️ [PrepareRoute] Saltando paso \(stepIndex + 1) (distancia del paso: \(String(format: "%.0f", route.steps[stepIndex].distance))m)")
                             continue
                         }
 
@@ -859,7 +859,7 @@ struct MapaView: View {
                     let endLocation = CLLocation(latitude: correctStepEndCoordinate.latitude, longitude: correctStepEndCoordinate.longitude)
                     let newDistance = userCLLocation.distance(from: endLocation)
 
-                    print("📏 [PrepareRoute] Paso correcto después de recalcular: \(correctStepIndex + 1), Distancia: \(String(format: "%.0f", newDistance))m")
+                    Logger.debug("📏 [PrepareRoute] Paso correcto después de recalcular: \(correctStepIndex + 1), Distancia: \(String(format: "%.0f", newDistance))m")
 
                     // Actualizar al paso correcto en el Coordinator
                     if let coordinator = (self.mapView?.delegate as? CustomMapView.Coordinator) {
@@ -867,16 +867,16 @@ struct MapaView: View {
                     }
 
                     self.distanceToNextStep = newDistance
-                    print("✅ [PrepareRoute] Distancia UI actualizada: \(String(format: "%.0f", newDistance))m")
+                    Logger.debug("✅ [PrepareRoute] Distancia UI actualizada: \(String(format: "%.0f", newDistance))m")
                 }
             }
         }
     }
     
     private func startNavigation() {
-        print("🚀 [StartNav] Iniciando navegación...")
-        print("📍 [StartNav] Ubicación del usuario: \(mapView?.userLocation.location?.coordinate.latitude ?? 0), \(mapView?.userLocation.location?.coordinate.longitude ?? 0)")
-        print("🎯 [StartNav] Destino: \(pendingDestination?.title ?? "desconocido")")
+        Logger.debug("🚀 [StartNav] Iniciando navegación...")
+        Logger.debug("📍 [StartNav] Ubicación del usuario: \(mapView?.userLocation.location?.coordinate.latitude ?? 0), \(mapView?.userLocation.location?.coordinate.longitude ?? 0)")
+        Logger.debug("🎯 [StartNav] Destino: \(pendingDestination?.title ?? "desconocido")")
 
         withAnimation(.spring()) {
             self.showRouteSummary = false
@@ -895,21 +895,21 @@ struct MapaView: View {
                 let endLocation = CLLocation(latitude: firstStepEndCoordinate.latitude, longitude: firstStepEndCoordinate.longitude)
                 self.distanceToNextStep = userCLLocation.distance(from: endLocation)
 
-                print("📏 [StartNav] Distancia inicial al paso 1: \(String(format: "%.0f", self.distanceToNextStep))m")
-                print("   Primer paso: \(route.steps[0].instructions)")
+                Logger.debug("📏 [StartNav] Distancia inicial al paso 1: \(String(format: "%.0f", self.distanceToNextStep))m")
+                Logger.debug("   Primer paso: \(route.steps[0].instructions)")
             } else {
                 self.distanceToNextStep = 0
-                print("⚠️ [StartNav] No se pudo calcular distancia inicial")
+                Logger.debug("⚠️ [StartNav] No se pudo calcular distancia inicial")
             }
         }
 
         // Pasar el destino al Coordinator para que pueda recalcular rutas
         if let mapView = self.mapView, let destination = pendingDestination {
-            print("✅ [StartNav] Configurando destino en Coordinator y activando actualizaciones de ubicación")
+            Logger.debug("✅ [StartNav] Configurando destino en Coordinator y activando actualizaciones de ubicación")
             (mapView.delegate as? CustomMapView.Coordinator)?.setCurrentDestination(destination)
         }
 
-        print("🧭 [StartNav] User tracking mode: \(userTrackingMode == .followWithHeading ? "followWithHeading" : "otro")")
+        Logger.debug("🧭 [StartNav] User tracking mode: \(userTrackingMode == .followWithHeading ? "followWithHeading" : "otro")")
     }
 
     // Helper para calcular la coordenada al final de un paso específico
@@ -947,7 +947,7 @@ struct MapaView: View {
     }
     
     private func stopNavigation() {
-        print("🛑 Deteniendo navegación...")
+        Logger.debug("🛑 Deteniendo navegación...")
         self.externalIsNavigating = false
         self.showRouteSummary = false
         self.route = nil
@@ -1158,7 +1158,7 @@ struct CustomMapView: UIViewRepresentable {
             locationManager?.activityType = .automotiveNavigation
             locationManager?.allowsBackgroundLocationUpdates = true
             locationManager?.pausesLocationUpdatesAutomatically = false
-            print("📱 Location Manager configurado para navegación continua")
+            Logger.debug("📱 Location Manager configurado para navegación continua")
         }
 
         func setCurrentDestination(_ destination: MapAnnotationItem) {
@@ -1166,13 +1166,13 @@ struct CustomMapView: UIViewRepresentable {
             // Resetear índice de polyline para nueva navegación
             self.lastPolylineUpdateIndex = 0
             // Iniciar actualizaciones de ubicación para navegación
-            print("🚀 Iniciando actualizaciones de ubicación continuas...")
+            Logger.debug("🚀 Iniciando actualizaciones de ubicación continuas...")
             locationManager?.startUpdatingLocation()
             locationManager?.startUpdatingHeading()
         }
 
         func stopLocationUpdates() {
-            print("🛑 Deteniendo actualizaciones de ubicación")
+            Logger.debug("🛑 Deteniendo actualizaciones de ubicación")
             locationManager?.stopUpdatingLocation()
             locationManager?.stopUpdatingHeading()
         }
@@ -1181,11 +1181,11 @@ struct CustomMapView: UIViewRepresentable {
             DispatchQueue.main.async {
                 let previousStep = self.parent.currentStepIndex
                 self.parent.currentStepIndex = stepIndex
-                print("   Paso actualizado después de recalcular: \(previousStep + 1) → \(stepIndex + 1)")
+                Logger.debug("   Paso actualizado después de recalcular: \(previousStep + 1) → \(stepIndex + 1)")
 
                 // Activar flag para evitar avances inmediatos
                 self.justRecalculated = true
-                print("   Flag 'justRecalculated' activado para evitar avances inmediatos")
+                Logger.debug("   Flag 'justRecalculated' activado para evitar avances inmediatos")
 
                 // Resetear índice de polyline para empezar desde el inicio
                 self.lastPolylineUpdateIndex = 0
@@ -1195,13 +1195,13 @@ struct CustomMapView: UIViewRepresentable {
         // MARK: - CLLocationManagerDelegate
         func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
             guard let location = locations.last else { return }
-            print("📍 [CLLocationManager] Ubicación actualizada: \(location.coordinate.latitude), \(location.coordinate.longitude)")
-            print("   Precisión: \(location.horizontalAccuracy)m, Velocidad: \(location.speed)m/s")
-            print("   Estado navegación: \(parent.isNavigating ? "NAVEGANDO" : "NO navegando")")
+            Logger.debug("📍 [CLLocationManager] Ubicación actualizada: \(location.coordinate.latitude), \(location.coordinate.longitude)")
+            Logger.debug("   Precisión: \(location.horizontalAccuracy)m, Velocidad: \(location.speed)m/s")
+            Logger.debug("   Estado navegación: \(parent.isNavigating ? "NAVEGANDO" : "NO navegando")")
 
             if parent.isNavigating {
-                print("✅ [CLLocationManager] Procesando ubicación durante navegación")
-                print("   Paso actual: \(parent.currentStepIndex + 1), Distancia actual: \(String(format: "%.0f", parent.distanceToNextStep))m")
+                Logger.debug("✅ [CLLocationManager] Procesando ubicación durante navegación")
+                Logger.debug("   Paso actual: \(parent.currentStepIndex + 1), Distancia actual: \(String(format: "%.0f", parent.distanceToNextStep))m")
 
                 // Actualizar paso actual y distancia en tiempo real
                 updateCurrentStep(userLocation: location.coordinate, source: "CLLocationManager")
@@ -1209,22 +1209,22 @@ struct CustomMapView: UIViewRepresentable {
                 // Verificar si necesitamos recalcular la ruta
                 checkIfRecalculationNeeded(userLocation: location.coordinate)
             } else {
-                print("⚠️ [CLLocationManager] No navegando - actualización ignorada")
+                Logger.debug("⚠️ [CLLocationManager] No navegando - actualización ignorada")
             }
         }
 
         func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
-            print("❌ Error en location manager: \(error.localizedDescription)")
+            Logger.debug("❌ Error en location manager: \(error.localizedDescription)")
         }
 
         func mapView(_ mapView: MKMapView, didUpdate userLocation: MKUserLocation) {
             // ⚠️ NO procesar ubicaciones aquí para evitar doble procesamiento
             // CLLocationManager ya maneja todas las actualizaciones durante navegación
             guard let location = userLocation.location else { return }
-            print("🗺️ [MapView] Ubicación del punto azul actualizada: \(location.coordinate.latitude), \(location.coordinate.longitude)")
+            Logger.debug("🗺️ [MapView] Ubicación del punto azul actualizada: \(location.coordinate.latitude), \(location.coordinate.longitude)")
 
             if parent.isNavigating {
-                print("   [MapView] Navegando - procesamiento delegado a CLLocationManager")
+                Logger.debug("   [MapView] Navegando - procesamiento delegado a CLLocationManager")
             }
         }
         
@@ -1239,7 +1239,7 @@ struct CustomMapView: UIViewRepresentable {
                 distanceToEndOfCurrentStep += currentRoute.steps[i].distance
             }
 
-            print("📊 [\(source)] Paso \(parent.currentStepIndex + 1)/\(currentRoute.steps.count) - Distancia total hasta fin del paso: \(String(format: "%.0f", distanceToEndOfCurrentStep))m")
+            Logger.debug("📊 [\(source)] Paso \(parent.currentStepIndex + 1)/\(currentRoute.steps.count) - Distancia total hasta fin del paso: \(String(format: "%.0f", distanceToEndOfCurrentStep))m")
 
             // Encontrar el punto en la polyline que corresponde al final del paso actual
             let polyline = currentRoute.polyline
@@ -1276,7 +1276,7 @@ struct CustomMapView: UIViewRepresentable {
             let endLocation = CLLocation(latitude: endCoord.latitude, longitude: endCoord.longitude)
             let remainingDistance = userCLLocation.distance(from: endLocation)
 
-            print("📍 [\(source)] Distancia restante desde ubicación actual hasta fin del paso: \(String(format: "%.0f", remainingDistance))m")
+            Logger.debug("📍 [\(source)] Distancia restante desde ubicación actual hasta fin del paso: \(String(format: "%.0f", remainingDistance))m")
 
             // 🎯 Actualizar la polyline para borrar el camino recorrido
             updatePolylineToRemoveTraveledPath(userLocation: userLocation, currentRoute: currentRoute)
@@ -1289,17 +1289,17 @@ struct CustomMapView: UIViewRepresentable {
                 // 🎯 FIX: Si acabamos de recalcular, NO permitir que la distancia SUBA
                 // Solo actualizar si la nueva distancia es menor (usuario se acerca)
                 if self.justRecalculated && newDistance > previousDistance {
-                    print("⏸️ [\(source)] Acabamos de recalcular - Ignorando aumento de distancia: \(String(format: "%.0f", previousDistance))m → \(String(format: "%.0f", newDistance))m")
+                    Logger.debug("⏸️ [\(source)] Acabamos de recalcular - Ignorando aumento de distancia: \(String(format: "%.0f", previousDistance))m → \(String(format: "%.0f", newDistance))m")
                     self.justRecalculated = false // Resetear flag para próximas actualizaciones
                 } else {
                     // Actualización normal: permitir cambios de distancia
                     self.parent.distanceToNextStep = newDistance
-                    print("✅ [\(source)] Distancia UI: \(String(format: "%.0f", previousDistance))m → \(String(format: "%.0f", newDistance))m")
+                    Logger.debug("✅ [\(source)] Distancia UI: \(String(format: "%.0f", previousDistance))m → \(String(format: "%.0f", newDistance))m")
 
                     // Si la distancia bajó después de un recálculo, resetear el flag
                     if self.justRecalculated {
                         self.justRecalculated = false
-                        print("   Flag 'justRecalculated' reseteado (distancia bajó correctamente)")
+                        Logger.debug("   Flag 'justRecalculated' reseteado (distancia bajó correctamente)")
                     }
                 }
             }
@@ -1308,7 +1308,7 @@ struct CustomMapView: UIViewRepresentable {
             // PERO: No avanzar si acabamos de recalcular la ruta (evitar saltos inmediatos)
             // Nota: El flag justRecalculated se maneja en el bloque anterior al actualizar la distancia
             if remainingDistance < 15 && parent.currentStepIndex < currentRoute.steps.count - 1 && !justRecalculated {
-                print("➡️ [\(source)] Avanzando al paso \(parent.currentStepIndex + 2)/\(currentRoute.steps.count) (distancia < 15m)")
+                Logger.debug("➡️ [\(source)] Avanzando al paso \(parent.currentStepIndex + 2)/\(currentRoute.steps.count) (distancia < 15m)")
                 DispatchQueue.main.async {
                     // Feedback háptico al avanzar de paso
                     HapticFeedback.medium()
@@ -1402,7 +1402,7 @@ struct CustomMapView: UIViewRepresentable {
                     }
                     mapView.removeOverlays(overlaysToRemove)
 
-                    print("🗑️ Polyline actualizada - Puntos eliminados: \(pointsAdvanced), Puntos restantes: \(polyline.pointCount - closestIndex)")
+                    Logger.debug("🗑️ Polyline actualizada - Puntos eliminados: \(pointsAdvanced), Puntos restantes: \(polyline.pointCount - closestIndex)")
                 }
 
                 // Actualizar el índice de la última actualización
@@ -1427,12 +1427,12 @@ struct CustomMapView: UIViewRepresentable {
                 if distance < minDistance { minDistance = distance }
             }
 
-            print("📏 [RecalculoCheck] Distancia a la ruta: \(String(format: "%.0f", minDistance))m")
+            Logger.debug("📏 [RecalculoCheck] Distancia a la ruta: \(String(format: "%.0f", minDistance))m")
 
             // Recalcular si te desvías más de 50 metros de la ruta (tolerante con imprecisión GPS)
             if minDistance > 50 {
-                print("🔄 [RecalculoCheck] INICIANDO RECÁLCULO - Desviación de \(String(format: "%.0f", minDistance))m")
-                print("   Paso actual antes de recalcular: \(parent.currentStepIndex + 1), Distancia actual: \(String(format: "%.0f", parent.distanceToNextStep))m")
+                Logger.debug("🔄 [RecalculoCheck] INICIANDO RECÁLCULO - Desviación de \(String(format: "%.0f", minDistance))m")
+                Logger.debug("   Paso actual antes de recalcular: \(parent.currentStepIndex + 1), Distancia actual: \(String(format: "%.0f", parent.distanceToNextStep))m")
                 lastRecalculationDate = Date()
 
                 // Feedback háptico para indicar recalculación
@@ -1672,7 +1672,7 @@ struct CustomMapView: UIViewRepresentable {
             // Sincronizar el estado cuando el MapKit cambia el tracking mode
             // (esto ocurre automáticamente cuando el usuario arrastra el mapa)
             if parent.userTrackingMode != mode {
-                print("📍 Usuario arrastró el mapa - Reseteando botón de ubicación")
+                Logger.debug("📍 Usuario arrastró el mapa - Reseteando botón de ubicación")
                 DispatchQueue.main.async {
                     self.parent.userTrackingMode = mode
                 }

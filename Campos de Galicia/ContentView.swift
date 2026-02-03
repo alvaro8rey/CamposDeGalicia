@@ -123,7 +123,7 @@ struct ContentView: View {
             }
         }
         .onChange(of: camposViewModel.campos) { oldCampos, newCampos in
-            print("Campos cambió, actualizando filteredCampos: \(newCampos.count) campos")
+            Logger.debug("Campos cambió, actualizando filteredCampos: \(newCampos.count) campos")
             // Si no hay filtros activos, ordenar alfabéticamente
             if hasActiveFilters {
                 applyFilters()
@@ -134,7 +134,7 @@ struct ContentView: View {
         }
         .onChange(of: camposViewModel.errorMessage) { oldMessage, message in
             if let message = message {
-                print("Error al cargar campos: \(message)")
+                Logger.debug("Error al cargar campos: \(message)")
             }
         }
         .onAppear {

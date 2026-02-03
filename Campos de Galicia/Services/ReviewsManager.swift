@@ -66,46 +66,42 @@ class ReviewsManager: ObservableObject {
             // Crear diccionario de user_id -> profile
             let profilesDictionary = Dictionary(uniqueKeysWithValues: userProfiles.map { ($0.id, $0) })
 
-            // 5. Mapear niveles y perfiles a las reseñas usando JSON manipulation
-            let json = try JSONSerialization.jsonObject(with: response.data, options: [])
-            guard let reviewsArray = json as? [[String: Any]] else {
-                throw NSError(domain: "ReviewsManager", code: 1, userInfo: [NSLocalizedDescriptionKey: "Formato de datos incorrecto"])
-            }
+            // 5. Mapear niveles y perfiles a las reseñas usando tipo seguro (Codable)
+            reviews = tempReviews.map { review in
+                // Obtener nivel del usuario (default a 1 si no existe)
+                let level = levelsDictionary[review.user_id.uuidString] ?? 1
 
-            reviews = reviewsArray.compactMap { dict -> Review? in
-                var mutableDict = dict
+                // Obtener perfil del usuario para datos actualizados
+                let profile = profilesDictionary[review.user_id.uuidString]
 
-                if let userIdStr = dict["user_id"] as? String {
-                    // Agregar nivel del usuario si existe
-                    if let level = levelsDictionary[userIdStr] {
-                        mutableDict["reviewer_level"] = level
-                    } else {
-                        mutableDict["reviewer_level"] = 1 // Nivel por defecto
-                    }
-
-                    // Siempre usar datos de perfiles para nombre y avatar (son los más actualizados)
-                    if let profile = profilesDictionary[userIdStr] {
-                        let fullName = "\(profile.nombre ?? "") \(profile.apellidos ?? "")".trimmingCharacters(in: .whitespaces)
-
-                        // Usar nombre de perfil si está disponible, sino mantener el guardado en reviewer_name
-                        if !fullName.isEmpty {
-                            mutableDict["reviewer_name"] = fullName
-                        } else if dict["reviewer_name"] == nil || (dict["reviewer_name"] as? String)?.isEmpty == true {
-                            mutableDict["reviewer_name"] = "Usuario"
-                        }
-
-                        // Usar avatar de perfil (siempre el más actualizado)
-                        mutableDict["reviewer_avatar_url"] = profile.avatar_url
+                // Construir nombre completo desde perfil si está disponible
+                var reviewerName = review.reviewer_name ?? "Usuario"
+                if let profile = profile {
+                    let fullName = "\(profile.nombre ?? "") \(profile.apellidos ?? "")".trimmingCharacters(in: .whitespaces)
+                    if !fullName.isEmpty {
+                        reviewerName = fullName
                     }
                 }
 
-                do {
-                    let reviewData = try JSONSerialization.data(withJSONObject: mutableDict)
-                    return try decoder.decode(Review.self, from: reviewData)
-                } catch {
-                    Logger.error("Error decodificando reseña: \(error)")
-                    return nil
-                }
+                // Usar avatar del perfil (siempre el más actualizado)
+                let avatarUrl = profile?.avatar_url ?? review.reviewer_avatar_url
+
+                // Crear nueva instancia de Review con datos actualizados
+                // Orden de parámetros debe coincidir con el struct Review
+                return Review(
+                    id: review.id,
+                    campo_id: review.campo_id,
+                    user_id: review.user_id,
+                    reseña: review.reseña,
+                    rating: review.rating,
+                    created_at: review.created_at,
+                    updated_at: review.updated_at,
+                    reviewer_name: reviewerName,
+                    reviewer_avatar_url: avatarUrl,
+                    reviewer_level: level,
+                    fotos: review.fotos,
+                    is_anonymous: review.is_anonymous
+                )
             }
 
             // Calculate stats
@@ -215,15 +211,23 @@ class ReviewsManager: ObservableObject {
             Logger.debug("📝 Nuevo contenido: \(text.prefix(50))...")
             Logger.debug("⭐ Nuevo rating: \(rating)")
 
-            // Construir el JSON manualmente para asegurar los tipos correctos
-            let updateDict: [String: Any] = [
-                "reseña": text,
-                "rating": rating,
-                "fotos": fotos as Any,
-                "is_anonymous": isAnonymous
-            ]
+            // Construir el update usando Codable para asegurar type safety
+            struct ReviewUpdate: Codable {
+                let reseña: String
+                let rating: Int
+                let fotos: [String]?
+                let is_anonymous: Bool
+            }
 
-            let updateData = try JSONSerialization.data(withJSONObject: updateDict)
+            let update = ReviewUpdate(
+                reseña: text,
+                rating: rating,
+                fotos: fotos,
+                is_anonymous: isAnonymous
+            )
+
+            let encoder = JSONEncoder()
+            let updateData = try encoder.encode(update)
 
             // Realizar UPDATE con select para obtener la fila actualizada
             let response = try await supabase.from("reseñas")

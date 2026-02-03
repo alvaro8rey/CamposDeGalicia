@@ -42,6 +42,10 @@ class AuthViewModel: ObservableObject {
     func login(email: String, password: String) async throws {
         Logger.debug("Intentando login para: \(email)")
 
+        // Validar inputs antes de enviar a Supabase
+        try InputValidator.validateEmail(email)
+        try InputValidator.validatePassword(password)
+
         let session = try await supabase.auth.signIn(email: email, password: password)
         self.user = session.user
         self.isAuthenticated = true
@@ -57,6 +61,12 @@ class AuthViewModel: ObservableObject {
     /// Registro de usuario
     func register(email: String, password: String, nombre: String, apellidos: String) async throws -> String {
         Logger.debug("Intentando registro para: \(email)")
+
+        // Validar inputs antes de enviar a Supabase
+        try InputValidator.validateEmail(email)
+        try InputValidator.validatePasswordStrength(password) // Validación más estricta para registro
+        try InputValidator.validateName(nombre)
+        try InputValidator.validateName(apellidos)
 
         let authResp = try await supabase.auth.signUp(email: email, password: password)
         let userId = authResp.user.id.uuidString
@@ -89,6 +99,10 @@ class AuthViewModel: ObservableObject {
     /// Solicitar reset de contraseña
     func requestPasswordReset(email: String) async throws {
         Logger.debug("Solicitando reset de contraseña para: \(email)")
+
+        // Validar email antes de enviar
+        try InputValidator.validateEmail(email)
+
         try await supabase.auth.resetPasswordForEmail(email)
         Logger.success("✅ Email de reset enviado")
     }
@@ -96,6 +110,10 @@ class AuthViewModel: ObservableObject {
     /// Cambiar contraseña
     func changePassword(newPassword: String) async throws {
         Logger.debug("Cambiando contraseña")
+
+        // Validar la nueva contraseña
+        try InputValidator.validatePasswordStrength(newPassword)
+
         try await supabase.auth.update(user: UserAttributes(password: newPassword))
         Logger.success("✅ Contraseña actualizada")
     }
@@ -114,13 +132,20 @@ class AuthViewModel: ObservableObject {
             .single()
             .execute()
 
-        let jsonObject = try JSONSerialization.jsonObject(with: perfilResponse.data, options: [])
-        if let dict = jsonObject as? [String: Any] {
-            self.nombre = dict["nombre"] as? String ?? ""
-            self.apellidos = dict["apellidos"] as? String ?? ""
-            self.avatarURL = dict["avatar_url"] as? String
-            Logger.debug("Perfil cargado: \(self.nombre) \(self.apellidos)")
+        // Usar Codable para parsear la respuesta de forma type-safe
+        struct PerfilData: Codable {
+            let nombre: String?
+            let apellidos: String?
+            let avatar_url: String?
         }
+
+        let decoder = JSONDecoder()
+        let perfilData = try decoder.decode(PerfilData.self, from: perfilResponse.data)
+
+        self.nombre = perfilData.nombre ?? ""
+        self.apellidos = perfilData.apellidos ?? ""
+        self.avatarURL = perfilData.avatar_url
+        Logger.debug("Perfil cargado: \(self.nombre) \(self.apellidos)")
 
         // Cargar datos iniciales en ProgressStore
         await ProgressStore.shared.loadInitialData(for: user.id.uuidString)

@@ -58,7 +58,7 @@ struct AppMain: App {
         }
         
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { ok, err in
-            if let err = err { print("🔔 notif auth err: \(err.localizedDescription)") }
+            if let err = err { Logger.debug("🔔 notif auth err: \(err.localizedDescription)") }
         }
         UNUserNotificationCenter.current().delegate = NotificationDelegate.shared
     }
@@ -165,7 +165,7 @@ struct AppMain: App {
             .onChange(of: camposViewModel.campos) { oldValue, newValue in
                 // Cuando los campos se cargan por primera vez, activar auto check-in si estaba habilitado
                 if !hasInitializedAutoCheckin && !newValue.isEmpty && geofenceManager.autoCheckinEnabled {
-                    print("🚀 Campos cargados (\(newValue.count)) - activando auto check-in al arranque")
+                    Logger.debug("🚀 Campos cargados (\(newValue.count)) - activando auto check-in al arranque")
                     hasInitializedAutoCheckin = true
                     geofenceManager.setAutoCheckin(true, campos: newValue)
                 } else if hasInitializedAutoCheckin && geofenceManager.autoCheckinEnabled {
@@ -234,7 +234,7 @@ struct AppMain: App {
             return
         }
 
-        print("📱 Manejando acción de notificación: \(action)")
+        Logger.debug("📱 Manejando acción de notificación: \(action)")
 
         // Activar overlay para ocultar la transición
         isProcessingDeepLink = true
@@ -246,7 +246,7 @@ struct AppMain: App {
             case "showCampoDetail":
                 // Navegar a detalle del campo
                 if let campoID = userInfo["campoID"] as? UUID {
-                    print("🎯 Navegando a campo: \(campoID)")
+                    Logger.debug("🎯 Navegando a campo: \(campoID)")
                     // Cambiar al tab primero
                     self.selectedTab = 0
                     // Pequeño delay adicional para que el tab se active antes de navegar
@@ -261,7 +261,7 @@ struct AppMain: App {
 
             case "showLogros":
                 // Navegar a pantalla de logros
-                print("🏆 Navegando a logros")
+                Logger.debug("🏆 Navegando a logros")
                 // Cambiar al tab primero
                 self.selectedTab = 3
                 // Pequeño delay adicional para que el tab se active antes de navegar
@@ -274,7 +274,7 @@ struct AppMain: App {
                 }
 
             default:
-                print("⚠️ Acción desconocida: \(action)")
+                Logger.debug("⚠️ Acción desconocida: \(action)")
                 self.isProcessingDeepLink = false
             }
         }

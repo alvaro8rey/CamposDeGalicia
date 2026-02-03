@@ -9,22 +9,32 @@ import Foundation
 let supabase: SupabaseClient = {
     let config = EnvironmentConfig.shared
 
-    // Validar credenciales
-    guard config.validate() else {
-        fatalError(L(.errorSupabaseCredentials))
-    }
+    do {
+        // Validar credenciales
+        try config.validate()
 
-    // Log de configuración en modo debug
-    if config.environment == .development {
-        Logger.debug("Inicializando Supabase con configuración:\n\(config.debugInfo)")
-    }
+        // Log de configuración en modo debug (sin exponer credenciales)
+        if config.environment == .development {
+            Logger.debug("Inicializando Supabase con configuración:\n\(config.debugInfo)")
+        }
 
-    guard let url = URL(string: config.supabaseURL) else {
-        fatalError(L(.errorSupabaseInvalidURL, config.supabaseURL))
-    }
+        guard let url = URL(string: config.supabaseURL) else {
+            Logger.error("❌ URL de Supabase inválida")
+            // En lugar de crash, usar URL temporal y permitir que los errores de red se manejen más adelante
+            let fallbackURL = URL(string: "https://placeholder.supabase.co")!
+            return SupabaseClient(supabaseURL: fallbackURL, supabaseKey: "")
+        }
 
-    return SupabaseClient(
-        supabaseURL: url,
-        supabaseKey: config.supabaseKey
-    )
+        return SupabaseClient(
+            supabaseURL: url,
+            supabaseKey: config.supabaseKey
+        )
+    } catch {
+        Logger.error("❌ Error al configurar Supabase: \(error.localizedDescription)")
+
+        // En lugar de crash inmediato, crear cliente con placeholder
+        // Los errores de autenticación se manejarán en tiempo de ejecución
+        let fallbackURL = URL(string: "https://placeholder.supabase.co")!
+        return SupabaseClient(supabaseURL: fallbackURL, supabaseKey: "")
+    }
 }()

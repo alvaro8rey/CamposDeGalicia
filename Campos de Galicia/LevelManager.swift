@@ -214,7 +214,7 @@ final class LevelManager {
                         ToastManager.shared.achievement("🏆 ¡Nuevo logro! \(logro.nombre)")
                     }
                 } catch {
-                    print("⚠️ Error insertando logro \(logro.id): \(error)")
+                    Logger.debug("⚠️ Error insertando logro \(logro.id): \(error)")
                 }
             }
         }
@@ -248,7 +248,7 @@ final class LevelManager {
                 newLogros.append(INITIAL_ACHIEVEMENT_ID)
                 logrosDesbloqueadosIds.insert(INITIAL_ACHIEVEMENT_ID)
             } catch {
-                print("⚠️ Error insertando logro inicial: \(error)")
+                Logger.debug("⚠️ Error insertando logro inicial: \(error)")
             }
         }
 

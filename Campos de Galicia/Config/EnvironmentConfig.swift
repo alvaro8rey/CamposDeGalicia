@@ -34,87 +34,70 @@ struct EnvironmentConfig {
         self.environment = .production
         #endif
 
-        // 1. Intentar cargar desde variables de entorno del sistema
-        if let envURL = ProcessInfo.processInfo.environment["SUPABASE_URL"],
-           let envKey = ProcessInfo.processInfo.environment["SUPABASE_KEY"],
-           !envURL.isEmpty, !envKey.isEmpty {
-            self.supabaseURL = envURL
-            self.supabaseKey = envKey
-            Logger.info("✅ Credenciales cargadas desde variables de entorno")
-            return
+        do {
+            // 1. Intentar cargar desde variables de entorno del sistema
+            if let envURL = ProcessInfo.processInfo.environment["SUPABASE_URL"],
+               let envKey = ProcessInfo.processInfo.environment["SUPABASE_KEY"],
+               !envURL.isEmpty, !envKey.isEmpty {
+                self.supabaseURL = envURL
+                self.supabaseKey = envKey
+                Logger.info("✅ Credenciales cargadas desde variables de entorno")
+                return
+            }
+
+            // 2. Intentar cargar desde Config.plist
+            if let configPath = Bundle.main.path(forResource: "Config", ofType: "plist"),
+               let config = NSDictionary(contentsOfFile: configPath),
+               let url = config["SUPABASE_URL"] as? String,
+               let key = config["SUPABASE_KEY"] as? String,
+               !url.isEmpty, !key.isEmpty {
+                self.supabaseURL = url
+                self.supabaseKey = key
+                Logger.info("✅ Credenciales cargadas desde Config.plist")
+                return
+            }
+
+            // 3. Si no hay credenciales disponibles, usar valores por defecto vacíos
+            // y loguear el error para permitir que la app maneje esto gracefully
+            Logger.error("❌ No se encontraron credenciales de Supabase")
+            self.supabaseURL = ""
+            self.supabaseKey = ""
+
+            // En desarrollo, mostrar alerta al usuario en lugar de crash
+            if environment == .development {
+                Logger.warning("""
+                    ⚠️ Credenciales de Supabase no configuradas.
+                    La aplicación puede no funcionar correctamente.
+
+                    Configura las credenciales en Config.plist o variables de entorno.
+                    Ver README.md para más información.
+                    """)
+            }
         }
-
-        // 2. Intentar cargar desde Config.plist
-        if let configPath = Bundle.main.path(forResource: "Config", ofType: "plist"),
-           let config = NSDictionary(contentsOfFile: configPath),
-           let url = config["SUPABASE_URL"] as? String,
-           let key = config["SUPABASE_KEY"] as? String,
-           !url.isEmpty, !key.isEmpty {
-            self.supabaseURL = url
-            self.supabaseKey = key
-            Logger.info("✅ Credenciales cargadas desde Config.plist")
-            return
-        }
-
-        // 3. En desarrollo, si no hay credenciales, mostrar error informativo
-        if environment == .development {
-            Logger.error("❌ No se encontraron credenciales de Supabase en desarrollo")
-            fatalError("""
-                ❌ No se encontraron credenciales de Supabase.
-
-                Por favor configura las credenciales de una de estas formas:
-
-                1. Variables de entorno:
-                   export SUPABASE_URL="tu_url"
-                   export SUPABASE_KEY="tu_key"
-
-                2. Archivo Config.plist con:
-                   - SUPABASE_URL (String)
-                   - SUPABASE_KEY (String)
-
-                3. Copia Config.plist.example a Config.plist y actualiza tus credenciales
-
-                Ver README.md para más información.
-                """)
-        }
-
-        // Si llegamos aquí en producción, es un error fatal
-        fatalError("""
-            ❌ No se encontraron credenciales de Supabase.
-
-            Por favor configura las credenciales de una de estas formas:
-
-            1. Variables de entorno:
-               export SUPABASE_URL="tu_url"
-               export SUPABASE_KEY="tu_key"
-
-            2. Archivo Config.plist con:
-               - SUPABASE_URL (String)
-               - SUPABASE_KEY (String)
-
-            Ver CREDENTIALS_SETUP.md para más información.
-            """)
     }
 
     // MARK: - Validation
-    func validate() -> Bool {
-        guard !supabaseURL.isEmpty,
-              supabaseURL.starts(with: "https://"),
-              !supabaseKey.isEmpty,
-              supabaseKey.count > 50 else {
-            Logger.error("❌ Credenciales de Supabase inválidas")
-            return false
+    func validate() throws {
+        guard !supabaseURL.isEmpty else {
+            throw AppConfigError.missingCredentials
         }
-        return true
+
+        guard supabaseURL.starts(with: "https://") else {
+            throw AppConfigError.invalidURL(supabaseURL)
+        }
+
+        guard !supabaseKey.isEmpty, supabaseKey.count > 50 else {
+            throw AppConfigError.invalidCredentials
+        }
     }
 
     // MARK: - Debug Info
+    /// Información de debug segura (sin exponer credenciales)
     var debugInfo: String {
         """
         Environment: \(environment.rawValue)
-        Supabase URL: \(supabaseURL)
+        Supabase URL: \(supabaseURL.isEmpty ? "No configurada" : "Configurada")
         Key Length: \(supabaseKey.count) characters
-        Key Preview: \(supabaseKey.prefix(20))...
         """
     }
 }

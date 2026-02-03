@@ -490,7 +490,7 @@ struct LogrosView: View {
 
             guard let row = data.first else {
                 guard let userUUID = UUID(uuidString: userId) else {
-                    print("⚠️ Error: userId inválido '\(userId)'")
+                    Logger.debug("⚠️ Error: userId inválido '\(userId)'")
                     return
                 }
                 let newAccess = AccesoDiario(
@@ -650,7 +650,7 @@ struct LogrosView: View {
         do {
             try await LevelManager.shared.updateLevelAndXP(for: uid)
         } catch {
-            print("⚠️ Error al actualizar nivel y XP: \(error.localizedDescription)")
+            Logger.debug("⚠️ Error al actualizar nivel y XP: \(error.localizedDescription)")
         }
         await loadUserProgress()
         await loadLogrosDesbloqueados()
@@ -665,7 +665,7 @@ struct LogrosView: View {
                 UNUserNotificationCenter.current()
                     .requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in
                         if !granted { DispatchQueue.main.async { self.showPermissionAlert = true } }
-                        if let error = error { print("Permisos notif error: \(error.localizedDescription)") }
+                        if let error = error { Logger.debug("Permisos notif error: \(error.localizedDescription)") }
                     }
             case .denied:
                 DispatchQueue.main.async { self.showPermissionAlert = true }
@@ -690,7 +690,7 @@ struct LogrosView: View {
         todayAt3PM.minute = DAILY_MIN
 
         guard let targetTimeToday = calendar.date(from: todayAt3PM) else {
-            print("❌ Error al calcular la hora de notificación")
+            Logger.debug("❌ Error al calcular la hora de notificación")
             return
         }
 
@@ -716,12 +716,12 @@ struct LogrosView: View {
 
         UNUserNotificationCenter.current().add(request) { err in
             if let err = err {
-                print("❌ Error al programar notificación diaria: \(err.localizedDescription)")
+                Logger.debug("❌ Error al programar notificación diaria: \(err.localizedDescription)")
             } else {
                 let dateFormatter = DateFormatter()
                 dateFormatter.dateStyle = .short
                 dateFormatter.timeStyle = .short
-                print("✅ Notificación diaria programada para: \(dateFormatter.string(from: targetDate))")
+                Logger.debug("✅ Notificación diaria programada para: \(dateFormatter.string(from: targetDate))")
             }
         }
     }

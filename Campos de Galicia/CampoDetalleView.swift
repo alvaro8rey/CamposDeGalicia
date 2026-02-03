@@ -277,7 +277,7 @@ struct CampoDetalleView: View {
                 isVisited = false
             }
         } catch {
-            print("Error checking visit:", error)
+            Logger.debug("Error checking visit:", error)
         }
     }
 
@@ -348,7 +348,7 @@ struct CampoDetalleView: View {
             contribucionesAprobadas = extras.contribuciones
             await preloadUserNames(for: extras.contribuciones)
         } catch {
-            print("Error fetching contribuciones:", error)
+            Logger.debug("Error fetching contribuciones:", error)
         }
     }
 
@@ -372,7 +372,7 @@ struct CampoDetalleView: View {
                 userNames[id] = L(.campoUnknownUser)
             }
         } catch {
-            print("Error loading user names:", error)
+            Logger.debug("Error loading user names:", error)
             for id in uniqueUserIds {
                 userNames[id] = L(.campoUnknownUser)
             }

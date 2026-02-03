@@ -28,7 +28,7 @@ final class LocationService: NSObject, CLLocationManagerDelegate {
 
         case .denied, .restricted:
             // Sin permisos, no podemos hacer nada
-            print("❌ LocationService: Permisos denegados o restringidos")
+            Logger.warning("❌ LocationService: Permisos denegados o restringidos")
             return nil
 
         case .authorizedWhenInUse, .authorizedAlways:
@@ -37,7 +37,7 @@ final class LocationService: NSObject, CLLocationManagerDelegate {
             if let lastLocation = manager.location,
                Date().timeIntervalSince(lastLocation.timestamp) < 10,
                lastLocation.horizontalAccuracy >= 0 {
-                print("✅ LocationService: Usando ubicación cacheada (\(lastLocation.horizontalAccuracy)m de precisión)")
+                Logger.debug("✅ LocationService: Usando ubicación cacheada (\(lastLocation.horizontalAccuracy)m de precisión)")
                 return lastLocation
             }
 
@@ -45,24 +45,24 @@ final class LocationService: NSObject, CLLocationManagerDelegate {
             return await requestLocation()
 
         @unknown default:
-            print("⚠️ LocationService: Estado de autorización desconocido")
+            Logger.warning("⚠️ LocationService: Estado de autorización desconocido")
             return nil
         }
     }
 
     /// Solicita permisos y espera la ubicación
     private func requestPermissionsAndLocation() async -> CLLocation? {
-        print("📍 LocationService: Solicitando permisos...")
+        Logger.debug("📍 LocationService: Solicitando permisos...")
 
         return await withCheckedContinuation { continuation in
             self.continuation = continuation
             manager.requestWhenInUseAuthorization()
 
-            // Timeout de 10 segundos para que el usuario responda
+            // Timeout de 5 segundos para que el usuario responda
             timeoutTask = Task { @MainActor in
-                try? await Task.sleep(nanoseconds: 10_000_000_000)
+                try? await Task.sleep(nanoseconds: 5_000_000_000)
                 if let cont = self.continuation {
-                    print("⏱️ LocationService: Timeout esperando permisos")
+                    Logger.warning("⏱️ LocationService: Timeout esperando permisos")
                     self.continuation = nil
                     cont.resume(returning: nil)
                 }
@@ -72,7 +72,7 @@ final class LocationService: NSObject, CLLocationManagerDelegate {
 
     /// Solicita la ubicación actual
     private func requestLocation() async -> CLLocation? {
-        print("📍 LocationService: Solicitando ubicación...")
+        Logger.debug("📍 LocationService: Solicitando ubicación...")
 
         return await withCheckedContinuation { continuation in
             self.continuation = continuation
@@ -82,7 +82,7 @@ final class LocationService: NSObject, CLLocationManagerDelegate {
             timeoutTask = Task { @MainActor in
                 try? await Task.sleep(nanoseconds: 3_000_000_000)
                 if let cont = self.continuation {
-                    print("⏱️ LocationService: Timeout obteniendo ubicación")
+                    Logger.warning("⏱️ LocationService: Timeout obteniendo ubicación")
                     self.continuation = nil
                     cont.resume(returning: nil)
                 }
@@ -98,20 +98,20 @@ final class LocationService: NSObject, CLLocationManagerDelegate {
 
     // MARK: CLLocationManagerDelegate
     func locationManager(_ manager: CLLocationManager, didChangeAuthorization status: CLAuthorizationStatus) {
-        print("🔐 LocationService: Cambio de autorización: \(status.rawValue)")
+        Logger.debug("🔐 LocationService: Cambio de autorización: \(status.rawValue)")
 
         guard let continuation = self.continuation else { return }
 
         switch status {
         case .authorizedWhenInUse, .authorizedAlways:
             // Permisos concedidos, ahora solicitar ubicación
-            print("✅ LocationService: Permisos concedidos, solicitando ubicación...")
+            Logger.info("✅ LocationService: Permisos concedidos, solicitando ubicación...")
             cancelTimeout()
             manager.requestLocation()
 
         case .denied, .restricted:
             // Permisos denegados
-            print("❌ LocationService: Permisos denegados")
+            Logger.warning("❌ LocationService: Permisos denegados")
             cancelTimeout()
             self.continuation = nil
             continuation.resume(returning: nil)
@@ -121,7 +121,7 @@ final class LocationService: NSObject, CLLocationManagerDelegate {
             break
 
         @unknown default:
-            print("⚠️ LocationService: Estado desconocido")
+            Logger.warning("⚠️ LocationService: Estado desconocido")
             cancelTimeout()
             self.continuation = nil
             continuation.resume(returning: nil)
@@ -146,9 +146,9 @@ final class LocationService: NSObject, CLLocationManagerDelegate {
             .first
 
         if let location = best {
-            print("✅ LocationService: Ubicación obtenida (precisión: \(location.horizontalAccuracy)m)")
+            Logger.info("✅ LocationService: Ubicación obtenida (precisión: \(location.horizontalAccuracy)m)")
         } else {
-            print("⚠️ LocationService: No se encontró ubicación válida")
+            Logger.warning("⚠️ LocationService: No se encontró ubicación válida")
         }
 
         self.continuation = nil
@@ -156,7 +156,7 @@ final class LocationService: NSObject, CLLocationManagerDelegate {
     }
 
     func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
-        print("❌ LocationService: Error obteniendo ubicación: \(error.localizedDescription)")
+        Logger.error("❌ LocationService: Error obteniendo ubicación: \(error.localizedDescription)")
 
         guard let continuation = self.continuation else { return }
 

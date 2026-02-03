@@ -143,7 +143,7 @@ struct ContribucionFormView: View {
                     photoPreviews.append(Image(uiImage: uiImage))
                 }
             } catch {
-                print("Error loading photo preview:", error)
+                Logger.debug("Error loading photo preview:", error)
             }
         }
     }
@@ -196,7 +196,7 @@ struct ContribucionFormView: View {
             onSubmit(contribucion)
             dismiss()
         } catch {
-            print("Error submitting contribution:", error)
+            Logger.debug("Error submitting contribution:", error)
         }
     }
 }

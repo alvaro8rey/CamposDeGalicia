@@ -65,6 +65,7 @@ struct ProfileView: View {
                     .padding(.horizontal)
                 }
                 .padding(.vertical)
+                .padding(.bottom, 80)
             }
         }
         .navigationTitle(L(.profileTitle))

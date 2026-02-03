@@ -61,6 +61,7 @@ struct LogrosView: View {
             }
             .padding(.vertical, 20)
             .padding(.horizontal, 16)
+            .padding(.bottom, 80)
         }
         .background(
             LinearGradient(

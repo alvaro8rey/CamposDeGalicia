@@ -87,7 +87,7 @@ struct CamposCercanosView: View {
                                 }
                                 .padding(.horizontal, 12)
                                 .padding(.top, 8)
-                                .padding(.bottom, 60)
+                                .padding(.bottom, 40)
                             }
                         } else {
                             EmptyCard(text: L(.nearbyLocationError))

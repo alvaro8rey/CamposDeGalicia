@@ -143,7 +143,7 @@ struct ContribucionFormView: View {
                     photoPreviews.append(Image(uiImage: uiImage))
                 }
             } catch {
-                Logger.debug("Error loading photo preview:", error)
+                Logger.debug("Error loading photo preview: \(error.localizedDescription)")
             }
         }
     }
@@ -196,7 +196,7 @@ struct ContribucionFormView: View {
             onSubmit(contribucion)
             dismiss()
         } catch {
-            Logger.debug("Error submitting contribution:", error)
+            Logger.debug("Error submitting contribution: \(error.localizedDescription)")
         }
     }
 }

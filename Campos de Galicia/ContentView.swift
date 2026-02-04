@@ -55,7 +55,7 @@ struct ContentView: View {
                 ]),
                 startPoint: .top, endPoint: .bottom
             )
-            .edgesIgnoringSafeArea(.all)
+            .ignoresSafeArea()
 
             // Contenido
             VStack(spacing: 0) {
@@ -108,9 +108,9 @@ struct ContentView: View {
                             await camposViewModel.refreshCampos()
                         }
                     )
+                    .ignoresSafeArea(.container, edges: .bottom)
                     .environmentObject(authViewModel)
                 }
-                Spacer()
             }
         }
         .navigationTitle(L(.contentHome))
@@ -697,8 +697,7 @@ struct CampoListView: View {
                                     .padding(.vertical, 8)
                                 }
                                 .frame(width: itemWidth, height: 162)
-                                .background(Color(UIColor.secondarySystemBackground))
-                                .cornerRadius(14)
+                                .background(.ultraThinMaterial)                                .cornerRadius(14)
                                 .shadow(color: Color.black.opacity(0.08), radius: 8, x: 0, y: 4)
 
                                 // Indicador de campo visitado
@@ -783,8 +782,7 @@ struct CampoListView: View {
                                     .foregroundColor(.secondary)
                             }
                             .padding(16)
-                            .background(Color(UIColor.secondarySystemBackground))
-                            .cornerRadius(16)
+                            .background(.ultraThinMaterial)                            .cornerRadius(16)
                             .shadow(color: Color.black.opacity(0.08), radius: 8, x: 0, y: 4)
                         }
                         .buttonStyle(PlainButtonStyle())
@@ -792,9 +790,12 @@ struct CampoListView: View {
                 }
                 .padding(.horizontal, 12)
                 .padding(.top, 8)
-                .padding(.bottom, 40)
+                .padding(.bottom, 100)
             }
         }
+        .scrollContentBackground(.hidden) // <--- Esto ya lo debes tener
+        .background(Color.clear)
+        .ignoresSafeArea(.all, edges: .bottom)
         .refreshable {
             await onRefresh()
         }

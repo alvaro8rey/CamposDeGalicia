@@ -38,6 +38,16 @@ struct AppMain: App {
     // Bandera para activar auto check-in solo una vez al inicio
     @State private var hasInitializedAutoCheckin: Bool = false
 
+    // Computed property para el binding del TabView
+    private var tabSelection: Binding<Int> {
+        Binding(
+            get: { self.selectedTab },
+            set: { newTab in
+                self.handleTabChange(to: newTab)
+            }
+        )
+    }
+
     init() {
         // --- CAMBIO: Configuración de Apariencia Nativa ---
         let appearance = UITabBarAppearance()
@@ -82,24 +92,8 @@ struct AppMain: App {
             // --- CAMBIO: Envolvemos en ZStack para controlar el fondo ---
             ZStack {
                 themeManager.currentTheme.colorScheme == .dark ? Color.black.ignoresSafeArea() : Color.white.ignoresSafeArea()
-                
-                TabView(selection: Binding(
-                    get: { self.selectedTab },
-                    set: { newTab in
-                        if self.isMapNavigating && self.selectedTab == 1 && newTab != 1 {
-                            self.pendingTab = newTab
-                            self.showExitRouteAlert = true
-                        } else {
-                            self.selectedTab = newTab
 
-                            // 📊 Analytics: Track tab change
-                            let tabNames = ["home", "map", "nearby", "profile"]
-                            if newTab < tabNames.count {
-                                AnalyticsManager.shared.trackTabChange(to: tabNames[newTab])
-                            }
-                        }
-                    }
-                )) {
+                TabView(selection: tabSelection) {
                     // TAB 0: INICIO
                     NavigationView {
                         ContentView(
@@ -241,6 +235,23 @@ struct AppMain: App {
                     }
                 }
             )
+        }
+    }
+
+    // MARK: - Tab Navigation
+
+    private func handleTabChange(to newTab: Int) {
+        if self.isMapNavigating && self.selectedTab == 1 && newTab != 1 {
+            self.pendingTab = newTab
+            self.showExitRouteAlert = true
+        } else {
+            self.selectedTab = newTab
+
+            // 📊 Analytics: Track tab change
+            let tabNames = ["home", "map", "nearby", "profile"]
+            if newTab < tabNames.count {
+                AnalyticsManager.shared.trackTabChange(to: tabNames[newTab])
+            }
         }
     }
 

@@ -108,11 +108,10 @@ final class SupabaseQueryOptimizer {
             query = query.eq("aprobada", value: true)
         }
 
-        query = query
+        let response = try await query
             .order("fecha", ascending: false)
             .range(from: offset, to: offset + limit - 1)
-
-        let response = try await query.execute()
+            .execute()
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
         var items = try decoder.decode([ContribucionAprobada].self, from: response.data)
@@ -242,11 +241,10 @@ final class SupabaseQueryOptimizer {
             query = query.gte("rating", value: minRating)
         }
 
-        query = query
+        let response = try await query
             .order("created_at", ascending: false)
             .range(from: offset, to: offset + limit - 1)
-
-        let response = try await query.execute()
+            .execute()
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
         var items = try decoder.decode([Review].self, from: response.data)
@@ -334,6 +332,7 @@ final class SupabaseQueryOptimizer {
         }
 
         func execute<T: Decodable>() async throws -> [T] {
+            // Construir query con filtros
             var query = client.from(table).select("*")
 
             for filter in filters {
@@ -346,19 +345,42 @@ final class SupabaseQueryOptimizer {
                 }
             }
 
+            // Aplicar transformaciones y ejecutar
+            // Nota: Después de aplicar filtros (.eq), tenemos un PostgrestFilterBuilder
+            // Después de aplicar order/limit/range, tenemos un PostgrestTransformBuilder
+            // Por eso no podemos reasignar a la misma variable
+            let response: PostgrestResponse
+
             if let orderColumn = orderColumn {
-                query = query.order(orderColumn, ascending: isAscending)
+                // Comenzar con order para obtener un TransformBuilder
+                var builder = query.order(orderColumn, ascending: isAscending)
+
+                if let limit = limitValue {
+                    builder = builder.limit(limit)
+                }
+
+                if let from = rangeFrom, let to = rangeTo {
+                    builder = builder.range(from: from, to: to)
+                }
+
+                response = try await builder.execute()
+            } else if let limit = limitValue {
+                // Comenzar con limit
+                var builder = query.limit(limit)
+
+                if let from = rangeFrom, let to = rangeTo {
+                    builder = builder.range(from: from, to: to)
+                }
+
+                response = try await builder.execute()
+            } else if let from = rangeFrom, let to = rangeTo {
+                // Solo range
+                response = try await query.range(from: from, to: to).execute()
+            } else {
+                // Sin transformaciones
+                response = try await query.execute()
             }
 
-            if let limit = limitValue {
-                query = query.limit(limit)
-            }
-
-            if let from = rangeFrom, let to = rangeTo {
-                query = query.range(from: from, to: to)
-            }
-
-            let response = try await query.execute()
             let decoder = JSONDecoder()
             decoder.dateDecodingStrategy = .iso8601
             return try decoder.decode([T].self, from: response.data)

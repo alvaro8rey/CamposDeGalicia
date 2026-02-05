@@ -353,12 +353,21 @@ final class GeofenceManager: NSObject, ObservableObject, CLLocationManagerDelega
 
         // CRÍTICO: Verificar PRIMERO si el campo ya fue visitado alguna vez en la BD
         // Esto evita iniciar dwells innecesarios para campos ya visitados
+
+        // IMPORTANTE: Iniciar background task ANTES de la verificación en BD
+        // para garantizar tiempo de ejecución en background
+        startBackgroundTask()
+
         Task { [weak self] in
-            guard let self else { return }
+            guard let self else {
+                self?.endBackgroundTask()
+                return
+            }
 
             do {
                 guard let user = supabase.auth.currentUser else {
                     Logger.debug("❌ No hay usuario autenticado")
+                    self.endBackgroundTask()
                     return
                 }
                 let userId = user.id.uuidString
@@ -374,6 +383,7 @@ final class GeofenceManager: NSObject, ObservableObject, CLLocationManagerDelega
                         self.recentlyCheckedIn.insert(campo.id)
                         self.persistDwellData()
                     }
+                    self.endBackgroundTask()
                     return
                 }
 
@@ -398,8 +408,7 @@ final class GeofenceManager: NSObject, ObservableObject, CLLocationManagerDelega
                         self.pendingDwells[id] = timer
                     }
 
-                    // Iniciar background task para procesar en background
-                    self.startBackgroundTask()
+                    // El background task ya fue iniciado arriba - no reiniciar
 
                     // Verificar inmediatamente si el dwell ya se completó (por si fue en background)
                     self.checkPendingDwells()
@@ -408,6 +417,7 @@ final class GeofenceManager: NSObject, ObservableObject, CLLocationManagerDelega
             } catch {
                 Logger.debug("❌ Error al verificar visita previa: \(error.localizedDescription)")
                 // En caso de error, no iniciar el dwell por seguridad
+                self?.endBackgroundTask()
             }
         }
     }

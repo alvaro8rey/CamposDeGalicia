@@ -214,7 +214,7 @@ struct AppMain: App {
                 AnalyticsManager.shared.track(.appLaunched)
 
                 // Configurar propiedades de usuario
-                if let userId = authViewModel.userId {
+                if let userId = authViewModel.user?.id {
                     AnalyticsManager.shared.setUserProperties([
                         "user_id": userId.uuidString
                     ])

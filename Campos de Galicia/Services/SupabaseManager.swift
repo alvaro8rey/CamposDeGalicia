@@ -76,17 +76,32 @@ final class SupabaseManager {
     }
 
     func fetchContribucionesAprobadas(for campoID: UUID, limit: Int = 50) async throws -> [ContribucionAprobada] {
-        // Limitar a 50 contribuciones más recientes por campo
-        let response = try await client.from("campo_contribuciones")
-            .select("*")
-            .eq("id_campo", value: campoID.uuidString)
-            .eq("aprobada", value: true)
-            .order("fecha", ascending: false)
-            .limit(limit)
-            .execute()
-        let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .iso8601
-        return try decoder.decode([ContribucionAprobada].self, from: response.data)
+        // Usar query optimizada con paginación
+        let config = SupabaseQueryOptimizer.PaginationConfig(pageSize: limit, maxPages: 1)
+        let result = try await SupabaseQueryOptimizer.fetchContribucionesPaginated(
+            client: client,
+            campoID: campoID,
+            page: 0,
+            config: config,
+            onlyApproved: true
+        )
+        return result.items
+    }
+
+    /// Fetch contribuciones con paginación completa
+    func fetchContribucionesPaginadas(
+        for campoID: UUID,
+        page: Int = 0,
+        pageSize: Int = 20
+    ) async throws -> SupabaseQueryOptimizer.PaginatedResult<ContribucionAprobada> {
+        let config = SupabaseQueryOptimizer.PaginationConfig(pageSize: pageSize, maxPages: nil)
+        return try await SupabaseQueryOptimizer.fetchContribucionesPaginated(
+            client: client,
+            campoID: campoID,
+            page: page,
+            config: config,
+            onlyApproved: true
+        )
     }
 
     func invalidateCamposCache() async {
@@ -98,14 +113,49 @@ final class SupabaseManager {
     }
 
     private func requestCampos() async throws -> [CampoModel] {
-        // Sin límite para campos - necesitamos todos en el mapa
-        // Pero agregamos order para optimización
-        let response = try await client.from("campos")
-            .select("*")
-            .order("nombre", ascending: true)
-            .execute()
-        let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .iso8601
-        return try decoder.decode([CampoModel].self, from: response.data)
+        // Usar query optimizada con medición de tiempo
+        let (campos, duration) = try await SupabaseQueryOptimizer.measureQueryTime(operation: "fetch_all_campos") {
+            try await SupabaseQueryOptimizer.fetchCamposOptimized(
+                client: client,
+                orderBy: "nombre",
+                ascending: true
+            )
+        }
+
+        Logger.debug("Fetched \(campos.count) campos in \(String(format: "%.2f", duration))s")
+        return campos
+    }
+
+    /// Fetch campos cercanos optimizado
+    func fetchCamposCercanos(
+        latitude: Double,
+        longitude: Double,
+        radiusKm: Double = 10,
+        limit: Int = 50
+    ) async throws -> [CampoModel] {
+        return try await SupabaseQueryOptimizer.fetchCamposCercanos(
+            client: client,
+            latitude: latitude,
+            longitude: longitude,
+            radiusKm: radiusKm,
+            limit: limit
+        )
+    }
+
+    /// Fetch incremental - solo campos actualizados desde la última sincronización
+    func fetchCamposIncrementales(since: Date) async throws -> [CampoModel] {
+        return try await SupabaseQueryOptimizer.fetchCamposIncremental(
+            client: client,
+            since: since
+        )
+    }
+
+    /// Fetch múltiples campos por IDs en batch
+    func fetchCamposByIDs(_ ids: [UUID]) async throws -> [CampoModel] {
+        guard !ids.isEmpty else { return [] }
+        return try await SupabaseQueryOptimizer.fetchCamposByIDs(
+            client: client,
+            ids: ids
+        )
     }
 }

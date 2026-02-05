@@ -140,7 +140,11 @@ class ErrorHandler: ObservableObject {
         }
 
         // Trackear en analytics
-        AnalyticsManager.shared.logEvent(name: "error_occurred", parameters: parameters)
+        AnalyticsManager.shared.trackCustom(
+            name: "error_occurred",
+            category: .error,
+            parameters: parameters
+        )
     }
 
     // MARK: - Error History

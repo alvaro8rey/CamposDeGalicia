@@ -10,6 +10,7 @@ struct ContribucionFormView: View {
     @Environment(\.dismiss) var dismiss
     @State private var selectedPhotos: [PhotosPickerItem] = []
     @State private var photoPreviews: [Image] = []
+    @State private var photoDataArray: [Data] = []
     @State private var tieneCantina: Bool = false
     @State private var aforoGrada: String = ""
     @State private var medidasCampo: String = ""
@@ -18,6 +19,8 @@ struct ContribucionFormView: View {
     @State private var accesibilidad: String = ""
     @State private var tieneParking: Bool = false
     @State private var notas: String = ""
+    @State private var isSubmitting: Bool = false
+    @State private var errorMessage: String? = nil
 
     var body: some View {
         NavigationView {
@@ -105,18 +108,38 @@ struct ContribucionFormView: View {
                                 .stroke(Color.gray.opacity(0.3), lineWidth: 1)
                         )
                 }
+
+                // Error message section
+                if let errorMessage = errorMessage {
+                    Section {
+                        HStack(spacing: 8) {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .foregroundColor(.red)
+                            Text(errorMessage)
+                                .font(.caption)
+                                .foregroundColor(.red)
+                        }
+                    }
+                }
             }
             .navigationTitle(L(.contribucionTitle))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button(L(.cancel)) { dismiss() }
+                    Button(L(.cancel)) {
+                        dismiss()
+                    }
+                    .disabled(isSubmitting)
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button(L(.send)) {
-                        Task { await submitForm() }
+                    if isSubmitting {
+                        ProgressView()
+                    } else {
+                        Button(L(.send)) {
+                            Task { await submitForm() }
+                        }
+                        .disabled(!isFormValid() || isSubmitting)
                     }
-                    .disabled(!isFormValid())
                 }
             }
         }
@@ -136,14 +159,29 @@ struct ContribucionFormView: View {
 
     private func loadPhotoPreviews(from items: [PhotosPickerItem]) async {
         photoPreviews.removeAll()
+        photoDataArray.removeAll()
+        errorMessage = nil
+
         for item in items {
             do {
-                if let data = try await item.loadTransferable(type: Data.self),
-                   let uiImage = UIImage(data: data) {
-                    photoPreviews.append(Image(uiImage: uiImage))
+                if let data = try await item.loadTransferable(type: Data.self) {
+                    // Validar tamaño de la imagen
+                    do {
+                        try InputValidator.validateImageSize(data, maxSizeInMB: 5.0)
+                    } catch {
+                        errorMessage = error.localizedDescription
+                        ToastManager.shared.error(error.localizedDescription)
+                        continue
+                    }
+
+                    if let uiImage = UIImage(data: data) {
+                        photoPreviews.append(Image(uiImage: uiImage))
+                        photoDataArray.append(data)
+                    }
                 }
             } catch {
                 Logger.debug("Error loading photo preview: \(error.localizedDescription)")
+                ErrorHandler.shared.handle(error, showToUser: false, context: "load_photo_preview_contribucion")
             }
         }
     }
@@ -151,6 +189,9 @@ struct ContribucionFormView: View {
     private func removePhoto(at index: Int) {
         selectedPhotos.remove(at: index)
         photoPreviews.remove(at: index)
+        if index < photoDataArray.count {
+            photoDataArray.remove(at: index)
+        }
     }
 
     private func uploadPhotos() async throws -> [String]? {
@@ -158,21 +199,61 @@ struct ContribucionFormView: View {
         var uploadedURLs: [String] = []
 
         for (index, item) in selectedPhotos.enumerated() {
-            guard let data = try await item.loadTransferable(type: Data.self) else { continue }
+            do {
+                guard let data = try await item.loadTransferable(type: Data.self) else { continue }
 
-            let fileName = "\(campo.id.uuidString)-\(UUID().uuidString)-photo-\(index).jpg"
+                // Validar tamaño de imagen antes de subir
+                try InputValidator.validateImageSize(data, maxSizeInMB: 5.0)
 
-            _ = try await supabase.storage.from("fotos-campos").upload(fileName, data: data)
+                let fileName = "\(campo.id.uuidString)-\(UUID().uuidString)-photo-\(index).jpg"
 
-            let publicURL = try supabase.storage.from("fotos-campos").getPublicURL(path: fileName).absoluteString
-            uploadedURLs.append(publicURL)
+                _ = try await supabase.storage.from("fotos-campos").upload(fileName, data: data)
+
+                let publicURL = try supabase.storage.from("fotos-campos").getPublicURL(path: fileName).absoluteString
+                uploadedURLs.append(publicURL)
+            } catch {
+                // Manejar error de upload individual sin fallar toda la operación
+                Logger.error("Error uploading photo \(index): \(error.localizedDescription)")
+                ErrorHandler.shared.handle(error, showToUser: false, context: "upload_photo_\(index)")
+                throw AppError.storageUploadFailed
+            }
         }
 
         return uploadedURLs.isEmpty ? nil : uploadedURLs
     }
 
     private func submitForm() async {
-        guard let currentUser = supabase.auth.currentUser else { return }
+        guard let currentUser = supabase.auth.currentUser else {
+            ErrorHandler.shared.handle(.notAuthenticated, context: "submit_contribucion")
+            return
+        }
+
+        // Validar inputs
+        do {
+            // Validar aforo si no está vacío
+            if !aforoGrada.isEmpty {
+                try InputValidator.validateInteger(aforoGrada, min: 0, max: 100000)
+            }
+
+            // Validar longitud de medidas del campo
+            if !medidasCampo.isEmpty {
+                try InputValidator.validateTextLength(medidasCampo, min: 1, max: 100, fieldName: "medidas del campo")
+            }
+
+            // Validar longitud de notas
+            if !notas.isEmpty {
+                try InputValidator.validateTextLength(notas, min: 1, max: 500, fieldName: "notas")
+            }
+        } catch {
+            if let validationError = error as? ValidationError {
+                errorMessage = validationError.errorDescription
+                ToastManager.shared.error(validationError.errorDescription ?? "Error de validación")
+            }
+            return
+        }
+
+        isSubmitting = true
+        errorMessage = nil
 
         do {
             let fotosURLs = try await uploadPhotos()
@@ -194,9 +275,13 @@ struct ContribucionFormView: View {
             )
 
             onSubmit(contribucion)
+            ToastManager.shared.success("Contribución enviada correctamente")
             dismiss()
         } catch {
-            Logger.debug("Error submitting contribution: \(error.localizedDescription)")
+            ErrorHandler.shared.handle(error, context: "submit_contribucion")
+            errorMessage = "Error al enviar la contribución"
         }
+
+        isSubmitting = false
     }
 }

@@ -301,20 +301,24 @@ struct RegisterView: View {
     private func registerAction() async {
         errorMessage = nil
 
-        // Validaciones
-        guard !nombre.isEmpty, !apellidos.isEmpty, !email.isEmpty, !password.isEmpty else {
-            errorMessage = L(.registerErrorAllFields)
-            return
-        }
+        // Validar inputs usando InputValidator centralizado
+        do {
+            try InputValidator.validateName(nombre)
+            try InputValidator.validateName(apellidos)
+            try InputValidator.validateEmail(email)
+            try InputValidator.validatePasswordStrength(password)
 
-        let passwordValidation = validatePassword(password)
-        guard passwordValidation.isValid else {
-            errorMessage = passwordValidation.message
-            return
-        }
-
-        guard email.contains("@"), email.contains(".") else {
-            errorMessage = L(.registerErrorInvalidEmail)
+            // Validar tamaño de imagen si se seleccionó una
+            if let photoData = selectedPhotoData {
+                try InputValidator.validateImageSize(photoData, maxSizeInMB: 5.0)
+            }
+        } catch {
+            // Mostrar error de validación en el formulario
+            if let validationError = error as? ValidationError {
+                errorMessage = validationError.errorDescription
+            } else {
+                errorMessage = error.localizedDescription
+            }
             return
         }
 
@@ -332,12 +336,11 @@ struct RegisterView: View {
             // 2. Subir foto de perfil si se seleccionó una
             if let photoData = selectedPhotoData {
                 do {
-                    // Usar el mismo método que EditProfileView
                     _ = try await authViewModel.uploadProfilePhoto(imageData: photoData)
                     Logger.success("✅ Foto de perfil subida correctamente")
                 } catch {
-                    // No fallar el registro si falla la foto, solo loggear
-                    Logger.error("⚠️ Error al subir foto de perfil: \(error.localizedDescription)")
+                    // No fallar el registro si falla la foto, solo manejar el error
+                    ErrorHandler.shared.handle(error, showToUser: false, context: "upload_profile_photo_on_register")
                 }
             }
 
@@ -347,67 +350,49 @@ struct RegisterView: View {
             Logger.success("✅ Registro exitoso: \(userId)")
 
         } catch {
-            let errorDesc = error.localizedDescription
-            errorMessage = mapRegistrationError(errorDesc)
-
-            Logger.error("Register error: \(errorDesc)")
-            AnalyticsManager.shared.trackError(type: "register", message: errorDesc)
+            // Usar ErrorHandler para manejo consistente de errores
+            let appError = convertToAppError(error)
+            errorMessage = appError.errorDescription
+            ErrorHandler.shared.handle(appError, showToUser: false, context: "register")
         }
 
         isLoading = false
     }
 
-    private func validatePassword(_ password: String) -> (isValid: Bool, message: String?) {
-        guard password.count >= 8 else {
-            return (false, L(.registerErrorPasswordShort))
+    /// Convierte errores de registro en AppError apropiados
+    private func convertToAppError(_ error: Error) -> AppError {
+        let errorDesc = error.localizedDescription.lowercased()
+
+        if errorDesc.contains("user already registered") || errorDesc.contains("already registered") ||
+           (errorDesc.contains("email") && errorDesc.contains("exists")) {
+            return .emailAlreadyInUse
         }
 
-        let hasUppercase = password.range(of: "[A-Z]", options: .regularExpression) != nil
-        let hasLowercase = password.range(of: "[a-z]", options: .regularExpression) != nil
-        let hasNumber = password.range(of: "[0-9]", options: .regularExpression) != nil
-
-        guard hasUppercase else {
-            return (false, L(.registerErrorPasswordUppercase))
-        }
-        guard hasLowercase else {
-            return (false, L(.registerErrorPasswordLowercase))
-        }
-        guard hasNumber else {
-            return (false, L(.registerErrorPasswordNumber))
+        if errorDesc.contains("invalid email") || (errorDesc.contains("email") && errorDesc.contains("invalid")) {
+            return .invalidInput("email")
         }
 
-        return (true, nil)
-    }
-
-    private func mapRegistrationError(_ error: String) -> String {
-        let msg = error.lowercased()
-
-        if msg.contains("user already registered") || msg.contains("already registered") ||
-           (msg.contains("email") && msg.contains("exists")) {
-            return L(.registerErrorAlreadyExists)
+        if errorDesc.contains("password") && (errorDesc.contains("short") || errorDesc.contains("length")) {
+            return .weakPassword
         }
 
-        if msg.contains("invalid email") || (msg.contains("email") && msg.contains("invalid")) {
-            return L(.registerErrorInvalidEmailFormat)
+        if errorDesc.contains("rate limit") || errorDesc.contains("too many requests") {
+            return .networkTimeout
         }
 
-        if msg.contains("password") && (msg.contains("short") || msg.contains("length")) {
-            return L(.registerErrorPasswordShort)
+        if errorDesc.contains("foreign key") || errorDesc.contains("perfiles_id_fkey") {
+            return .databaseInsertFailed
         }
 
-        if msg.contains("rate limit") || msg.contains("too many requests") {
-            return L(.registerErrorRateLimit)
+        if errorDesc.contains("duplicate key") || errorDesc.contains("conflict") {
+            return .duplicateRecord
         }
 
-        if msg.contains("foreign key") || msg.contains("perfiles_id_fkey") {
-            return L(.registerErrorProfile)
+        if errorDesc.contains("network") || errorDesc.contains("timeout") {
+            return .networkError(error)
         }
 
-        if msg.contains("duplicate key") || msg.contains("conflict") {
-            return L(.registerErrorDuplicate)
-        }
-
-        return L(.registerErrorGeneral)
+        return .unknown(error)
     }
 }
 

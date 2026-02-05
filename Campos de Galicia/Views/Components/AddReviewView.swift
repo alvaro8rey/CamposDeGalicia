@@ -287,15 +287,27 @@ struct AddReviewView: View {
     // MARK: - Photo Methods
     private func loadPhotoPreviews(from items: [PhotosPickerItem]) async {
         photoPreviews.removeAll()
+        errorMessage = nil
+
         for item in items {
             do {
-                if let data = try await item.loadTransferable(type: Data.self),
-                   let uiImage = UIImage(data: data) {
-                    let image = Image(uiImage: uiImage)
-                    photoPreviews.append(image)
+                if let data = try await item.loadTransferable(type: Data.self) {
+                    // Validar tamaño de la imagen
+                    do {
+                        try InputValidator.validateImageSize(data, maxSizeInMB: 5.0)
+                    } catch {
+                        errorMessage = error.localizedDescription
+                        ToastManager.shared.error(error.localizedDescription)
+                        continue
+                    }
+
+                    if let uiImage = UIImage(data: data) {
+                        let image = Image(uiImage: uiImage)
+                        photoPreviews.append(image)
+                    }
                 }
             } catch {
-                Logger.error("Error al cargar previsualización: \(error.localizedDescription)")
+                ErrorHandler.shared.handle(error, showToUser: false, context: "load_photo_preview_review")
             }
         }
     }
@@ -310,23 +322,32 @@ struct AddReviewView: View {
 
         var uploadedURLs: [String] = []
         for (index, photoItem) in selectedPhotos.enumerated() {
-            guard let data = try await photoItem.loadTransferable(type: Data.self) else {
-                Logger.warning("No se pudo cargar foto #\(index)")
-                continue
+            do {
+                guard let data = try await photoItem.loadTransferable(type: Data.self) else {
+                    Logger.warning("No se pudo cargar foto #\(index)")
+                    continue
+                }
+
+                // Validar tamaño de imagen antes de subir
+                try InputValidator.validateImageSize(data, maxSizeInMB: 5.0)
+
+                let fileName = "\(campoId.uuidString)-review-\(UUID().uuidString)-\(index).jpg"
+
+                _ = try await supabase.storage
+                    .from("fotos-campos")
+                    .upload(fileName, data: data)
+
+                let publicURL = try supabase.storage
+                    .from("fotos-campos")
+                    .getPublicURL(path: fileName)
+                    .absoluteString
+
+                uploadedURLs.append(publicURL)
+            } catch {
+                Logger.error("Error uploading photo \(index): \(error.localizedDescription)")
+                ErrorHandler.shared.handle(error, showToUser: false, context: "upload_review_photo_\(index)")
+                throw AppError.storageUploadFailed
             }
-
-            let fileName = "\(campoId.uuidString)-review-\(UUID().uuidString)-\(index).jpg"
-
-            _ = try await supabase.storage
-                .from("fotos-campos")
-                .upload(fileName, data: data)
-
-            let publicURL = try supabase.storage
-                .from("fotos-campos")
-                .getPublicURL(path: fileName)
-                .absoluteString
-
-            uploadedURLs.append(publicURL)
         }
 
         return uploadedURLs.isEmpty ? nil : uploadedURLs
@@ -340,7 +361,24 @@ struct AddReviewView: View {
         defer { isSubmitting = false }
 
         guard let userId = authViewModel.user?.id else {
+            ErrorHandler.shared.handle(.notAuthenticated, context: "submit_review")
             errorMessage = "\(L(.error)): \(L(.errorUserNotAuthenticated))"
+            return
+        }
+
+        // Validar inputs
+        do {
+            // Validar rating
+            try InputValidator.validateInteger(String(rating), min: 1, max: 5)
+
+            // Validar texto de la reseña
+            let trimmedText = reviewText.trimmingCharacters(in: .whitespacesAndNewlines)
+            try InputValidator.validateTextLength(trimmedText, min: 1, max: maxCharacters, fieldName: "reseña")
+        } catch {
+            if let validationError = error as? ValidationError {
+                errorMessage = validationError.errorDescription
+                ToastManager.shared.error(validationError.errorDescription ?? "Error de validación")
+            }
             return
         }
 
@@ -427,11 +465,29 @@ struct AddReviewView: View {
             dismiss()
 
         } catch {
+            let appError = convertToAppError(error, context: isEditMode ? "update_review" : "create_review")
             await MainActor.run {
-                ToastManager.shared.error("Error al \(isEditMode ? "actualizar" : "publicar") la reseña")
+                ErrorHandler.shared.handle(appError, context: isEditMode ? "update_review" : "create_review")
+                errorMessage = appError.errorDescription
             }
-            Logger.error("Error: \(error.localizedDescription)")
         }
+    }
+
+    /// Convierte errores de reseña en AppError apropiados
+    private func convertToAppError(_ error: Error, context: String) -> AppError {
+        let errorDesc = error.localizedDescription.lowercased()
+
+        if errorDesc.contains("network") || errorDesc.contains("timeout") {
+            return .networkError(error)
+        } else if errorDesc.contains("upload") || errorDesc.contains("storage") {
+            return .storageUploadFailed
+        } else if errorDesc.contains("unauthorized") || errorDesc.contains("invalid token") {
+            return .sessionExpired
+        } else if errorDesc.contains("duplicate") {
+            return .duplicateRecord
+        }
+
+        return .unknown(error)
     }
 }
 

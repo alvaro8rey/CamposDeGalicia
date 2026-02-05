@@ -48,6 +48,102 @@ struct AppMain: App {
         )
     }
 
+    // Computed property para el color de fondo
+    private var backgroundColor: some View {
+        Group {
+            if themeManager.currentTheme.colorScheme == .dark {
+                Color.black.ignoresSafeArea()
+            } else {
+                Color.white.ignoresSafeArea()
+            }
+        }
+    }
+
+    // MARK: - Tab Views
+
+    private var homeTab: some View {
+        NavigationView {
+            ContentView(
+                distanciaPredeterminada: $distanciaPredeterminada,
+                notificationCampoID: $notificationCampoID
+            )
+            .environmentObject(camposViewModel)
+            .environmentObject(authViewModel)
+        }
+        .tabItem {
+            Image(systemName: "house.fill")
+            Text(L(.tabHome))
+        }
+        .tag(0)
+    }
+
+    private var mapTab: some View {
+        NavigationView {
+            MapaView(externalIsNavigating: $isMapNavigating)
+                .environmentObject(camposViewModel)
+                .environmentObject(authViewModel)
+        }
+        .tabItem {
+            Image(systemName: "map.fill")
+            Text(L(.tabMap))
+        }
+        .tag(1)
+    }
+
+    private var nearbyTab: some View {
+        NavigationView {
+            CamposCercanosView(
+                userLocation: $locationManager.userLocation,
+                isLoadingLocation: $locationManager.isLoading,
+                distanciaPredeterminada: $distanciaPredeterminada,
+                requestLocation: {
+                    locationManager.requestLocation()
+                }
+            )
+            .environmentObject(camposViewModel)
+            .environmentObject(authViewModel)
+        }
+        .tabItem {
+            Image(systemName: "mappin.and.ellipse")
+            Text(L(.tabNearby))
+        }
+        .tag(2)
+    }
+
+    private var profileTab: some View {
+        NavigationView {
+            UserView(
+                distanciaPredeterminada: $distanciaPredeterminada,
+                shouldShowLogros: $shouldShowLogros
+            )
+            .environmentObject(camposViewModel)
+            .environmentObject(authViewModel)
+        }
+        .environmentObject(locationManager)
+        .tabItem {
+            Image(systemName: "person.fill")
+            Text(L(.tabProfile))
+        }
+        .tag(3)
+    }
+
+    // MARK: - Alert Buttons
+
+    private var continueRouteButton: some View {
+        Button(L(.navContinueRoute), role: .cancel) {
+            self.selectedTab = 1
+        }
+    }
+
+    private var stopRouteButton: some View {
+        Button(L(.navStopAndExit), role: .destructive) {
+            self.isMapNavigating = false
+            DispatchQueue.main.async {
+                self.selectedTab = pendingTab
+            }
+        }
+    }
+
     init() {
         // --- CAMBIO: Configuración de Apariencia Nativa ---
         let appearance = UITabBarAppearance()
@@ -91,70 +187,13 @@ struct AppMain: App {
         WindowGroup {
             // --- CAMBIO: Envolvemos en ZStack para controlar el fondo ---
             ZStack {
-                themeManager.currentTheme.colorScheme == .dark ? Color.black.ignoresSafeArea() : Color.white.ignoresSafeArea()
+                backgroundColor
 
                 TabView(selection: tabSelection) {
-                    // TAB 0: INICIO
-                    NavigationView {
-                        ContentView(
-                            distanciaPredeterminada: $distanciaPredeterminada,
-                            notificationCampoID: $notificationCampoID
-                        )
-                            .environmentObject(camposViewModel)
-                            .environmentObject(authViewModel)
-                    }
-                    .tabItem {
-                        Image(systemName: "house.fill")
-                        Text(L(.tabHome))
-                    }
-                    .tag(0)
-
-                    // TAB 1: MAPA
-                    NavigationView {
-                        MapaView(externalIsNavigating: $isMapNavigating)
-                            .environmentObject(camposViewModel)
-                            .environmentObject(authViewModel)
-                    }
-                    .tabItem {
-                        Image(systemName: "map.fill")
-                        Text(L(.tabMap))
-                    }
-                    .tag(1)
-
-                    // TAB 2: CERCANOS
-                    NavigationView {
-                        CamposCercanosView(
-                            userLocation: $locationManager.userLocation,
-                            isLoadingLocation: $locationManager.isLoading,
-                            distanciaPredeterminada: $distanciaPredeterminada,
-                            requestLocation: {
-                                locationManager.requestLocation()
-                            }
-                        )
-                        .environmentObject(camposViewModel)
-                        .environmentObject(authViewModel)
-                    }
-                    .tabItem {
-                        Image(systemName: "mappin.and.ellipse")
-                        Text(L(.tabNearby))
-                    }
-                    .tag(2)
-
-                    // TAB 3: USUARIO
-                    NavigationView {
-                        UserView(
-                            distanciaPredeterminada: $distanciaPredeterminada,
-                            shouldShowLogros: $shouldShowLogros
-                        )
-                            .environmentObject(camposViewModel)
-                            .environmentObject(authViewModel)
-                    }
-                    .environmentObject(locationManager)
-                    .tabItem {
-                        Image(systemName: "person.fill")
-                        Text(L(.tabProfile))
-                    }
-                    .tag(3)
+                    homeTab
+                    mapTab
+                    nearbyTab
+                    profileTab
                 }
                 // --- CAMBIO: El modificador clave ---
                 .ignoresSafeArea(.all, edges: .bottom)
@@ -207,19 +246,12 @@ struct AppMain: App {
             .onReceive(NotificationCenter.default.publisher(for: .didTapNotification)) { notification in
                 handleNotificationNavigation(notification: notification)
             }
-            .alert(L(.navRouteInProgress), isPresented: $showExitRouteAlert) {
-                Button(L(.navContinueRoute), role: .cancel) {
-                    self.selectedTab = 1
-                }
-                Button(L(.navStopAndExit), role: .destructive) {
-                    self.isMapNavigating = false
-                    DispatchQueue.main.async {
-                        self.selectedTab = pendingTab
-                    }
-                }
-            } message: {
+            .alert(L(.navRouteInProgress), isPresented: $showExitRouteAlert, actions: {
+                continueRouteButton
+                stopRouteButton
+            }, message: {
                 Text(L(.navCancelMessage))
-            }
+            })
             .alert(isPresented: $showVerificationAlert) {
                 Alert(
                     title: Text(L(.navVerification)),

@@ -349,7 +349,8 @@ final class SupabaseQueryOptimizer {
             // Nota: Después de aplicar filtros (.eq), tenemos un PostgrestFilterBuilder
             // Después de aplicar order/limit/range, tenemos un PostgrestTransformBuilder
             // Por eso no podemos reasignar a la misma variable
-            let response: PostgrestResponse
+
+            let responseData: Data
 
             if let orderColumn = orderColumn {
                 // Comenzar con order para obtener un TransformBuilder
@@ -363,7 +364,8 @@ final class SupabaseQueryOptimizer {
                     builder = builder.range(from: from, to: to)
                 }
 
-                response = try await builder.execute()
+                let response = try await builder.execute()
+                responseData = response.data
             } else if let limit = limitValue {
                 // Comenzar con limit
                 var builder = query.limit(limit)
@@ -372,18 +374,21 @@ final class SupabaseQueryOptimizer {
                     builder = builder.range(from: from, to: to)
                 }
 
-                response = try await builder.execute()
+                let response = try await builder.execute()
+                responseData = response.data
             } else if let from = rangeFrom, let to = rangeTo {
                 // Solo range
-                response = try await query.range(from: from, to: to).execute()
+                let response = try await query.range(from: from, to: to).execute()
+                responseData = response.data
             } else {
                 // Sin transformaciones
-                response = try await query.execute()
+                let response = try await query.execute()
+                responseData = response.data
             }
 
             let decoder = JSONDecoder()
             decoder.dateDecodingStrategy = .iso8601
-            return try decoder.decode([T].self, from: response.data)
+            return try decoder.decode([T].self, from: responseData)
         }
     }
 

@@ -64,6 +64,13 @@ class AnalyticsManager {
         case campoViewed(id: String, name: String)
         case campoVisited(id: String, name: String, method: String) // method: "manual" or "auto"
         case campoContributionAdded(id: String)
+        case campoFavoriteToggled(id: String, isFavorite: Bool)
+        case campoShared(id: String, method: String) // method: "link", "social", etc.
+
+        // Search & Filter events
+        case searchPerformed(query: String, resultsCount: Int)
+        case filterApplied(filterType: String, value: String)
+        case sortChanged(sortBy: String)
 
         // Achievement events
         case achievementUnlocked(id: String, name: String, xp: Int)
@@ -74,6 +81,18 @@ class AnalyticsManager {
         case screenViewed(name: String)
         case tabChanged(to: String)
 
+        // Engagement events
+        case buttonClicked(buttonName: String, screen: String)
+        case listScrolled(listName: String, itemsViewed: Int)
+        case photoViewed(campoId: String, photoIndex: Int)
+        case mapInteraction(action: String) // "zoom", "pan", "marker_tap"
+
+        // Settings events
+        case settingChanged(setting: String, value: String)
+        case themeChanged(theme: String)
+        case languageChanged(language: String)
+        case notificationsToggled(enabled: Bool)
+
         // Error events
         case error(type: String, message: String)
         case apiError(endpoint: String, statusCode: Int)
@@ -82,19 +101,30 @@ class AnalyticsManager {
         case appLaunched
         case dataLoaded(type: String, count: Int, duration: TimeInterval)
 
+        // Retention events
+        case appBackgrounded(sessionDuration: TimeInterval)
+        case appForegrounded
+        case firstTimeUser
+
         var category: Category {
             switch self {
             case .login, .logout, .register, .profileUpdate:
                 return .user
-            case .campoViewed, .campoVisited, .campoContributionAdded:
+            case .campoViewed, .campoVisited, .campoContributionAdded, .campoFavoriteToggled, .campoShared:
                 return .campo
+            case .searchPerformed, .filterApplied, .sortChanged:
+                return .navigation
             case .achievementUnlocked, .levelUp, .dailyRewardClaimed:
                 return .achievement
             case .screenViewed, .tabChanged:
                 return .navigation
+            case .buttonClicked, .listScrolled, .photoViewed, .mapInteraction:
+                return .navigation
+            case .settingChanged, .themeChanged, .languageChanged, .notificationsToggled:
+                return .user
             case .error, .apiError:
                 return .error
-            case .appLaunched, .dataLoaded:
+            case .appLaunched, .dataLoaded, .appBackgrounded, .appForegrounded, .firstTimeUser:
                 return .performance
             }
         }
@@ -108,15 +138,31 @@ class AnalyticsManager {
             case .campoViewed: return "campo_viewed"
             case .campoVisited: return "campo_visited"
             case .campoContributionAdded: return "campo_contribution_added"
+            case .campoFavoriteToggled: return "campo_favorite_toggled"
+            case .campoShared: return "campo_shared"
+            case .searchPerformed: return "search"
+            case .filterApplied: return "filter_applied"
+            case .sortChanged: return "sort_changed"
             case .achievementUnlocked: return "achievement_unlocked"
             case .levelUp: return "level_up"
             case .dailyRewardClaimed: return "daily_reward_claimed"
-            case .screenViewed: return "screen_viewed"
+            case .screenViewed: return "screen_view"
             case .tabChanged: return "tab_changed"
+            case .buttonClicked: return "button_click"
+            case .listScrolled: return "list_scrolled"
+            case .photoViewed: return "photo_view"
+            case .mapInteraction: return "map_interaction"
+            case .settingChanged: return "setting_changed"
+            case .themeChanged: return "theme_changed"
+            case .languageChanged: return "language_changed"
+            case .notificationsToggled: return "notifications_toggled"
             case .error: return "error"
             case .apiError: return "api_error"
-            case .appLaunched: return "app_launched"
+            case .appLaunched: return "app_open"
             case .dataLoaded: return "data_loaded"
+            case .appBackgrounded: return "app_backgrounded"
+            case .appForegrounded: return "app_foregrounded"
+            case .firstTimeUser: return "first_open"
             }
         }
 
@@ -130,6 +176,16 @@ class AnalyticsManager {
                 return ["campo_id": id, "campo_name": name, "method": method]
             case .campoContributionAdded(let id):
                 return ["campo_id": id]
+            case .campoFavoriteToggled(let id, let isFavorite):
+                return ["campo_id": id, "is_favorite": isFavorite]
+            case .campoShared(let id, let method):
+                return ["campo_id": id, "share_method": method]
+            case .searchPerformed(let query, let resultsCount):
+                return ["search_term": query, "results_count": resultsCount]
+            case .filterApplied(let filterType, let value):
+                return ["filter_type": filterType, "filter_value": value]
+            case .sortChanged(let sortBy):
+                return ["sort_by": sortBy]
             case .achievementUnlocked(let id, let name, let xp):
                 return ["achievement_id": id, "achievement_name": name, "xp": xp]
             case .levelUp(let newLevel, let totalXP):
@@ -139,13 +195,31 @@ class AnalyticsManager {
             case .screenViewed(let name):
                 return ["screen_name": name]
             case .tabChanged(let to):
-                return ["tab": to]
+                return ["tab_name": to]
+            case .buttonClicked(let buttonName, let screen):
+                return ["button_name": buttonName, "screen_name": screen]
+            case .listScrolled(let listName, let itemsViewed):
+                return ["list_name": listName, "items_viewed": itemsViewed]
+            case .photoViewed(let campoId, let photoIndex):
+                return ["campo_id": campoId, "photo_index": photoIndex]
+            case .mapInteraction(let action):
+                return ["action": action]
+            case .settingChanged(let setting, let value):
+                return ["setting_name": setting, "new_value": value]
+            case .themeChanged(let theme):
+                return ["theme": theme]
+            case .languageChanged(let language):
+                return ["language": language]
+            case .notificationsToggled(let enabled):
+                return ["enabled": enabled]
             case .error(let type, let message):
                 return ["error_type": type, "message": message]
             case .apiError(let endpoint, let statusCode):
                 return ["endpoint": endpoint, "status_code": statusCode]
             case .dataLoaded(let type, let count, let duration):
                 return ["data_type": type, "count": count, "duration_ms": Int(duration * 1000)]
+            case .appBackgrounded(let sessionDuration):
+                return ["session_duration_seconds": Int(sessionDuration)]
             default:
                 return [:]
             }
@@ -188,6 +262,12 @@ class AnalyticsManager {
 
         // Configurar propiedades de sesión
         Analytics.setSessionTimeoutInterval(1800) // 30 minutos
+
+        #if DEBUG
+        // IMPORTANTE: Habilitar modo debug para ver eventos en Firebase DebugView
+        Analytics.setUserProperty("true", forName: "debug_mode")
+        Logger.info("🔍 Firebase Analytics modo DEBUG habilitado - Verifica en Firebase Console > DebugView")
+        #endif
 
         Logger.info("✅ Firebase Analytics configurado")
         #endif
@@ -417,6 +497,31 @@ extension AnalyticsManager {
         ))
     }
 
+    /// Track campo favorite toggle
+    func trackCampoFavorite(id: UUID, isFavorite: Bool) {
+        track(.campoFavoriteToggled(id: id.uuidString, isFavorite: isFavorite))
+    }
+
+    /// Track campo share
+    func trackCampoShare(id: UUID, method: String = "link") {
+        track(.campoShared(id: id.uuidString, method: method))
+    }
+
+    /// Track search
+    func trackSearch(query: String, resultsCount: Int) {
+        track(.searchPerformed(query: query, resultsCount: resultsCount))
+    }
+
+    /// Track filter
+    func trackFilter(filterType: String, value: String) {
+        track(.filterApplied(filterType: filterType, value: value))
+    }
+
+    /// Track sort
+    func trackSort(sortBy: String) {
+        track(.sortChanged(sortBy: sortBy))
+    }
+
     /// Track achievement unlock
     func trackAchievement(id: UUID, name: String, xp: Int) {
         track(.achievementUnlocked(id: id.uuidString, name: name, xp: xp))
@@ -430,6 +535,31 @@ extension AnalyticsManager {
     /// Track screen view
     func trackScreen(_ name: String) {
         track(.screenViewed(name: name))
+    }
+
+    /// Track tab change
+    func trackTabChange(to tabName: String) {
+        track(.tabChanged(to: tabName))
+    }
+
+    /// Track button click
+    func trackButton(name: String, screen: String) {
+        track(.buttonClicked(buttonName: name, screen: screen))
+    }
+
+    /// Track map interaction
+    func trackMapAction(_ action: String) {
+        track(.mapInteraction(action: action))
+    }
+
+    /// Track theme change
+    func trackTheme(_ theme: String) {
+        track(.themeChanged(theme: theme))
+    }
+
+    /// Track language change
+    func trackLanguage(_ language: String) {
+        track(.languageChanged(language: language))
     }
 
     /// Track error

@@ -145,6 +145,16 @@ struct ContentView: View {
             filteredCampos = sortCamposAlphabetically(camposViewModel.campos)
             camposMostrados = filteredCampos.count
             showOnboarding = !hasSeenOnboarding
+
+            // 📊 Analytics: Track screen view
+            AnalyticsManager.shared.trackScreen("home")
+        }
+        // 📊 Analytics: Track view mode changes
+        .onChange(of: isGridView) { _, newValue in
+            AnalyticsManager.shared.trackButton(
+                name: newValue ? "grid_view" : "list_view",
+                screen: "home"
+            )
         }
         // Cerrar el cover cuando el onboarding marque la flag
         .onChange(of: hasSeenOnboarding) { wasSeen, seen in
@@ -234,6 +244,17 @@ struct ContentView: View {
         withAnimation(.easeInOut) {
             isFilterExpanded = false
             camposMostrados = filteredCampos.count
+        }
+
+        // 📊 Analytics: Track filter usage
+        if !searchNombre.isEmpty {
+            AnalyticsManager.shared.trackSearch(query: searchNombre, resultsCount: filteredCampos.count)
+        }
+        if !searchLocalidad.isEmpty {
+            AnalyticsManager.shared.trackFilter(filterType: "localidad", value: searchLocalidad)
+        }
+        if selectedProvincia != L(.contentAllProvinces) {
+            AnalyticsManager.shared.trackFilter(filterType: "provincia", value: selectedProvincia)
         }
     }
 

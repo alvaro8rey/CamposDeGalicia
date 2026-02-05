@@ -172,6 +172,11 @@ struct CampoDetalleView: View {
                 await checkIfVisited()
                 await fetchContribucionesAprobadas(forceRefresh: false)
             }
+
+            // 📊 Analytics: Track campo view
+            if let campo = campo {
+                AnalyticsManager.shared.trackCampoView(id: campo.id, name: campo.nombre)
+            }
         }
         .onChange(of: camposViewModel.campos) { oldCampos, newCampos in
             syncCampo()
@@ -296,6 +301,9 @@ struct CampoDetalleView: View {
                 ToastManager.shared.success(L(.toastVisited, campo.nombre))
                 // Cancelar temporizador de auto check-in si estaba pendiente
                 geofenceManager.cancelPendingDwell(for: campo.id)
+
+                // 📊 Analytics: Track campo visit
+                AnalyticsManager.shared.trackCampoVisit(id: campo.id, name: campo.nombre, autoCheckin: false)
             }
             NotificationCenter.default.post(name: .didUpdateVisits, object: nil)
         } catch {

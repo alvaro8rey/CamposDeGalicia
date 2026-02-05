@@ -116,12 +116,22 @@ class AppDelegate: NSObject, UIApplicationDelegate {
 
     func applicationDidEnterBackground(_ application: UIApplication) {
         Logger.debug("🌙 App entrando en background")
+
+        // 📊 Analytics: Track app backgrounded
+        let sessionDuration = Date().timeIntervalSince(application.backgroundRefreshStatus == .available ? Date() : Date())
+        AnalyticsManager.shared.track(.appBackgrounded(sessionDuration: sessionDuration))
+        AnalyticsManager.shared.endSession()
+
         // Programar tarea de verificación
         AppDelegate.scheduleBackgroundDwellCheck()
     }
 
     func applicationWillEnterForeground(_ application: UIApplication) {
         Logger.debug("☀️ App volviendo a foreground")
+
+        // 📊 Analytics: Track app foregrounded
+        AnalyticsManager.shared.track(.appForegrounded)
+        AnalyticsManager.shared.startNewSession()
     }
 
     func applicationDidBecomeActive(_ application: UIApplication) {

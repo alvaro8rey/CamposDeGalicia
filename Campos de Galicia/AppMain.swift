@@ -91,6 +91,12 @@ struct AppMain: App {
                             self.showExitRouteAlert = true
                         } else {
                             self.selectedTab = newTab
+
+                            // 📊 Analytics: Track tab change
+                            let tabNames = ["home", "map", "nearby", "profile"]
+                            if newTab < tabNames.count {
+                                AnalyticsManager.shared.trackTabChange(to: tabNames[newTab])
+                            }
                         }
                     }
                 )) {
@@ -170,6 +176,16 @@ struct AppMain: App {
             .withToast()
             .onAppear {
                 locationManager.requestLocation()
+
+                // 📊 Analytics: Track app launch
+                AnalyticsManager.shared.track(.appLaunched)
+
+                // Configurar propiedades de usuario
+                if let userId = authViewModel.userId {
+                    AnalyticsManager.shared.setUserProperties([
+                        "user_id": userId.uuidString
+                    ])
+                }
 
                 cleanupTask = Task {
                     while !Task.isCancelled {

@@ -103,12 +103,14 @@ final class SupabaseQueryOptimizer {
         var query = client.from("campo_contribuciones")
             .select("*")
             .eq("id_campo", value: campoID.uuidString)
-            .order("fecha", ascending: false)
-            .range(from: offset, to: offset + limit - 1)
 
         if onlyApproved {
             query = query.eq("aprobada", value: true)
         }
+
+        query = query
+            .order("fecha", ascending: false)
+            .range(from: offset, to: offset + limit - 1)
 
         let response = try await query.execute()
         let decoder = JSONDecoder()
@@ -206,11 +208,14 @@ final class SupabaseQueryOptimizer {
 
         // Filtrar por distancia localmente (no óptimo para grandes datasets)
         let nearby = allCampos.filter { campo in
+            guard let campoLat = campo.latitud, let campoLon = campo.longitud else {
+                return false
+            }
             let distance = calculateDistance(
                 lat1: latitude,
                 lon1: longitude,
-                lat2: campo.latitud,
-                lon2: campo.longitud
+                lat2: campoLat,
+                lon2: campoLon
             )
             return distance <= radiusKm
         }
@@ -232,12 +237,14 @@ final class SupabaseQueryOptimizer {
         var query = client.from("reseñas")
             .select("*")
             .eq("campo_id", value: campoID.uuidString)
-            .order("created_at", ascending: false)
-            .range(from: offset, to: offset + limit - 1)
 
         if let minRating = minRating {
             query = query.gte("rating", value: minRating)
         }
+
+        query = query
+            .order("created_at", ascending: false)
+            .range(from: offset, to: offset + limit - 1)
 
         let response = try await query.execute()
         let decoder = JSONDecoder()
@@ -373,10 +380,14 @@ final class SupabaseQueryOptimizer {
 
         // Track en analytics si la query es lenta
         if duration > 2.0 {
-            AnalyticsManager.shared.logEvent(name: "slow_query", parameters: [
-                "operation": operation,
-                "duration": duration
-            ])
+            AnalyticsManager.shared.trackCustom(
+                name: "slow_query",
+                category: .performance,
+                parameters: [
+                    "operation": operation,
+                    "duration": duration
+                ]
+            )
         }
 
         return (result, duration)

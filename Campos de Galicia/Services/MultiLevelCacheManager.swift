@@ -1,40 +1,41 @@
 import Foundation
 
+// MARK: - Cache Configuration
+
+/// Configuración para el sistema de caché multinivel
+struct CacheConfig {
+    let memoryCacheSize: Int        // Número máximo de items en memoria
+    let memoryCacheTTL: TimeInterval // TTL para caché en memoria
+    let diskCacheTTL: TimeInterval   // TTL para caché en disco
+    let diskCacheMaxSize: Int        // Tamaño máximo en bytes para disco
+
+    static let `default` = CacheConfig(
+        memoryCacheSize: 50,
+        memoryCacheTTL: 300,        // 5 minutos
+        diskCacheTTL: 86400,        // 24 horas
+        diskCacheMaxSize: 10_485_760 // 10 MB
+    )
+
+    static let aggressive = CacheConfig(
+        memoryCacheSize: 100,
+        memoryCacheTTL: 600,        // 10 minutos
+        diskCacheTTL: 172800,       // 48 horas
+        diskCacheMaxSize: 20_971_520 // 20 MB
+    )
+
+    static let conservative = CacheConfig(
+        memoryCacheSize: 20,
+        memoryCacheTTL: 120,        // 2 minutos
+        diskCacheTTL: 43200,        // 12 horas
+        diskCacheMaxSize: 5_242_880  // 5 MB
+    )
+}
+
 /// Sistema de caché multinivel con memoria y disco
 /// Nivel 1 (Memoria): Rápido, volátil, tamaño limitado
 /// Nivel 2 (Disco): Persistente, más lento, mayor capacidad
 @MainActor
 final class MultiLevelCacheManager<T: Codable> {
-
-    // MARK: - Configuration
-
-    struct CacheConfig {
-        let memoryCacheSize: Int        // Número máximo de items en memoria
-        let memoryCacheTTL: TimeInterval // TTL para caché en memoria
-        let diskCacheTTL: TimeInterval   // TTL para caché en disco
-        let diskCacheMaxSize: Int        // Tamaño máximo en bytes para disco
-
-        static let `default` = CacheConfig(
-            memoryCacheSize: 50,
-            memoryCacheTTL: 300,        // 5 minutos
-            diskCacheTTL: 86400,        // 24 horas
-            diskCacheMaxSize: 10_485_760 // 10 MB
-        )
-
-        static let aggressive = CacheConfig(
-            memoryCacheSize: 100,
-            memoryCacheTTL: 600,        // 10 minutos
-            diskCacheTTL: 172800,       // 48 horas
-            diskCacheMaxSize: 20_971_520 // 20 MB
-        )
-
-        static let conservative = CacheConfig(
-            memoryCacheSize: 20,
-            memoryCacheTTL: 120,        // 2 minutos
-            diskCacheTTL: 43200,        // 12 horas
-            diskCacheMaxSize: 5_242_880  // 5 MB
-        )
-    }
 
     // MARK: - Cache Entry
 
@@ -228,7 +229,6 @@ final class MultiLevelCacheManager<T: Codable> {
         var updatedStats = stats
         updatedStats.memoryCacheSize = memoryCache.count
         updatedStats.diskCacheSize = getDiskCacheSize()
-        updatedStats.hitRate = stats.hitRate
         return updatedStats
     }
 
@@ -450,6 +450,7 @@ struct CacheStatistics {
 // MARK: - Cache Manager Factory
 
 /// Factory para crear cache managers específicos
+@MainActor
 final class CacheManagerFactory {
 
     /// Singleton para campos

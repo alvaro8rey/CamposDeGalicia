@@ -1,17 +1,46 @@
 import Foundation
 import UIKit
 
-/// Sistema de analytics básico para tracking de eventos
-/// Puede ser extendido para integrar con Firebase Analytics, Mixpanel, etc.
+// MARK: - Firebase Import (comment out if not using Firebase)
+#if canImport(FirebaseAnalytics)
+import FirebaseAnalytics
+import FirebaseCore
+#endif
+
+/// Sistema de analytics unificado con soporte para múltiples proveedores
+/// Actualmente soporta: Logs locales + Firebase Analytics
 class AnalyticsManager {
 
     // MARK: - Singleton
     static let shared = AnalyticsManager()
 
+    // MARK: - Analytics Providers
+    enum Provider {
+        case localLogs
+        case firebase
+        case mixpanel
+
+        var isAvailable: Bool {
+            switch self {
+            case .localLogs:
+                return true
+            case .firebase:
+                #if canImport(FirebaseAnalytics)
+                return true
+                #else
+                return false
+                #endif
+            case .mixpanel:
+                return false // Implement when needed
+            }
+        }
+    }
+
     // MARK: - Properties
     private let isEnabled: Bool
     private var sessionId: String
     private var sessionStartTime: Date
+    private let enabledProviders: [Provider]
 
     // MARK: - Event Categories
     enum Category: String {
@@ -127,16 +156,41 @@ class AnalyticsManager {
     private init() {
         #if DEBUG
         self.isEnabled = true
+        // En desarrollo, usar logs locales + Firebase si está disponible
+        self.enabledProviders = Provider.firebase.isAvailable ? [.localLogs, .firebase] : [.localLogs]
         #else
-        self.isEnabled = true // Cambiar a true en producción cuando tengas analytics configurado
+        self.isEnabled = true
+        // En producción, usar todos los proveedores disponibles
+        self.enabledProviders = [.localLogs, .firebase].filter { $0.isAvailable }
         #endif
 
         self.sessionId = UUID().uuidString
         self.sessionStartTime = Date()
 
+        // Configurar Firebase si está disponible
+        configureFirebase()
+
         if isEnabled {
-            Logger.info("📊 Analytics inicializado (Session: \(sessionId.prefix(8))...)")
+            let providersStr = enabledProviders.map { "\($0)" }.joined(separator: ", ")
+            Logger.info("📊 Analytics inicializado con: \(providersStr) (Session: \(sessionId.prefix(8))...)")
         }
+    }
+
+    // MARK: - Firebase Configuration
+
+    private func configureFirebase() {
+        #if canImport(FirebaseAnalytics)
+        guard enabledProviders.contains(.firebase) else { return }
+
+        // Firebase ya debería estar configurado en AppDelegate
+        // Aquí solo configuramos analytics-specific settings
+        Analytics.setAnalyticsCollectionEnabled(true)
+
+        // Configurar propiedades de sesión
+        Analytics.setSessionTimeoutInterval(1800) // 30 minutos
+
+        Logger.info("✅ Firebase Analytics configurado")
+        #endif
     }
 
     // MARK: - Public Methods
@@ -150,11 +204,10 @@ class AnalyticsManager {
         parameters["session_id"] = sessionId
         parameters["timestamp"] = ISO8601DateFormatter().string(from: Date())
 
-        // En producción, aquí enviarías a tu backend o servicio de analytics
-        logEvent(name: event.name, parameters: parameters)
-
-        // TODO: Integrar con Firebase Analytics, Mixpanel, etc.
-        // Analytics.logEvent(event.name, parameters: parameters)
+        // Enviar a todos los proveedores habilitados
+        for provider in enabledProviders {
+            sendEvent(name: event.name, parameters: parameters, to: provider)
+        }
     }
 
     /// Registra un evento personalizado
@@ -166,7 +219,10 @@ class AnalyticsManager {
         params["session_id"] = sessionId
         params["timestamp"] = ISO8601DateFormatter().string(from: Date())
 
-        logEvent(name: name, parameters: params)
+        // Enviar a todos los proveedores habilitados
+        for provider in enabledProviders {
+            sendEvent(name: name, parameters: params, to: provider)
+        }
     }
 
     /// Establece propiedades del usuario
@@ -175,8 +231,10 @@ class AnalyticsManager {
 
         Logger.info("📊 User properties: \(properties)")
 
-        // TODO: Integrar con tu servicio de analytics
-        // Analytics.setUserProperties(properties)
+        // Enviar a todos los proveedores habilitados
+        for provider in enabledProviders {
+            sendUserProperties(properties, to: provider)
+        }
     }
 
     /// Registra el tiempo que el usuario pasa en una pantalla
@@ -212,14 +270,109 @@ class AnalyticsManager {
 
     // MARK: - Private Methods
 
-    private func logEvent(name: String, parameters: [String: Any]) {
-        // Formatear parámetros para logging
+    /// Envía un evento a un proveedor específico
+    private func sendEvent(name: String, parameters: [String: Any], to provider: Provider) {
+        switch provider {
+        case .localLogs:
+            logEventLocally(name: name, parameters: parameters)
+
+        case .firebase:
+            sendEventToFirebase(name: name, parameters: parameters)
+
+        case .mixpanel:
+            // TODO: Implement Mixpanel integration
+            break
+        }
+    }
+
+    /// Envía propiedades de usuario a un proveedor específico
+    private func sendUserProperties(_ properties: [String: Any], to provider: Provider) {
+        switch provider {
+        case .localLogs:
+            Logger.info("📊 User properties: \(properties)")
+
+        case .firebase:
+            sendUserPropertiesToFirebase(properties)
+
+        case .mixpanel:
+            // TODO: Implement Mixpanel integration
+            break
+        }
+    }
+
+    /// Log evento localmente (para debugging)
+    private func logEventLocally(name: String, parameters: [String: Any]) {
         let paramsString = parameters.map { "\($0.key): \($0.value)" }.joined(separator: ", ")
-
         Logger.debug("📊 Event: \(name) | \(paramsString)")
+    }
 
-        // Aquí puedes agregar lógica para persistir eventos localmente
-        // o enviarlos a un servicio de analytics
+    // MARK: - Firebase Methods
+
+    /// Envía evento a Firebase Analytics
+    private func sendEventToFirebase(name: String, parameters: [String: Any]) {
+        #if canImport(FirebaseAnalytics)
+        // Firebase tiene límites en los nombres y parámetros
+        let sanitizedName = sanitizeFirebaseEventName(name)
+        let sanitizedParams = sanitizeFirebaseParameters(parameters)
+
+        Analytics.logEvent(sanitizedName, parameters: sanitizedParams)
+        #endif
+    }
+
+    /// Envía propiedades de usuario a Firebase
+    private func sendUserPropertiesToFirebase(_ properties: [String: Any]) {
+        #if canImport(FirebaseAnalytics)
+        for (key, value) in properties {
+            let sanitizedKey = sanitizeFirebasePropertyName(key)
+            let stringValue = "\(value)"
+            Analytics.setUserProperty(stringValue, forName: sanitizedKey)
+        }
+        #endif
+    }
+
+    /// Sanitiza nombre de evento para Firebase (máx 40 caracteres, alfanumérico + _)
+    private func sanitizeFirebaseEventName(_ name: String) -> String {
+        let sanitized = name
+            .replacingOccurrences(of: " ", with: "_")
+            .lowercased()
+            .filter { $0.isLetter || $0.isNumber || $0 == "_" }
+
+        return String(sanitized.prefix(40))
+    }
+
+    /// Sanitiza nombre de propiedad para Firebase
+    private func sanitizeFirebasePropertyName(_ name: String) -> String {
+        let sanitized = name
+            .replacingOccurrences(of: " ", with: "_")
+            .lowercased()
+            .filter { $0.isLetter || $0.isNumber || $0 == "_" }
+
+        return String(sanitized.prefix(24)) // Firebase limit is 24 chars for property names
+    }
+
+    /// Sanitiza parámetros para Firebase
+    private func sanitizeFirebaseParameters(_ parameters: [String: Any]) -> [String: Any] {
+        var sanitized: [String: Any] = [:]
+
+        for (key, value) in parameters {
+            let sanitizedKey = sanitizeFirebasePropertyName(key)
+
+            // Firebase solo acepta String, Int, Double como valores
+            if let stringValue = value as? String {
+                sanitized[sanitizedKey] = String(stringValue.prefix(100)) // Max 100 chars
+            } else if let intValue = value as? Int {
+                sanitized[sanitizedKey] = intValue
+            } else if let doubleValue = value as? Double {
+                sanitized[sanitizedKey] = doubleValue
+            } else if let boolValue = value as? Bool {
+                sanitized[sanitizedKey] = boolValue ? 1 : 0
+            } else {
+                // Convertir cualquier otro tipo a String
+                sanitized[sanitizedKey] = String(describing: value).prefix(100)
+            }
+        }
+
+        return sanitized
     }
 
     // MARK: - Helper Methods

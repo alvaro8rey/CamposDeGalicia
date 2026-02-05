@@ -92,6 +92,8 @@ iOSInjectionProject/
 # Credentials and sensitive files
 Config.plist
 **/Config.plist
+GoogleService-Info.plist
+**/GoogleService-Info.plist
 .env
 .env.local
 .env.*.local

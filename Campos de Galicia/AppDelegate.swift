@@ -2,6 +2,11 @@ import UIKit
 import BackgroundTasks
 import CoreLocation
 
+// Firebase import (comment out if not using Firebase)
+#if canImport(FirebaseCore)
+import FirebaseCore
+#endif
+
 /// AppDelegate para manejar eventos de background y tareas programadas
 class AppDelegate: NSObject, UIApplicationDelegate {
 
@@ -10,6 +15,9 @@ class AppDelegate: NSObject, UIApplicationDelegate {
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
         Logger.debug("🚀 AppDelegate didFinishLaunchingWithOptions")
+
+        // Configurar Firebase
+        configureFirebase()
 
         // Registrar tareas de background
         registerBackgroundTasks()
@@ -20,7 +28,25 @@ class AppDelegate: NSObject, UIApplicationDelegate {
             // El GeofenceManager ya está configurado como delegate y manejará los eventos
         }
 
+        // Inicializar AnalyticsManager
+        _ = AnalyticsManager.shared
+
+        // Track app launch
+        AnalyticsManager.shared.track(.appLaunched)
+
         return true
+    }
+
+    // MARK: - Firebase Configuration
+
+    /// Configura Firebase si está disponible
+    private func configureFirebase() {
+        #if canImport(FirebaseCore)
+        FirebaseApp.configure()
+        Logger.success("✅ Firebase configurado correctamente")
+        #else
+        Logger.debug("⚠️ Firebase no disponible - continuando sin analytics")
+        #endif
     }
 
     // MARK: - Background Tasks

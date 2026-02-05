@@ -351,28 +351,65 @@ final class GeofenceManager: NSObject, ObservableObject, CLLocationManagerDelega
             return
         }
 
-        let now = Date()
-        dwellStartTimes[id] = now
+        // CRÍTICO: Verificar PRIMERO si el campo ya fue visitado alguna vez en la BD
+        // Esto evita iniciar dwells innecesarios para campos ya visitados
+        Task { [weak self] in
+            guard let self else { return }
 
-        // CRÍTICO: Persistir inmediatamente para que sobreviva al cierre de la app
-        persistDwellData()
+            do {
+                guard let user = supabase.auth.currentUser else {
+                    Logger.debug("❌ No hay usuario autenticado")
+                    return
+                }
+                let userId = user.id.uuidString
+                let campoId = campo.id.uuidString
 
-        Logger.debug("⏱️ Empezando dwell de \(Int(dwellSeconds))s para \(campo.nombre) (ID: \(id)) - Inicio: \(now)")
+                Logger.debug("🔍 Verificando si campo \(campo.nombre) ya fue visitado antes de iniciar dwell")
 
-        // Timer solo para foreground (mejora UX pero no es crítico)
-        if UIApplication.shared.applicationState == .active {
-            let timer = Timer.scheduledTimer(withTimeInterval: dwellSeconds, repeats: false) { [weak self] _ in
-                self?.completeDwell(for: campo)
+                let alreadyVisited = try await self.hasVisit(userId: userId, campoId: campoId)
+                if alreadyVisited {
+                    Logger.debug("⏭️ Campo \(campo.nombre) ya fue visitado previamente - NO se iniciará dwell")
+                    // Marcar en recentlyCheckedIn para no verificar de nuevo mientras esté dentro
+                    await MainActor.run {
+                        self.recentlyCheckedIn.insert(campo.id)
+                        self.persistDwellData()
+                    }
+                    return
+                }
+
+                // El campo nunca fue visitado - proceder con el dwell
+                await MainActor.run {
+                    Logger.debug("✅ Campo \(campo.nombre) nunca visitado - iniciando dwell de \(Int(self.dwellSeconds))s")
+
+                    let now = Date()
+                    self.dwellStartTimes[id] = now
+
+                    // CRÍTICO: Persistir inmediatamente para que sobreviva al cierre de la app
+                    self.persistDwellData()
+
+                    Logger.debug("⏱️ Dwell iniciado para \(campo.nombre) (ID: \(id)) - Inicio: \(now)")
+
+                    // Timer solo para foreground (mejora UX pero no es crítico)
+                    if UIApplication.shared.applicationState == .active {
+                        let timer = Timer.scheduledTimer(withTimeInterval: self.dwellSeconds, repeats: false) { [weak self] _ in
+                            self?.completeDwell(for: campo)
+                        }
+                        RunLoop.main.add(timer, forMode: .common)
+                        self.pendingDwells[id] = timer
+                    }
+
+                    // Iniciar background task para procesar en background
+                    self.startBackgroundTask()
+
+                    // Verificar inmediatamente si el dwell ya se completó (por si fue en background)
+                    self.checkPendingDwells()
+                }
+
+            } catch {
+                Logger.debug("❌ Error al verificar visita previa: \(error.localizedDescription)")
+                // En caso de error, no iniciar el dwell por seguridad
             }
-            RunLoop.main.add(timer, forMode: .common)
-            pendingDwells[id] = timer
         }
-
-        // Iniciar background task para procesar en background
-        startBackgroundTask()
-
-        // Verificar inmediatamente si el dwell ya se completó (por si fue en background)
-        checkPendingDwells()
     }
 
     private func cancelDwell(for campo: CampoModel) {
@@ -445,7 +482,7 @@ final class GeofenceManager: NSObject, ObservableObject, CLLocationManagerDelega
         // Persistir cambios inmediatamente
         persistDwellData()
 
-        Logger.debug("✅ Dwell completado para \(campo.nombre) - Verificando visita en Supabase...")
+        Logger.debug("✅ Dwell completado para \(campo.nombre) - Registrando visita en Supabase...")
 
         Task { [weak self] in
             guard let self else { return }
@@ -462,17 +499,9 @@ final class GeofenceManager: NSObject, ObservableObject, CLLocationManagerDelega
                 let userId = user.id.uuidString
                 let campoId = campo.id.uuidString
 
-                Logger.debug("🔍 Verificando si campo \(campoId) ya fue visitado alguna vez por usuario \(userId)")
+                // NOTA: La verificación de si ya fue visitado se hace ANTES de iniciar el dwell
+                // Si llegamos aquí, es porque el campo nunca fue visitado y cumplió el dwell time
 
-                // 1) ¿Ya hay visita registrada alguna vez? (auto check-in solo para campos nuevos)
-                let alreadyVisited = try await self.hasVisit(userId: userId, campoId: campoId)
-                if alreadyVisited {
-                    Logger.debug("ℹ️ Campo \(campo.nombre) ya fue visitado previamente; auto check-in solo funciona para campos nuevos.")
-                    self.endBackgroundTask()
-                    return
-                }
-
-                // 2) Insertar visita
                 Logger.debug("💾 Insertando nueva visita para \(campo.nombre)...")
                 let visita: [String: String] = ["id_usuario": userId, "id_campo": campoId]
                 _ = try await supabase.from("visitas").insert(visita).execute()
@@ -502,8 +531,6 @@ final class GeofenceManager: NSObject, ObservableObject, CLLocationManagerDelega
     /// Comprueba si existe ya una visita para (usuario, campo) en cualquier momento (histórico).
     /// El auto check-in solo debe registrar campos que NUNCA han sido visitados.
     private func hasVisit(userId: String, campoId: String) async throws -> Bool {
-        Logger.debug("🔍 Verificando si existe alguna visita histórica para campo \(campoId)")
-
         let resp = try await supabase
             .from("visitas")
             .select("id", head: false, count: .exact)
@@ -514,7 +541,7 @@ final class GeofenceManager: NSObject, ObservableObject, CLLocationManagerDelega
 
         if let json = try? JSONSerialization.jsonObject(with: resp.data) as? [[String: Any]] {
             let hasVisited = !json.isEmpty
-            print(hasVisited ? "✅ Campo ya visitado previamente - NO se hará auto check-in" : "ℹ️ Campo nunca visitado - se permitirá auto check-in")
+            Logger.debug(hasVisited ? "✅ Campo ya visitado previamente" : "ℹ️ Campo nunca visitado")
             return hasVisited
         }
         Logger.debug("⚠️ Error al parsear respuesta de visitas")

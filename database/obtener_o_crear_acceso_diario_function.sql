@@ -17,10 +17,10 @@ SET search_path = public
 AS $$
 BEGIN
     -- Intentar insertar si no existe
-    -- Usamos el parámetro p_usuario_id directamente sin ambigüedad
+    -- Usamos el constraint explícito para evitar ambigüedad con RLS
     INSERT INTO public.accesos_diarios (id_usuario, ultimo_acceso, dias_consecutivos)
     VALUES (p_usuario_id, now(), 1)
-    ON CONFLICT (id_usuario) DO NOTHING;
+    ON CONFLICT ON CONSTRAINT accesos_diarios_id_usuario_key DO NOTHING;
 
     -- Retornar el registro existente o recién creado
     -- Calificamos todas las columnas con el nombre de la tabla para evitar ambigüedad

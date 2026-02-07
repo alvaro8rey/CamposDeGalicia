@@ -2,7 +2,11 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<!-- CarPlay entitlement comentado temporalmente para cuenta free -->
+	<!-- Descomentar cuando tengas Apple Developer Program -->
+	<!--
 	<key>com.apple.developer.carplay-navigation</key>
 	<true/>
+	-->
 </dict>
 </plist>

@@ -3,6 +3,21 @@
 ## Problema
 CarPlay no aparece en la lista de capabilities en Xcode cuando intentas agregarlo.
 
+## 🚨 SOLUCIÓN RÁPIDA para Cuenta Free
+
+**Si tienes una cuenta free y no puedes compilar**, el entitlement de CarPlay ya ha sido **deshabilitado temporalmente**.
+
+### ¿Qué hacer ahora?
+
+1. **Abre el proyecto en Xcode**
+2. **Selecciona tu Personal Team en Signing & Capabilities**
+3. **Compila normalmente** - debería funcionar sin errores
+4. **Cuando tengas Apple Developer Program**, lee `CARPLAY_ENABLE_WHEN_READY.md` para habilitar CarPlay
+
+**La app funcionará perfectamente sin CarPlay** hasta que actualices tu cuenta.
+
+---
+
 ## Causas Comunes y Soluciones
 
 ### 1. ✅ Verificar que tienes Apple Developer Program

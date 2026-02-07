@@ -1,6 +1,7 @@
 import UIKit
 import BackgroundTasks
 import CoreLocation
+import CarPlay
 
 // Firebase import (comment out if not using Firebase)
 #if canImport(FirebaseCore)
@@ -136,5 +137,28 @@ class AppDelegate: NSObject, UIApplicationDelegate {
 
     func applicationDidBecomeActive(_ application: UIApplication) {
         Logger.debug("✨ App activa")
+    }
+
+    // MARK: - UISceneSession Lifecycle
+
+    func application(_ application: UIApplication,
+                     configurationForConnecting connectingSceneSession: UISceneSession,
+                     options: UIScene.ConnectionOptions) -> UISceneConfiguration {
+        Logger.debug("🔧 Configurando escena: \(connectingSceneSession.role.rawValue)")
+
+        // Configuración para CarPlay
+        if connectingSceneSession.role == .carTemplateApplication {
+            let sceneConfig = UISceneConfiguration(name: "CarPlay",
+                                                   sessionRole: connectingSceneSession.role)
+            sceneConfig.delegateClass = CarPlaySceneDelegate.self
+            Logger.debug("🚗 Configuración de CarPlay creada")
+            return sceneConfig
+        }
+
+        // Configuración por defecto para la app principal
+        let sceneConfig = UISceneConfiguration(name: "Default",
+                                               sessionRole: connectingSceneSession.role)
+        Logger.debug("📱 Configuración de app principal creada")
+        return sceneConfig
     }
 }

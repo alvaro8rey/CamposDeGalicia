@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Sin CarPlay entitlement para dispositivos reales -->
+	<!-- Se activará cuando tengas acceso a CarPlay en tu cuenta de Apple Developer -->
+</dict>
+</plist>

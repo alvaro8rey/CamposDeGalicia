@@ -384,7 +384,7 @@ extension CarPlayManager: CPSearchTemplateDelegate {
 
             item.handler = { [weak self] (item: CPSelectableListItem, completion: @escaping () -> Void) in
                 self?.selectCampo(campo)
-                searchTemplate.dismiss(animated: true)
+                self?.interfaceController.dismissTemplate(animated: true)
                 completion()
             }
 

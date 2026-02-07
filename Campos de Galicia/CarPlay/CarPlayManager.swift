@@ -1,6 +1,7 @@
 import CarPlay
 import MapKit
 import Combine
+import Supabase
 
 /// Manager para gestionar toda la lógica de CarPlay
 class CarPlayManager: NSObject {
@@ -10,12 +11,12 @@ class CarPlayManager: NSObject {
     private let interfaceController: CPInterfaceController
     private var mapTemplate: CPMapTemplate?
     private var locationManager: CLLocationManager
-    private var supabaseClient = SupabaseManager.shared.client
+    private var supabaseClient = supabase
     private var cancellables = Set<AnyCancellable>()
 
     // Campos cercanos y búsqueda
-    private var nearbyCampos: [Campo] = []
-    private var allCampos: [Campo] = []
+    private var nearbyCampos: [CampoModel] = []
+    private var allCampos: [CampoModel] = []
 
     // MARK: - Initialization
 
@@ -98,7 +99,7 @@ class CarPlayManager: NSObject {
         Task {
             do {
                 // Obtener campos cercanos (dentro de 50km)
-                let response: [Campo] = try await supabaseClient
+                let response: [CampoModel] = try await supabaseClient
                     .from("campos")
                     .select()
                     .execute()
@@ -106,13 +107,13 @@ class CarPlayManager: NSObject {
 
                 // Filtrar y ordenar por distancia
                 let campos = response.filter { campo in
-                    guard let lat = campo.latitude, let lon = campo.longitude else { return false }
+                    guard let lat = campo.latitud, let lon = campo.longitud else { return false }
                     let campoLocation = CLLocation(latitude: lat, longitude: lon)
                     let distance = userLocation.distance(from: campoLocation)
                     return distance <= 50000 // 50km
                 }.sorted { campo1, campo2 in
-                    guard let lat1 = campo1.latitude, let lon1 = campo1.longitude,
-                          let lat2 = campo2.latitude, let lon2 = campo2.longitude else {
+                    guard let lat1 = campo1.latitud, let lon1 = campo1.longitud,
+                          let lat2 = campo2.latitud, let lon2 = campo2.longitud else {
                         return false
                     }
                     let loc1 = CLLocation(latitude: lat1, longitude: lon1)
@@ -135,7 +136,7 @@ class CarPlayManager: NSObject {
     private func loadAllCampos() {
         Task {
             do {
-                let response: [Campo] = try await supabaseClient
+                let response: [CampoModel] = try await supabaseClient
                     .from("campos")
                     .select()
                     .execute()
@@ -154,15 +155,15 @@ class CarPlayManager: NSObject {
 
     // MARK: - Map Display
 
-    private func displayCamposOnMap(campos: [Campo]) {
+    private func displayCamposOnMap(campos: [CampoModel]) {
         guard let mapTemplate = mapTemplate else { return }
 
         // Crear anotaciones para cada campo
         var annotations: [CPPointOfInterest] = []
 
         for campo in campos {
-            guard let lat = campo.latitude,
-                  let lon = campo.longitude else { continue }
+            guard let lat = campo.latitud,
+                  let lon = campo.longitud else { continue }
 
             let coordinate = CLLocationCoordinate2D(latitude: lat, longitude: lon)
             let location = MKMapItem(placemark: MKPlacemark(coordinate: coordinate))
@@ -171,7 +172,7 @@ class CarPlayManager: NSObject {
             let poi = CPPointOfInterest(
                 location: location,
                 title: campo.nombre,
-                subtitle: campo.localidad ?? "",
+                subtitle: campo.localidad,
                 summary: nil,
                 detailTitle: nil,
                 detailSubtitle: nil,
@@ -180,7 +181,7 @@ class CarPlayManager: NSObject {
             )
 
             // Configurar acción al tocar
-            poi.primaryButton = CPTextButton(title: "Navegar") { [weak self] _ in
+            poi.primaryButton = CPTextButton(title: "Navegar", textStyle: .normal) { [weak self] _ in
                 self?.startNavigation(to: campo)
             }
 
@@ -209,10 +210,10 @@ class CarPlayManager: NSObject {
             let distance = distanceString(to: campo)
             let item = CPListItem(
                 text: campo.nombre,
-                detailText: "\(campo.localidad ?? "") • \(distance)"
+                detailText: "\(campo.localidad) • \(distance)"
             )
 
-            item.handler = { [weak self] _, completion in
+            item.handler = { [weak self] (item: CPSelectableListItem, completion: @escaping () -> Void) in
                 self?.selectCampo(campo)
                 completion()
             }
@@ -253,9 +254,9 @@ class CarPlayManager: NSObject {
 
     // MARK: - Navigation
 
-    private func startNavigation(to campo: Campo) {
-        guard let lat = campo.latitude,
-              let lon = campo.longitude else {
+    private func startNavigation(to campo: CampoModel) {
+        guard let lat = campo.latitud,
+              let lon = campo.longitud else {
             Logger.debug("❌ Campo sin coordenadas")
             return
         }
@@ -273,28 +274,29 @@ class CarPlayManager: NSObject {
         ])
 
         // Track evento
-        AnalyticsManager.shared.track(.custom(
+        AnalyticsManager.shared.trackCustom(
             name: "carplay_navigation_started",
+            category: .navigation,
             parameters: ["campo_id": campo.id.uuidString, "campo_name": campo.nombre]
-        ))
+        )
     }
 
-    private func selectCampo(_ campo: Campo) {
+    private func selectCampo(_ campo: CampoModel) {
         Logger.debug("📍 Campo seleccionado: \(campo.nombre)")
 
         // Centrar mapa en el campo
-        if let lat = campo.latitude, let lon = campo.longitude {
+        if let lat = campo.latitud, let lon = campo.longitud {
             let coordinate = CLLocationCoordinate2D(latitude: lat, longitude: lon)
             // En CarPlay, mostramos información del campo
             showCampoDetails(campo)
         }
     }
 
-    private func showCampoDetails(_ campo: Campo) {
+    private func showCampoDetails(_ campo: CampoModel) {
         // Crear información detallada del campo
         let detailText = """
-        \(campo.localidad ?? "")
-        \(campo.provincia ?? "")
+        \(campo.localidad)
+        \(campo.provincia)
         """
 
         let item = CPListItem(
@@ -302,7 +304,7 @@ class CarPlayManager: NSObject {
             detailText: detailText
         )
 
-        item.handler = { [weak self] _, completion in
+        item.handler = { [weak self] (item: CPSelectableListItem, completion: @escaping () -> Void) in
             self?.startNavigation(to: campo)
             completion()
         }
@@ -328,10 +330,10 @@ class CarPlayManager: NSObject {
 
     // MARK: - Helper Methods
 
-    private func distanceString(to campo: Campo) -> String {
+    private func distanceString(to campo: CampoModel) -> String {
         guard let userLocation = locationManager.location,
-              let lat = campo.latitude,
-              let lon = campo.longitude else {
+              let lat = campo.latitud,
+              let lon = campo.longitud else {
             return "Distancia desconocida"
         }
 
@@ -369,7 +371,7 @@ extension CarPlayManager: CPSearchTemplateDelegate {
         // Filtrar campos por nombre o localidad
         let filtered = allCampos.filter { campo in
             campo.nombre.localizedCaseInsensitiveContains(searchText) ||
-            campo.localidad?.localizedCaseInsensitiveContains(searchText) == true
+            campo.localidad.localizedCaseInsensitiveContains(searchText)
         }
 
         // Crear items de resultados
@@ -377,10 +379,10 @@ extension CarPlayManager: CPSearchTemplateDelegate {
             let distance = distanceString(to: campo)
             let item = CPListItem(
                 text: campo.nombre,
-                detailText: "\(campo.localidad ?? "") • \(distance)"
+                detailText: "\(campo.localidad) • \(distance)"
             )
 
-            item.handler = { [weak self] _, completion in
+            item.handler = { [weak self] (item: CPSelectableListItem, completion: @escaping () -> Void) in
                 self?.selectCampo(campo)
                 searchTemplate.dismiss(animated: true)
                 completion()

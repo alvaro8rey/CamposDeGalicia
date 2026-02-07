@@ -16,17 +16,32 @@ class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegate {
 
     func templateApplicationScene(_ templateApplicationScene: CPTemplateApplicationScene,
                                    didConnect interfaceController: CPInterfaceController) {
-        print("========== CARPLAY CONECTADO ==========")
+        print("")
+        print("========================================")
+        print("========================================")
+        print("🚗🚗🚗 CARPLAY CONECTADO! 🚗🚗🚗")
+        print("========================================")
+        print("========================================")
+        print("")
         Logger.debug("🚗 CarPlay conectado")
 
         self.interfaceController = interfaceController
         self.window = templateApplicationScene.carWindow
 
+        print("✅ Interface controller asignado")
+        print("✅ Window asignada")
+
         // Inicializar el manager de CarPlay
+        print("📱 Inicializando CarPlayManager...")
         carPlayManager = CarPlayManager(interfaceController: interfaceController)
 
         // Configurar la interfaz inicial
+        print("🎨 Configurando interfaz de CarPlay...")
         carPlayManager?.setupInterface()
+
+        print("========================================")
+        print("✅ CARPLAY CONFIGURADO COMPLETAMENTE")
+        print("========================================")
 
         // Track evento de analytics
         AnalyticsManager.shared.trackCustom(name: "carplay_connected", category: .navigation)

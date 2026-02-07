@@ -145,14 +145,23 @@ class AppDelegate: NSObject, UIApplicationDelegate {
     func application(_ application: UIApplication,
                      configurationForConnecting connectingSceneSession: UISceneSession,
                      options: UIScene.ConnectionOptions) -> UISceneConfiguration {
+        print("========================================")
+        print("🔧 CONFIGURANDO ESCENA")
+        print("Role: \(connectingSceneSession.role.rawValue)")
+        print("========================================")
         Logger.debug("🔧 Configurando escena: \(connectingSceneSession.role.rawValue)")
 
         // Detectar si es CarPlay
         if connectingSceneSession.role == .carTemplateApplication {
+            print("========================================")
+            print("🚗🚗🚗 CARPLAY DETECTADO! 🚗🚗🚗")
+            print("========================================")
             let sceneConfig = UISceneConfiguration(name: "CarPlay",
                                                    sessionRole: connectingSceneSession.role)
             sceneConfig.delegateClass = CarPlaySceneDelegate.self
             Logger.debug("🚗 Configuración de CarPlay creada")
+            print("Delegate class: \(String(describing: sceneConfig.delegateClass))")
+            print("========================================")
             return sceneConfig
         }
 

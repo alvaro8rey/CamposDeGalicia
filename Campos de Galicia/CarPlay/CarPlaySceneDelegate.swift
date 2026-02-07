@@ -28,7 +28,7 @@ class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegate {
         carPlayManager?.setupInterface()
 
         // Track evento de analytics
-        AnalyticsManager.shared.track(.custom(name: "carplay_connected", parameters: nil))
+        AnalyticsManager.shared.trackCustom(name: "carplay_connected", category: .navigation)
     }
 
     func templateApplicationScene(_ templateApplicationScene: CPTemplateApplicationScene,
@@ -39,6 +39,6 @@ class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegate {
         self.carPlayManager = nil
 
         // Track evento de analytics
-        AnalyticsManager.shared.track(.custom(name: "carplay_disconnected", parameters: nil))
+        AnalyticsManager.shared.trackCustom(name: "carplay_disconnected", category: .navigation)
     }
 }

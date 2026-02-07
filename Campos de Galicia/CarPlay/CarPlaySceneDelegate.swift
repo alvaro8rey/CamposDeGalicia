@@ -16,6 +16,7 @@ class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegate {
 
     func templateApplicationScene(_ templateApplicationScene: CPTemplateApplicationScene,
                                    didConnect interfaceController: CPInterfaceController) {
+        print("========== CARPLAY CONECTADO ==========")
         Logger.debug("🚗 CarPlay conectado")
 
         self.interfaceController = interfaceController
@@ -33,6 +34,7 @@ class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegate {
 
     func templateApplicationScene(_ templateApplicationScene: CPTemplateApplicationScene,
                                    didDisconnect interfaceController: CPInterfaceController) {
+        print("========== CARPLAY DESCONECTADO ==========")
         Logger.debug("🚗 CarPlay desconectado")
 
         self.interfaceController = nil

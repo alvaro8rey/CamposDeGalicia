@@ -21,16 +21,19 @@ class CarPlayManager: NSObject {
     // MARK: - Initialization
 
     init(interfaceController: CPInterfaceController) {
+        print("========== CARPLAY MANAGER INIT ==========")
         self.interfaceController = interfaceController
         self.locationManager = CLLocationManager()
         super.init()
 
         setupLocationManager()
+        print("========== CARPLAY MANAGER INIT COMPLETE ==========")
     }
 
     // MARK: - Setup
 
     func setupInterface() {
+        print("========== SETUP INTERFACE CARPLAY ==========")
         Logger.debug("🚗 Configurando interfaz de CarPlay")
 
         // Crear el template de mapa
@@ -45,8 +48,10 @@ class CarPlayManager: NSObject {
         // Establecer como root template
         interfaceController.setRootTemplate(mapTemplate, animated: true) { success, error in
             if let error = error {
+                print("========== ERROR AL ESTABLECER TEMPLATE: \(error.localizedDescription) ==========")
                 Logger.debug("❌ Error al establecer template: \(error.localizedDescription)")
             } else {
+                print("========== TEMPLATE DE CARPLAY ESTABLECIDO CORRECTAMENTE ==========")
                 Logger.debug("✅ Template de CarPlay establecido correctamente")
             }
         }

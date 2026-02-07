@@ -15,6 +15,7 @@ class AppDelegate: NSObject, UIApplicationDelegate {
     static let backgroundTaskIdentifier = "com.camposdegalicia.app.dwellcheck"
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
+        print("========== APP LAUNCHED ==========")
         Logger.debug("🚀 AppDelegate didFinishLaunchingWithOptions")
 
         // Configurar Firebase
@@ -144,14 +145,17 @@ class AppDelegate: NSObject, UIApplicationDelegate {
     func application(_ application: UIApplication,
                      configurationForConnecting connectingSceneSession: UISceneSession,
                      options: UIScene.ConnectionOptions) -> UISceneConfiguration {
+        print("========== CONFIGURANDO ESCENA: \(connectingSceneSession.role.rawValue) ==========")
         Logger.debug("🔧 Configurando escena: \(connectingSceneSession.role.rawValue)")
 
         // Configuración para CarPlay
         if connectingSceneSession.role == .carTemplateApplication {
+            print("========== CREANDO CONFIGURACIÓN DE CARPLAY ==========")
             let sceneConfig = UISceneConfiguration(name: "CarPlay",
                                                    sessionRole: connectingSceneSession.role)
             sceneConfig.delegateClass = CarPlaySceneDelegate.self
             Logger.debug("🚗 Configuración de CarPlay creada")
+            print("========== CARPLAY CONFIG DELEGATECLASS: \(String(describing: sceneConfig.delegateClass)) ==========")
             return sceneConfig
         }
 

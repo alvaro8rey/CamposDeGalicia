@@ -2,9 +2,5 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<!-- CarPlay entitlement para desarrollo en simulador -->
-	<!-- Funciona en simulador sin necesidad de cuenta de pago -->
-	<key>com.apple.developer.carplay-navigation</key>
-	<true/>
 </dict>
 </plist>

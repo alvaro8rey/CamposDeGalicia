@@ -2,7 +2,6 @@ import SwiftUI
 import CoreLocation
 import Supabase
 import UserNotifications
-import CarPlay
 
 extension Notification.Name {
     static let showResetPassword = Notification.Name("showResetPassword")

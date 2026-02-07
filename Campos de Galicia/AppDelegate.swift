@@ -1,7 +1,6 @@
 import UIKit
 import BackgroundTasks
 import CoreLocation
-import CarPlay
 
 // Firebase import (comment out if not using Firebase)
 #if canImport(FirebaseCore)
@@ -145,28 +144,9 @@ class AppDelegate: NSObject, UIApplicationDelegate {
     func application(_ application: UIApplication,
                      configurationForConnecting connectingSceneSession: UISceneSession,
                      options: UIScene.ConnectionOptions) -> UISceneConfiguration {
-        print("========================================")
-        print("🔧 CONFIGURANDO ESCENA")
-        print("Role: \(connectingSceneSession.role.rawValue)")
-        print("========================================")
         Logger.debug("🔧 Configurando escena: \(connectingSceneSession.role.rawValue)")
 
-        // Configuración para CarPlay
-        if connectingSceneSession.role == .carTemplateApplication {
-            print("========================================")
-            print("🚗🚗🚗 CARPLAY DETECTADO 🚗🚗🚗")
-            print("Creando configuración de CarPlay...")
-            print("========================================")
-            let sceneConfig = UISceneConfiguration(name: "CarPlay",
-                                                   sessionRole: connectingSceneSession.role)
-            sceneConfig.delegateClass = CarPlaySceneDelegate.self
-            Logger.debug("🚗 Configuración de CarPlay creada con delegateClass: \(String(describing: sceneConfig.delegateClass))")
-            print("✅ CarPlay configurado con delegate: \(String(describing: sceneConfig.delegateClass))")
-            return sceneConfig
-        }
-
         // Configuración por defecto para la app principal
-        print("📱 Configurando app principal (no CarPlay)")
         let sceneConfig = UISceneConfiguration(name: "Default",
                                                sessionRole: connectingSceneSession.role)
         Logger.debug("📱 Configuración de app principal creada")

@@ -21,46 +21,71 @@ class CarPlayManager: NSObject {
     // MARK: - Initialization
 
     init(interfaceController: CPInterfaceController) {
-        print("========== CARPLAY MANAGER INIT ==========")
+        print("========================================")
+        print("🏗️ INICIALIZANDO CARPLAY MANAGER")
+        print("InterfaceController: \(interfaceController)")
+        print("========================================")
         self.interfaceController = interfaceController
         self.locationManager = CLLocationManager()
         super.init()
 
+        print("📍 Configurando LocationManager...")
         setupLocationManager()
-        print("========== CARPLAY MANAGER INIT COMPLETE ==========")
+        print("========================================")
+        print("✅ CARPLAY MANAGER INICIALIZADO")
+        print("========================================")
     }
 
     // MARK: - Setup
 
     func setupInterface() {
-        print("========== SETUP INTERFACE CARPLAY ==========")
+        print("========================================")
+        print("🎨 CONFIGURANDO INTERFAZ DE CARPLAY")
+        print("========================================")
         Logger.debug("🚗 Configurando interfaz de CarPlay")
 
         // Crear el template de mapa
+        print("🗺️ Creando CPMapTemplate...")
         let mapTemplate = CPMapTemplate()
         mapTemplate.mapDelegate = self
 
         self.mapTemplate = mapTemplate
+        print("✅ CPMapTemplate creado")
 
         // Configurar botones del mapa
+        print("🔘 Configurando botones del mapa...")
         setupMapButtons(for: mapTemplate)
+        print("✅ Botones configurados")
 
         // Establecer como root template
+        print("🚀 Estableciendo root template...")
         interfaceController.setRootTemplate(mapTemplate, animated: true) { success, error in
             if let error = error {
-                print("========== ERROR AL ESTABLECER TEMPLATE: \(error.localizedDescription) ==========")
+                print("========================================")
+                print("❌❌❌ ERROR AL ESTABLECER TEMPLATE")
+                print("Error: \(error.localizedDescription)")
+                print("========================================")
                 Logger.debug("❌ Error al establecer template: \(error.localizedDescription)")
             } else {
-                print("========== TEMPLATE DE CARPLAY ESTABLECIDO CORRECTAMENTE ==========")
+                print("========================================")
+                print("✅✅✅ TEMPLATE DE CARPLAY ESTABLECIDO")
+                print("Success: \(success)")
+                print("========================================")
                 Logger.debug("✅ Template de CarPlay establecido correctamente")
             }
         }
 
         // Cargar campos cercanos
+        print("📍 Cargando campos cercanos...")
         loadNearbyCampos()
 
         // Cargar todos los campos para búsqueda
+        print("🔍 Cargando todos los campos...")
         loadAllCampos()
+
+        print("========================================")
+        print("🎉 SETUP INTERFACE COMPLETADO")
+        print("========================================")
     }
 
     private func setupLocationManager() {

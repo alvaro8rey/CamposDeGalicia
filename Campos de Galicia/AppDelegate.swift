@@ -145,21 +145,28 @@ class AppDelegate: NSObject, UIApplicationDelegate {
     func application(_ application: UIApplication,
                      configurationForConnecting connectingSceneSession: UISceneSession,
                      options: UIScene.ConnectionOptions) -> UISceneConfiguration {
-        print("========== CONFIGURANDO ESCENA: \(connectingSceneSession.role.rawValue) ==========")
+        print("========================================")
+        print("🔧 CONFIGURANDO ESCENA")
+        print("Role: \(connectingSceneSession.role.rawValue)")
+        print("========================================")
         Logger.debug("🔧 Configurando escena: \(connectingSceneSession.role.rawValue)")
 
         // Configuración para CarPlay
         if connectingSceneSession.role == .carTemplateApplication {
-            print("========== CREANDO CONFIGURACIÓN DE CARPLAY ==========")
+            print("========================================")
+            print("🚗🚗🚗 CARPLAY DETECTADO 🚗🚗🚗")
+            print("Creando configuración de CarPlay...")
+            print("========================================")
             let sceneConfig = UISceneConfiguration(name: "CarPlay",
                                                    sessionRole: connectingSceneSession.role)
             sceneConfig.delegateClass = CarPlaySceneDelegate.self
-            Logger.debug("🚗 Configuración de CarPlay creada")
-            print("========== CARPLAY CONFIG DELEGATECLASS: \(String(describing: sceneConfig.delegateClass)) ==========")
+            Logger.debug("🚗 Configuración de CarPlay creada con delegateClass: \(String(describing: sceneConfig.delegateClass))")
+            print("✅ CarPlay configurado con delegate: \(String(describing: sceneConfig.delegateClass))")
             return sceneConfig
         }
 
         // Configuración por defecto para la app principal
+        print("📱 Configurando app principal (no CarPlay)")
         let sceneConfig = UISceneConfiguration(name: "Default",
                                                sessionRole: connectingSceneSession.role)
         Logger.debug("📱 Configuración de app principal creada")

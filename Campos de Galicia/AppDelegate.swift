@@ -146,6 +146,15 @@ class AppDelegate: NSObject, UIApplicationDelegate {
                      options: UIScene.ConnectionOptions) -> UISceneConfiguration {
         Logger.debug("🔧 Configurando escena: \(connectingSceneSession.role.rawValue)")
 
+        // Verificar si es una sesión de CarPlay
+        if connectingSceneSession.role == .carTemplateApplication {
+            let sceneConfig = UISceneConfiguration(name: "CarPlay",
+                                                   sessionRole: connectingSceneSession.role)
+            sceneConfig.delegateClass = CarPlaySceneDelegate.self
+            Logger.debug("🚗 Configuración de CarPlay creada")
+            return sceneConfig
+        }
+
         // Configuración por defecto para la app principal
         let sceneConfig = UISceneConfiguration(name: "Default",
                                                sessionRole: connectingSceneSession.role)

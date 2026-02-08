@@ -9,6 +9,7 @@ class CarPlayManager: NSObject {
     // MARK: - Properties
 
     private let interfaceController: CPInterfaceController
+    private weak var window: CPWindow?
     private var mapTemplate: CPMapTemplate?
     private var locationManager: CLLocationManager
     private var supabaseClient = supabase
@@ -21,10 +22,10 @@ class CarPlayManager: NSObject {
 
     // MARK: - Initialization
 
-    init(interfaceController: CPInterfaceController, mapView: MKMapView) {
+    init(interfaceController: CPInterfaceController, window: CPWindow?) {
         print("========== CARPLAY MANAGER INIT ==========")
         self.interfaceController = interfaceController
-        self.mapView = mapView
+        self.window = window
         self.locationManager = CLLocationManager()
         super.init()
 
@@ -32,28 +33,47 @@ class CarPlayManager: NSObject {
         print("========== CARPLAY MANAGER INIT COMPLETE ==========")
     }
 
+    // MARK: - MapView Access
+
+    /// Obtiene el MKMapView del CPWindow después de que el template esté configurado
+    private func getMapView() -> MKMapView? {
+        guard let window = window else {
+            print("⚠️ CPWindow es nil")
+            return nil
+        }
+
+        // El MKMapView es creado automáticamente por el sistema cuando asignamos el CPMapTemplate
+        // Lo encontramos en la jerarquía de vistas del CPWindow
+        if let mapView = findMapView(in: window) {
+            self.mapView = mapView
+            print("✅ MKMapView encontrado en la jerarquía de vistas")
+            return mapView
+        }
+
+        print("⚠️ No se pudo encontrar MKMapView en la jerarquía de vistas")
+        return nil
+    }
+
+    /// Busca recursivamente un MKMapView en la jerarquía de vistas
+    private func findMapView(in view: UIView) -> MKMapView? {
+        if let mapView = view as? MKMapView {
+            return mapView
+        }
+
+        for subview in view.subviews {
+            if let mapView = findMapView(in: subview) {
+                return mapView
+            }
+        }
+
+        return nil
+    }
+
     // MARK: - Setup
 
     func setupInterface() {
         print("========== SETUP INTERFACE CARPLAY ==========")
         Logger.debug("🚗 Configurando interfaz de CarPlay")
-
-        // Configurar el MKMapView inicial
-        if let mapView = mapView {
-            print("🗺️ Configurando MKMapView...")
-            mapView.delegate = self
-
-            // Centrar en Galicia por defecto
-            let galiciaCenter = CLLocationCoordinate2D(latitude: 42.8782, longitude: -8.5448)
-            let region = MKCoordinateRegion(
-                center: galiciaCenter,
-                span: MKCoordinateSpan(latitudeDelta: 2.0, longitudeDelta: 2.0)
-            )
-            mapView.setRegion(region, animated: false)
-            print("✅ MKMapView centrado en Galicia")
-        } else {
-            print("⚠️ ADVERTENCIA: MKMapView es nil en setupInterface")
-        }
 
         // Crear el template de mapa
         let mapTemplate = CPMapTemplate()
@@ -65,13 +85,19 @@ class CarPlayManager: NSObject {
         setupMapButtons(for: mapTemplate)
 
         // Establecer como root template
-        interfaceController.setRootTemplate(mapTemplate, animated: true) { success, error in
+        interfaceController.setRootTemplate(mapTemplate, animated: true) { [weak self] success, error in
             if let error = error {
                 print("========== ERROR AL ESTABLECER TEMPLATE: \(error.localizedDescription) ==========")
                 Logger.debug("❌ Error al establecer template: \(error.localizedDescription)")
             } else {
                 print("========== TEMPLATE DE CARPLAY ESTABLECIDO CORRECTAMENTE ==========")
                 Logger.debug("✅ Template de CarPlay establecido correctamente")
+
+                // Ahora que el template está configurado, obtener el MKMapView
+                // que el sistema creó automáticamente
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    self?.configureMapView()
+                }
             }
         }
 
@@ -80,6 +106,26 @@ class CarPlayManager: NSObject {
 
         // Cargar todos los campos para búsqueda
         loadAllCampos()
+    }
+
+    private func configureMapView() {
+        guard let mapView = getMapView() else {
+            print("⚠️ No se pudo obtener el MKMapView")
+            return
+        }
+
+        print("🗺️ Configurando MKMapView...")
+        mapView.delegate = self
+        mapView.showsUserLocation = true
+
+        // Centrar en Galicia por defecto
+        let galiciaCenter = CLLocationCoordinate2D(latitude: 42.8782, longitude: -8.5448)
+        let region = MKCoordinateRegion(
+            center: galiciaCenter,
+            span: MKCoordinateSpan(latitudeDelta: 2.0, longitudeDelta: 2.0)
+        )
+        mapView.setRegion(region, animated: false)
+        print("✅ MKMapView centrado en Galicia")
     }
 
     private func setupLocationManager() {
@@ -180,8 +226,13 @@ class CarPlayManager: NSObject {
     // MARK: - Map Display
 
     private func displayCamposOnMap(campos: [CampoModel]) {
-        guard let mapTemplate = mapTemplate,
-              let mapView = mapView else { return }
+        guard let mapTemplate = mapTemplate else { return }
+
+        // Obtener el MKMapView si aún no lo tenemos
+        guard let mapView = self.mapView ?? getMapView() else {
+            print("⚠️ No se pudo obtener el MKMapView para mostrar campos")
+            return
+        }
 
         print("🗺️ Mostrando \(campos.count) campos en el mapa")
 
@@ -412,9 +463,13 @@ class CarPlayManager: NSObject {
     private func centerOnUserLocation() {
         Logger.debug("📍 Centrando en ubicación del usuario")
 
-        guard let mapView = mapView,
-              let userLocation = locationManager.location else {
+        guard let userLocation = locationManager.location else {
             Logger.debug("⚠️ No hay ubicación del usuario disponible")
+            return
+        }
+
+        guard let mapView = self.mapView ?? getMapView() else {
+            Logger.debug("⚠️ No se pudo obtener el MKMapView")
             return
         }
 

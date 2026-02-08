@@ -62,28 +62,11 @@ class CarPlaySceneDelegate: UIResponder, UISceneDelegate, CPTemplateApplicationS
         print("✅ Interface controller asignado")
         print("✅ Window asignada: \(String(describing: self.window))")
 
-        // Crear y configurar el MKMapView
-        print("🗺️ Creando MKMapView para CarPlay...")
-        let mapView = MKMapView(frame: UIScreen.main.bounds)
-        mapView.isRotateEnabled = false
-        mapView.showsUserLocation = true
-        mapView.userTrackingMode = .follow
-
-        self.mapView = mapView
-
-        // Establecer el MKMapView como root view del window de CarPlay
-        if let window = self.window {
-            window.rootViewController = UIViewController()
-            window.rootViewController?.view = mapView
-            window.makeKeyAndVisible()
-            print("✅ MKMapView configurado en CPWindow")
-        } else {
-            print("⚠️ ADVERTENCIA: CPWindow es nil!")
-        }
-
         // Inicializar el manager de CarPlay
+        // IMPORTANTE: NO creamos el MKMapView manualmente.
+        // El sistema lo crea automáticamente cuando asignamos el CPMapTemplate.
         print("📱 Inicializando CarPlayManager...")
-        carPlayManager = CarPlayManager(interfaceController: interfaceController, mapView: mapView)
+        carPlayManager = CarPlayManager(interfaceController: interfaceController, window: self.window)
 
         // Configurar la interfaz inicial
         print("🎨 Configurando interfaz de CarPlay...")

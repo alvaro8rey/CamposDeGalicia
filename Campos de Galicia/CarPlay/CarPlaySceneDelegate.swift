@@ -14,7 +14,7 @@ class CarPlaySceneDelegate: UIResponder, UISceneDelegate, CPTemplateApplicationS
 
     // MARK: - UISceneDelegate Methods
 
-    func scene(_ scene: UIScene, willConnectTo session: UISceneSession, options connectionOptions: UIScene.ConnectionOptions) {
+    @objc func scene(_ scene: UIScene, willConnectTo session: UISceneSession, options connectionOptions: UIScene.ConnectionOptions) {
         print("")
         print("========================================")
         print("🔌 SCENE WILL CONNECT TO SESSION")
@@ -29,23 +29,23 @@ class CarPlaySceneDelegate: UIResponder, UISceneDelegate, CPTemplateApplicationS
         // La configuración real de CarPlay se hace en templateApplicationScene(_:didConnect:)
     }
 
-    func sceneDidDisconnect(_ scene: UIScene) {
+    @objc func sceneDidDisconnect(_ scene: UIScene) {
         print("========== SCENE DID DISCONNECT ==========")
         Logger.debug("🔌 Scene did disconnect")
     }
 
-    func sceneDidBecomeActive(_ scene: UIScene) {
+    @objc func sceneDidBecomeActive(_ scene: UIScene) {
         Logger.debug("✨ CarPlay scene became active")
     }
 
-    func sceneWillResignActive(_ scene: UIScene) {
+    @objc func sceneWillResignActive(_ scene: UIScene) {
         Logger.debug("💤 CarPlay scene will resign active")
     }
 
     // MARK: - CPTemplateApplicationSceneDelegate Methods
 
-    func templateApplicationScene(_ templateApplicationScene: CPTemplateApplicationScene,
-                                   didConnect interfaceController: CPInterfaceController) {
+    @objc func templateApplicationScene(_ templateApplicationScene: CPTemplateApplicationScene,
+                                         didConnect interfaceController: CPInterfaceController) {
         print("")
         print("========================================")
         print("========================================")
@@ -77,8 +77,8 @@ class CarPlaySceneDelegate: UIResponder, UISceneDelegate, CPTemplateApplicationS
         AnalyticsManager.shared.trackCustom(name: "carplay_connected", category: .navigation)
     }
 
-    func templateApplicationScene(_ templateApplicationScene: CPTemplateApplicationScene,
-                                   didDisconnect interfaceController: CPInterfaceController) {
+    @objc func templateApplicationScene(_ templateApplicationScene: CPTemplateApplicationScene,
+                                         didDisconnect interfaceController: CPInterfaceController) {
         print("========== CARPLAY DESCONECTADO ==========")
         Logger.debug("🚗 CarPlay desconectado")
 

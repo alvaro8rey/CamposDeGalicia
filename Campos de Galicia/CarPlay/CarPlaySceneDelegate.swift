@@ -4,44 +4,14 @@ import MapKit
 import Combine
 
 /// Scene Delegate para manejar la sesión de CarPlay
-class CarPlaySceneDelegate: UIResponder, UISceneDelegate, CPTemplateApplicationSceneDelegate {
+/// IMPORTANTE: Solo implementa CPTemplateApplicationSceneDelegate, NO UISceneDelegate
+class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegate {
 
     // MARK: - Properties
 
     var interfaceController: CPInterfaceController?
     var window: CPWindow?
     private var carPlayManager: CarPlayManager?
-    private var mapView: MKMapView?
-
-    // MARK: - UISceneDelegate Methods
-
-    func scene(_ scene: UIScene, willConnectTo session: UISceneSession, options connectionOptions: UIScene.ConnectionOptions) {
-        print("")
-        print("========================================")
-        print("🔌 SCENE WILL CONNECT TO SESSION")
-        print("========================================")
-        print("Scene: \(scene)")
-        print("Session role: \(session.role.rawValue)")
-        print("========================================")
-        print("")
-        Logger.debug("🔌 Scene willConnectTo session")
-
-        // Este método es requerido por UISceneDelegate
-        // La configuración real de CarPlay se hace en templateApplicationScene(_:didConnect:)
-    }
-
-    func sceneDidDisconnect(_ scene: UIScene) {
-        print("========== SCENE DID DISCONNECT ==========")
-        Logger.debug("🔌 Scene did disconnect")
-    }
-
-    func sceneDidBecomeActive(_ scene: UIScene) {
-        Logger.debug("✨ CarPlay scene became active")
-    }
-
-    func sceneWillResignActive(_ scene: UIScene) {
-        Logger.debug("💤 CarPlay scene will resign active")
-    }
 
     // MARK: - CPTemplateApplicationSceneDelegate Methods
 

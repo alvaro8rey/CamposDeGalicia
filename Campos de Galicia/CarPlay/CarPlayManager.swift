@@ -13,6 +13,7 @@ class CarPlayManager: NSObject {
     private var locationManager: CLLocationManager
     private var supabaseClient = supabase
     private var cancellables = Set<AnyCancellable>()
+    private weak var mapView: MKMapView?
 
     // Campos cercanos y búsqueda
     private var nearbyCampos: [CampoModel] = []
@@ -20,9 +21,10 @@ class CarPlayManager: NSObject {
 
     // MARK: - Initialization
 
-    init(interfaceController: CPInterfaceController) {
+    init(interfaceController: CPInterfaceController, mapView: MKMapView) {
         print("========== CARPLAY MANAGER INIT ==========")
         self.interfaceController = interfaceController
+        self.mapView = mapView
         self.locationManager = CLLocationManager()
         super.init()
 
@@ -35,6 +37,23 @@ class CarPlayManager: NSObject {
     func setupInterface() {
         print("========== SETUP INTERFACE CARPLAY ==========")
         Logger.debug("🚗 Configurando interfaz de CarPlay")
+
+        // Configurar el MKMapView inicial
+        if let mapView = mapView {
+            print("🗺️ Configurando MKMapView...")
+            mapView.delegate = self
+
+            // Centrar en Galicia por defecto
+            let galiciaCenter = CLLocationCoordinate2D(latitude: 42.8782, longitude: -8.5448)
+            let region = MKCoordinateRegion(
+                center: galiciaCenter,
+                span: MKCoordinateSpan(latitudeDelta: 2.0, longitudeDelta: 2.0)
+            )
+            mapView.setRegion(region, animated: false)
+            print("✅ MKMapView centrado en Galicia")
+        } else {
+            print("⚠️ ADVERTENCIA: MKMapView es nil en setupInterface")
+        }
 
         // Crear el template de mapa
         let mapTemplate = CPMapTemplate()
@@ -161,10 +180,46 @@ class CarPlayManager: NSObject {
     // MARK: - Map Display
 
     private func displayCamposOnMap(campos: [CampoModel]) {
-        guard let mapTemplate = mapTemplate else { return }
+        guard let mapTemplate = mapTemplate,
+              let mapView = mapView else { return }
 
-        // Crear anotaciones para cada campo
-        var annotations: [CPPointOfInterest] = []
+        print("🗺️ Mostrando \(campos.count) campos en el mapa")
+
+        // Limpiar anotaciones anteriores
+        mapView.removeAnnotations(mapView.annotations)
+
+        // Crear anotaciones MKPointAnnotation para el MKMapView
+        var mkAnnotations: [MKPointAnnotation] = []
+
+        for campo in campos {
+            guard let lat = campo.latitud,
+                  let lon = campo.longitud else { continue }
+
+            let annotation = MKPointAnnotation()
+            annotation.coordinate = CLLocationCoordinate2D(latitude: lat, longitude: lon)
+            annotation.title = campo.nombre
+            annotation.subtitle = campo.localidad
+
+            mkAnnotations.append(annotation)
+        }
+
+        // Agregar anotaciones al MKMapView
+        mapView.addAnnotations(mkAnnotations)
+        print("✅ \(mkAnnotations.count) anotaciones agregadas al mapa")
+
+        // Ajustar la región del mapa para mostrar todas las anotaciones
+        if !mkAnnotations.isEmpty {
+            let coordinates = mkAnnotations.map { $0.coordinate }
+            let region = regionForCoordinates(coordinates)
+            mapView.setRegion(region, animated: true)
+            print("✅ Región del mapa ajustada")
+        }
+
+        // Habilitar interfaz de panning en CarPlay
+        mapTemplate.showPanningInterface(animated: true)
+
+        // Crear CPPointOfInterest para CarPlay (para interacción)
+        var poiAnnotations: [CPPointOfInterest] = []
 
         for campo in campos {
             guard let lat = campo.latitud,
@@ -190,14 +245,41 @@ class CarPlayManager: NSObject {
                 self?.startNavigation(to: campo)
             }
 
-            annotations.append(poi)
+            poiAnnotations.append(poi)
+        }
+    }
+
+    // Helper para calcular región que contenga todas las coordenadas
+    private func regionForCoordinates(_ coordinates: [CLLocationCoordinate2D]) -> MKCoordinateRegion {
+        guard !coordinates.isEmpty else {
+            // Región por defecto centrada en Galicia
+            return MKCoordinateRegion(
+                center: CLLocationCoordinate2D(latitude: 42.8782, longitude: -8.5448),
+                span: MKCoordinateSpan(latitudeDelta: 2.0, longitudeDelta: 2.0)
+            )
         }
 
-        mapTemplate.showPanningInterface(animated: true)
+        var minLat = coordinates[0].latitude
+        var maxLat = coordinates[0].latitude
+        var minLon = coordinates[0].longitude
+        var maxLon = coordinates[0].longitude
 
-        // Mostrar anotaciones en el mapa
-        // Nota: En CarPlay real, las anotaciones se muestran automáticamente
-        // cuando están en el área visible del mapa
+        for coordinate in coordinates {
+            minLat = min(minLat, coordinate.latitude)
+            maxLat = max(maxLat, coordinate.latitude)
+            minLon = min(minLon, coordinate.longitude)
+            maxLon = max(maxLon, coordinate.longitude)
+        }
+
+        let centerLat = (minLat + maxLat) / 2
+        let centerLon = (minLon + maxLon) / 2
+        let spanLat = (maxLat - minLat) * 1.5  // 1.5x para dar margen
+        let spanLon = (maxLon - minLon) * 1.5
+
+        return MKCoordinateRegion(
+            center: CLLocationCoordinate2D(latitude: centerLat, longitude: centerLon),
+            span: MKCoordinateSpan(latitudeDelta: max(spanLat, 0.1), longitudeDelta: max(spanLon, 0.1))
+        )
     }
 
     // MARK: - List Interface
@@ -329,8 +411,19 @@ class CarPlayManager: NSObject {
 
     private func centerOnUserLocation() {
         Logger.debug("📍 Centrando en ubicación del usuario")
-        // En CarPlay real, esto centraría el mapa automáticamente
-        // El mapa de CarPlay maneja esto nativamente
+
+        guard let mapView = mapView,
+              let userLocation = locationManager.location else {
+            Logger.debug("⚠️ No hay ubicación del usuario disponible")
+            return
+        }
+
+        let region = MKCoordinateRegion(
+            center: userLocation.coordinate,
+            span: MKCoordinateSpan(latitudeDelta: 0.1, longitudeDelta: 0.1)
+        )
+        mapView.setRegion(region, animated: true)
+        Logger.debug("✅ Mapa centrado en ubicación del usuario")
     }
 
     // MARK: - Helper Methods
@@ -421,5 +514,36 @@ extension CarPlayManager: CLLocationManagerDelegate {
         if status == .authorizedWhenInUse || status == .authorizedAlways {
             manager.startUpdatingLocation()
         }
+    }
+}
+
+// MARK: - MKMapViewDelegate
+
+extension CarPlayManager: MKMapViewDelegate {
+    func mapView(_ mapView: MKMapView, viewFor annotation: MKAnnotation) -> MKAnnotationView? {
+        // No personalizar la anotación del usuario
+        if annotation is MKUserLocation {
+            return nil
+        }
+
+        let identifier = "CampoAnnotation"
+        var annotationView = mapView.dequeueReusableAnnotationView(withIdentifier: identifier) as? MKMarkerAnnotationView
+
+        if annotationView == nil {
+            annotationView = MKMarkerAnnotationView(annotation: annotation, reuseIdentifier: identifier)
+            annotationView?.canShowCallout = true
+        } else {
+            annotationView?.annotation = annotation
+        }
+
+        // Personalizar el marcador
+        annotationView?.markerTintColor = .systemGreen
+        annotationView?.glyphImage = UIImage(systemName: "figure.walk")
+
+        return annotationView
+    }
+
+    func mapView(_ mapView: MKMapView, didSelect view: MKAnnotationView) {
+        Logger.debug("📍 Anotación seleccionada: \(view.annotation?.title ?? "Sin título")")
     }
 }

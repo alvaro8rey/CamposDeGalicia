@@ -18,25 +18,34 @@ class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegate {
 
     func templateApplicationScene(_ templateApplicationScene: CPTemplateApplicationScene,
                                    didConnect interfaceController: CPInterfaceController) {
+        print("")
+        print("========================================")
+        print("========================================")
+        print("🚗🚗🚗 CARPLAY CONECTADO! 🚗🚗🚗")
+        print("========================================")
+        print("========================================")
+        print("")
         Logger.debug("🚗 CarPlay conectado")
 
         self.interfaceController = interfaceController
         self.window = templateApplicationScene.carWindow
 
-        Logger.debug("✅ Interface controller asignado")
-        Logger.debug("✅ Window asignada: \(String(describing: self.window))")
+        print("✅ Interface controller asignado")
+        print("✅ Window asignada: \(String(describing: self.window))")
 
         // Inicializar el manager de CarPlay
         // IMPORTANTE: NO creamos el MKMapView manualmente.
         // El sistema lo crea automáticamente cuando asignamos el CPMapTemplate.
-        Logger.debug("📱 Inicializando CarPlayManager...")
+        print("📱 Inicializando CarPlayManager...")
         carPlayManager = CarPlayManager(interfaceController: interfaceController, window: self.window)
 
         // Configurar la interfaz inicial
-        Logger.debug("🎨 Configurando interfaz de CarPlay...")
+        print("🎨 Configurando interfaz de CarPlay...")
         carPlayManager?.setupInterface()
 
-        Logger.debug("✅ CarPlay configurado completamente")
+        print("========================================")
+        print("✅ CARPLAY CONFIGURADO COMPLETAMENTE")
+        print("========================================")
 
         // Track evento de analytics
         AnalyticsManager.shared.trackCustom(name: "carplay_connected", category: .navigation)
@@ -44,6 +53,7 @@ class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegate {
 
     func templateApplicationScene(_ templateApplicationScene: CPTemplateApplicationScene,
                                    didDisconnect interfaceController: CPInterfaceController) {
+        print("========== CARPLAY DESCONECTADO ==========")
         Logger.debug("🚗 CarPlay desconectado")
 
         self.interfaceController = nil

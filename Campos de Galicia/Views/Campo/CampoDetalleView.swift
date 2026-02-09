@@ -310,7 +310,7 @@ struct CampoDetalleView: View {
             await MainActor.run {
                 ToastManager.shared.error(L(.campoVisitError))
             }
-            Logger.debug("Error: \(error)")
+            print(error)
         }
     }
 
@@ -345,7 +345,7 @@ struct CampoDetalleView: View {
             await MainActor.run {
                 ToastManager.shared.error(L(.campoUnvisitError))
             }
-            Logger.debug("Error: \(error)")
+            print(error)
         }
     }
 
@@ -400,7 +400,7 @@ struct CampoDetalleView: View {
             await MainActor.run {
                 ToastManager.shared.error(L(.contribucionError))
             }
-            Logger.debug("Error: \(error)")
+            print(error)
         }
     }
 

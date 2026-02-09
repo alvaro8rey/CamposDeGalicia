@@ -9,194 +9,326 @@ extension Notification.Name {
 
 @main
 struct AppMain: App {
-    @StateObject private var camposViewModel: CamposViewModel
-    @StateObject private var locationManager = LocationManager()
-    @StateObject private var geofenceManager = GeofenceManager()   // ✅ nuevo
-    @State private var distanciaPredeterminada: Double = 10.0
+    @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
 
+    @StateObject private var camposViewModel: CamposViewModel
+    @StateObject private var authViewModel = AuthViewModel.shared
+    @StateObject private var locationManager = LocationManager()
+    @StateObject private var geofenceManager = GeofenceManager()
+    @StateObject private var themeManager = ThemeManager.shared
+    
+    @State private var distanciaPredeterminada: Double = 10.0
     @State private var showVerificationAlert: Bool = false
     @State private var verificationResult: String = ""
 
+    // Gestión de navegación y pestañas
+    @State private var selectedTab: Int = 0
+    @State private var isMapNavigating: Bool = false
+    @State private var showExitRouteAlert: Bool = false
+    @State private var pendingTab: Int = 0
+
+    // Navegación desde notificaciones (deep linking)
+    @State private var notificationCampoID: UUID? = nil
+    @State private var shouldShowLogros: Bool = false
+    @State private var isProcessingDeepLink: Bool = false
+
+    // Task de limpieza periódica
+    @State private var cleanupTask: Task<Void, Never>?
+
+    // Bandera para activar auto check-in solo una vez al inicio
+    @State private var hasInitializedAutoCheckin: Bool = false
+
+    // Computed property para el binding del TabView
+    private var tabSelection: Binding<Int> {
+        Binding(
+            get: { self.selectedTab },
+            set: { newTab in
+                self.handleTabChange(to: newTab)
+            }
+        )
+    }
+
+    // Computed property para el color de fondo
+    private var backgroundColor: some View {
+        Group {
+            if themeManager.currentTheme.colorScheme == .dark {
+                Color.black.ignoresSafeArea()
+            } else {
+                Color.white.ignoresSafeArea()
+            }
+        }
+    }
+
+    // MARK: - Tab Views
+
+    private var homeTab: some View {
+        NavigationView {
+            ContentView(
+                distanciaPredeterminada: $distanciaPredeterminada,
+                notificationCampoID: $notificationCampoID
+            )
+            .environmentObject(camposViewModel)
+            .environmentObject(authViewModel)
+        }
+        .tabItem {
+            Image(systemName: "house.fill")
+            Text(L(.tabHome))
+        }
+        .tag(0)
+    }
+
+    private var mapTab: some View {
+        NavigationView {
+            MapaView(externalIsNavigating: $isMapNavigating)
+                .environmentObject(camposViewModel)
+                .environmentObject(authViewModel)
+        }
+        .tabItem {
+            Image(systemName: "map.fill")
+            Text(L(.tabMap))
+        }
+        .tag(1)
+    }
+
+    private var nearbyTab: some View {
+        NavigationView {
+            CamposCercanosView(
+                userLocation: $locationManager.userLocation,
+                isLoadingLocation: $locationManager.isLoading,
+                distanciaPredeterminada: $distanciaPredeterminada,
+                requestLocation: {
+                    locationManager.requestLocation()
+                }
+            )
+            .environmentObject(camposViewModel)
+            .environmentObject(authViewModel)
+        }
+        .tabItem {
+            Image(systemName: "mappin.and.ellipse")
+            Text(L(.tabNearby))
+        }
+        .tag(2)
+    }
+
+    private var profileTab: some View {
+        NavigationView {
+            UserView(
+                distanciaPredeterminada: $distanciaPredeterminada,
+                shouldShowLogros: $shouldShowLogros
+            )
+            .environmentObject(camposViewModel)
+            .environmentObject(authViewModel)
+        }
+        .environmentObject(locationManager)
+        .tabItem {
+            Image(systemName: "person.fill")
+            Text(L(.tabProfile))
+        }
+        .tag(3)
+    }
+
+    // MARK: - Alert Buttons
+
+    private var continueRouteButton: some View {
+        Button(L(.navContinueRoute), role: .cancel) {
+            self.selectedTab = 1
+        }
+    }
+
+    private var stopRouteButton: some View {
+        Button(L(.navStopAndExit), role: .destructive) {
+            self.isMapNavigating = false
+            DispatchQueue.main.async {
+                self.selectedTab = pendingTab
+            }
+        }
+    }
+
     init() {
+        // --- CAMBIO: Configuración de Apariencia Nativa ---
+        let appearance = UITabBarAppearance()
+        appearance.configureWithTransparentBackground()
+        appearance.backgroundColor = .clear
+        appearance.backgroundEffect = UIBlurEffect(style: .systemUltraThinMaterial)
+        appearance.shadowColor = .clear
+        appearance.shadowImage = UIImage()
+        
+        UITabBar.appearance().standardAppearance = appearance
+        if #available(iOS 15.0, *) {
+            UITabBar.appearance().scrollEdgeAppearance = appearance
+        }
+        // --------------------------------------------------
+
         let viewModel = CamposViewModel()
         _camposViewModel = StateObject(wrappedValue: viewModel)
+
+        // Reducir cache para evitar problemas de memoria
+        let imageCache = URLCache(
+            memoryCapacity: 15_000_000,  // 15 MB (antes 50 MB)
+            diskCapacity: 40_000_000      // 40 MB (antes 100 MB)
+        )
+        URLCache.shared = imageCache
+
+        Task { @MainActor in
+            NetworkMonitor.shared.startMonitoring()
+        }
+
         Task {
             await viewModel.loadCampos()
         }
+        
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { ok, err in
-            if let err = err { print("🔔 notif auth err: \(err.localizedDescription)") }
-            print("🔔 notif auth granted: \(ok)")
+            if let err = err { Logger.debug("🔔 notif auth err: \(err.localizedDescription)") }
         }
         UNUserNotificationCenter.current().delegate = NotificationDelegate.shared
     }
 
     var body: some Scene {
         WindowGroup {
-            TabView {
-                NavigationView {
-                    ContentView(
-                        distanciaPredeterminada: $distanciaPredeterminada
-                    )
-                    .environmentObject(camposViewModel)
-                }
-                .tabItem {
-                    Image(systemName: "house.fill")
-                    Text("Inicio")
-                }
-                .tag(0)
+            // --- CAMBIO: Envolvemos en ZStack para controlar el fondo ---
+            ZStack {
+                backgroundColor
 
-                NavigationView {
-                    MapaView()
-                        .environmentObject(camposViewModel)
+                TabView(selection: tabSelection) {
+                    homeTab
+                    mapTab
+                    nearbyTab
+                    profileTab
                 }
-                .tabItem {
-                    Image(systemName: "map.fill")
-                    Text("Mapa")
-                }
-                .tag(1)
-
-                NavigationView {
-                    CamposCercanosView(
-                        userLocation: $locationManager.userLocation,
-                        isLoadingLocation: $locationManager.isLoading,
-                        distanciaPredeterminada: $distanciaPredeterminada,
-                        requestLocation: {
-                            locationManager.requestLocation()
-                        }
-                    )
-                    .environmentObject(camposViewModel)
-                }
-                .tabItem {
-                    Image(systemName: "mappin.and.ellipse")
-                    Text("Cercanos")
-                }
-                .tag(2)
-
-                NavigationView {
-                    UserView(
-                        distanciaPredeterminada: $distanciaPredeterminada
-                    )
-                    .environmentObject(camposViewModel)
-                }
-                .environmentObject(locationManager)
-                .tabItem {
-                    Image(systemName: "person.fill")
-                    Text("Usuario")
-                }
-                .tag(3)
+                // --- CAMBIO: El modificador clave ---
+                .ignoresSafeArea(.all, edges: .bottom)
+                // ------------------------------------
             }
+            .id(themeManager.currentTheme.rawValue)
             .accentColor(.blue)
-            .environmentObject(geofenceManager) // ✅ inyectamos el manager
+            .environmentObject(geofenceManager)
             .environmentObject(camposViewModel)
+            .environmentObject(LocalizationManager.shared)
+            .environmentObject(themeManager)
+            .preferredColorScheme(themeManager.currentTheme.colorScheme)
+            .withToast()
             .onAppear {
-                Task {
-                    await camposViewModel.loadCampos()
-                }
                 locationManager.requestLocation()
 
-                if geofenceManager.autoCheckinEnabled {
-                    geofenceManager.refreshWith(campos: camposViewModel.campos)
+                // 📊 Analytics: Track app launch
+                AnalyticsManager.shared.track(.appLaunched)
+
+                // Configurar propiedades de usuario
+                if let userId = authViewModel.user?.id {
+                    AnalyticsManager.shared.setUserProperties([
+                        "user_id": userId.uuidString
+                    ])
+                }
+
+                cleanupTask = Task {
+                    while !Task.isCancelled {
+                        try? await Task.sleep(nanoseconds: 5 * 60 * 1_000_000_000)
+                        guard !Task.isCancelled else { break }
+                        await camposViewModel.cleanExpiredExtras()
+                    }
                 }
             }
-            .onChange(of: locationManager.authorizationStatus) { status in
-                if status == .authorizedWhenInUse || status == .authorizedAlways {
-                    locationManager.requestLocation()
+            .onChange(of: camposViewModel.campos) { oldValue, newValue in
+                if !hasInitializedAutoCheckin && !newValue.isEmpty && geofenceManager.autoCheckinEnabled {
+                    Logger.debug("🚀 Campos cargados (\(newValue.count)) - activando auto check-in al arranque")
+                    hasInitializedAutoCheckin = true
+                    geofenceManager.setAutoCheckin(true, campos: newValue)
+                } else if hasInitializedAutoCheckin && geofenceManager.autoCheckinEnabled {
+                    geofenceManager.refreshWith(campos: newValue)
                 }
             }
-            .onChange(of: camposViewModel.campos) { _ in
-                if geofenceManager.autoCheckinEnabled {
-                    geofenceManager.refreshWith(campos: camposViewModel.campos)
-                }
+            .onDisappear {
+                cleanupTask?.cancel()
             }
             .onOpenURL { url in
                 handleDeepLink(url: url)
             }
+            .onReceive(NotificationCenter.default.publisher(for: .didTapNotification)) { notification in
+                handleNotificationNavigation(notification: notification)
+            }
+            .alert(L(.navRouteInProgress), isPresented: $showExitRouteAlert, actions: {
+                continueRouteButton
+                stopRouteButton
+            }, message: {
+                Text(L(.navCancelMessage))
+            })
             .alert(isPresented: $showVerificationAlert) {
                 Alert(
-                    title: Text("Verificación"),
+                    title: Text(L(.navVerification)),
                     message: Text(verificationResult),
-                    dismissButton: .default(Text("Aceptar"))
+                    dismissButton: .default(Text(L(.navAccept)))
                 )
             }
-        }
-    }
-
-    // MARK: - Cargar campos
-    // MARK: - Deep Links de Supabase (igual que tenías)
-    func handleDeepLink(url: URL) {
-        print("🔗 Deep link recibido: \(url)")
-        guard url.scheme == "camposdegalicia" else { print("❌ Esquema no reconocido."); return }
-
-        if let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
-           let code = components.queryItems?.first(where: { $0.name == "code" })?.value,
-           !code.isEmpty {
-            Task {
-                do {
-                    try await supabase.auth.exchangeCodeForSession(authCode: code)
-                    print("✅ Sesión establecida vía exchangeCodeForSession.")
-                    NotificationCenter.default.post(name: .showResetPassword, object: nil)
-                } catch {
-                    print("❌ exchangeCodeForSession: \(error.localizedDescription)")
-                    NotificationCenter.default.post(name: .showResetPassword, object: nil)
-                }
-            }
-            return
-        }
-
-        if url.host == "reset-password" {
-            let params = parseFragmentParams(url)
-            let accessToken = params["access_token"]
-            let refreshToken = params["refresh_token"]
-
-            if let access = accessToken, let refresh = refreshToken {
-                Task {
-                    do {
-                        try await supabase.auth.setSession(accessToken: access, refreshToken: refresh)
-                        print("✅ Sesión establecida desde fragmento.")
-                        NotificationCenter.default.post(name: .showResetPassword, object: nil)
-                    } catch {
-                        print("❌ setSession: \(error.localizedDescription)")
-                        NotificationCenter.default.post(name: .showResetPassword, object: nil)
+            .overlay(
+                Group {
+                    if isProcessingDeepLink {
+                        Color(.systemBackground)
+                            .ignoresSafeArea()
                     }
                 }
-            } else {
-                print("⚠️ Fragmento sin tokens.")
-                NotificationCenter.default.post(name: .showResetPassword, object: nil)
-            }
-            return
+            )
         }
-
-        if url.host == "auth",
-           let queryItems = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems,
-           let tokenHash = queryItems.first(where: { $0.name == "token_hash" })?.value,
-           let type = queryItems.first(where: { $0.name == "type" })?.value {
-            print("Recibido token de verificación: \(tokenHash), tipo: \(type)")
-            DispatchQueue.main.async {
-                verificationResult = "Tu cuenta ha sido verificada con éxito."
-                showVerificationAlert = true
-            }
-            return
-        }
-
-        print("❌ Enlace no reconocido o no compatible.")
     }
 
-    func parseFragmentParams(_ url: URL) -> [String: String] {
-        guard let fragment = url.fragment, !fragment.isEmpty else { return [:] }
-        var params: [String: String] = [:]
-        for pair in fragment.split(separator: "&") {
-            let parts = pair.split(separator: "=", maxSplits: 1)
-            if parts.count == 2 {
-                let key = String(parts[0])
-                let value = String(parts[1]).removingPercentEncoding ?? ""
-                params[key] = value
+    // MARK: - Tab Navigation
+
+    private func handleTabChange(to newTab: Int) {
+        if self.isMapNavigating && self.selectedTab == 1 && newTab != 1 {
+            self.pendingTab = newTab
+            self.showExitRouteAlert = true
+        } else {
+            self.selectedTab = newTab
+
+            // 📊 Analytics: Track tab change
+            let tabNames = ["home", "map", "nearby", "profile"]
+            if newTab < tabNames.count {
+                AnalyticsManager.shared.trackTabChange(to: tabNames[newTab])
             }
         }
-        return params
+    }
+
+    func handleDeepLink(url: URL) {
+        guard url.scheme == "camposdegalicia" else { return }
+    }
+
+    func handleNotificationNavigation(notification: Notification) {
+        guard let userInfo = notification.userInfo,
+              let action = userInfo["action"] as? String else {
+            return
+        }
+
+        isProcessingDeepLink = true
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            switch action {
+            case "showCampoDetail":
+                if let campoID = userInfo["campoID"] as? UUID {
+                    self.selectedTab = 0
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                        self.notificationCampoID = campoID
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                            self.isProcessingDeepLink = false
+                        }
+                    }
+                }
+
+            case "showLogros":
+                self.selectedTab = 3
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                    self.shouldShowLogros = true
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                        self.isProcessingDeepLink = false
+                    }
+                }
+
+            default:
+                self.isProcessingDeepLink = false
+            }
+        }
     }
 }
 
-// MARK: - Location Manager (tu clase existente sin cambios)
+// MARK: - Location Manager
 class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
     private let locationManager = CLLocationManager()
     @Published var userLocation: CLLocationCoordinate2D?
@@ -211,20 +343,12 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
     }
 
     func requestLocation() {
-        switch locationManager.authorizationStatus {
-        case .notDetermined:
-            locationManager.requestWhenInUseAuthorization()
-        case .restricted, .denied:
-            userLocation = nil
-            isLoading = false
-        case .authorizedWhenInUse, .authorizedAlways:
+        if locationManager.authorizationStatus == .authorizedWhenInUse || locationManager.authorizationStatus == .authorizedAlways {
             locationManager.requestLocation()
             isLoading = true
-        @unknown default:
-            userLocation = nil
-            isLoading = false
+        } else {
+            locationManager.requestWhenInUseAuthorization()
         }
-        authorizationStatus = locationManager.authorizationStatus
     }
 
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
@@ -235,31 +359,10 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
     }
 
     func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
-        print("Error al obtener la ubicación: \(error)")
-        userLocation = nil
         isLoading = false
     }
 
     func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
         authorizationStatus = manager.authorizationStatus
-        switch manager.authorizationStatus {
-        case .authorizedWhenInUse, .authorizedAlways:
-            locationManager.requestLocation()
-            isLoading = true
-        default:
-            userLocation = nil
-            isLoading = false
-        }
-    }
-    func requestAlwaysPermission() {
-        switch locationManager.authorizationStatus {
-        case .authorizedWhenInUse:
-            locationManager.requestAlwaysAuthorization()
-        case .notDetermined:
-            locationManager.requestWhenInUseAuthorization()
-        default:
-            // para .denied/.restricted el camino es abrir Ajustes
-            break
-        }
     }
 }

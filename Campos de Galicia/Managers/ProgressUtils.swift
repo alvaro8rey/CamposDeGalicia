@@ -13,13 +13,14 @@ enum ProgressUtils {
         }
     }
 
-    static func evaluate(condition: String, campos: Int, provincias: Int, dias: Int) -> Bool {
+    static func evaluate(condition: String, campos: Int, provincias: Int, dias: Int, reseñas: Int = 0) -> Bool {
         let parts = condition.split(separator: ">=").map { $0.trimmingCharacters(in: .whitespaces) }
         guard parts.count == 2, let target = Int(parts[1]) else { return false }
 
         if condition.contains("campos_visitados") { return campos >= target }
         if condition.contains("provincias_visitadas") { return provincias >= target }
         if condition.contains("dias_visitados") { return dias >= target }
+        if condition.contains("reseñas_escritas") { return reseñas >= target }
         return false
     }
 
@@ -40,11 +41,11 @@ enum ProgressUtils {
         iso.timeZone = TimeZone(secondsFromGMT: 0)
 
         let dates = isoDates.compactMap { iso.date(from: $0) }.sorted(by: >)
-        guard !dates.isEmpty else { return 0 }
+        guard let firstDate = dates.first else { return 0 }
 
         let cal = Calendar.current
         var streak = 1
-        var current = cal.startOfDay(for: dates[0])
+        var current = cal.startOfDay(for: firstDate)
 
         for i in 1..<dates.count {
             let prev = cal.startOfDay(for: dates[i])

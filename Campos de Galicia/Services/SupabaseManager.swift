@@ -34,12 +34,13 @@ final class SupabaseManager {
     }
 
     func fetchCampos(forceRefresh: Bool = false) async throws -> CamposFetchResult {
-        let cachedPayload = await cacheStore.load()
+        let cachedData = await cacheStore.loadCampos()
 
-        if !forceRefresh, let cachedPayload = cachedPayload, isCacheValid(cachedPayload.lastUpdated) {
+        if !forceRefresh, let cached = cachedData, isCacheValid(cached.lastUpdated) {
+            Logger.debug("✅ Usando caché válido: \(cached.campos.count) campos")
             return CamposFetchResult(
-                campos: cachedPayload.campos,
-                lastUpdated: cachedPayload.lastUpdated,
+                campos: cached.campos,
+                lastUpdated: cached.lastUpdated,
                 source: .cache,
                 cacheValid: true,
                 error: nil
@@ -47,6 +48,7 @@ final class SupabaseManager {
         }
 
         do {
+            Logger.debug("📡 Fetching campos desde servidor")
             let campos = try await requestCampos()
             let sorted = campos.sorted { $0.nombre.lowercased() < $1.nombre.lowercased() }
             let timestamp = Date()
@@ -59,10 +61,11 @@ final class SupabaseManager {
                 error: nil
             )
         } catch {
-            if let cachedPayload = cachedPayload {
+            if let cached = cachedData {
+                Logger.warning("⚠️ Error al obtener campos, usando caché expirado: \(error.localizedDescription)")
                 return CamposFetchResult(
-                    campos: cachedPayload.campos,
-                    lastUpdated: cachedPayload.lastUpdated,
+                    campos: cached.campos,
+                    lastUpdated: cached.lastUpdated,
                     source: .cache,
                     cacheValid: false,
                     error: error
@@ -72,16 +75,33 @@ final class SupabaseManager {
         }
     }
 
-    func fetchContribucionesAprobadas(for campoID: UUID) async throws -> [ContribucionAprobada] {
-        let response = try await client.from("campo_contribuciones")
-            .select("*")
-            .eq(column: "id_campo", value: campoID.uuidString)
-            .eq(column: "aprobada", value: true)
-            .order(column: "fecha", ascending: false)
-            .execute()
-        let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .iso8601
-        return try decoder.decode([ContribucionAprobada].self, from: response.data)
+    func fetchContribucionesAprobadas(for campoID: UUID, limit: Int = 50) async throws -> [ContribucionAprobada] {
+        // Usar query optimizada con paginación
+        let config = SupabaseQueryOptimizer.PaginationConfig(pageSize: limit, maxPages: 1)
+        let result = try await SupabaseQueryOptimizer.fetchContribucionesPaginated(
+            client: client,
+            campoID: campoID,
+            page: 0,
+            config: config,
+            onlyApproved: true
+        )
+        return result.items
+    }
+
+    /// Fetch contribuciones con paginación completa
+    func fetchContribucionesPaginadas(
+        for campoID: UUID,
+        page: Int = 0,
+        pageSize: Int = 20
+    ) async throws -> SupabaseQueryOptimizer.PaginatedResult<ContribucionAprobada> {
+        let config = SupabaseQueryOptimizer.PaginationConfig(pageSize: pageSize, maxPages: nil)
+        return try await SupabaseQueryOptimizer.fetchContribucionesPaginated(
+            client: client,
+            campoID: campoID,
+            page: page,
+            config: config,
+            onlyApproved: true
+        )
     }
 
     func invalidateCamposCache() async {
@@ -93,9 +113,49 @@ final class SupabaseManager {
     }
 
     private func requestCampos() async throws -> [CampoModel] {
-        let response = try await client.from("campos").select("*").execute()
-        let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .iso8601
-        return try decoder.decode([CampoModel].self, from: response.data)
+        // Usar query optimizada con medición de tiempo
+        let (campos, duration) = try await SupabaseQueryOptimizer.measureQueryTime(operation: "fetch_all_campos") {
+            try await SupabaseQueryOptimizer.fetchCamposOptimized(
+                client: client,
+                orderBy: "nombre",
+                ascending: true
+            )
+        }
+
+        Logger.debug("Fetched \(campos.count) campos in \(String(format: "%.2f", duration))s")
+        return campos
+    }
+
+    /// Fetch campos cercanos optimizado
+    func fetchCamposCercanos(
+        latitude: Double,
+        longitude: Double,
+        radiusKm: Double = 10,
+        limit: Int = 50
+    ) async throws -> [CampoModel] {
+        return try await SupabaseQueryOptimizer.fetchCamposCercanos(
+            client: client,
+            latitude: latitude,
+            longitude: longitude,
+            radiusKm: radiusKm,
+            limit: limit
+        )
+    }
+
+    /// Fetch incremental - solo campos actualizados desde la última sincronización
+    func fetchCamposIncrementales(since: Date) async throws -> [CampoModel] {
+        return try await SupabaseQueryOptimizer.fetchCamposIncremental(
+            client: client,
+            since: since
+        )
+    }
+
+    /// Fetch múltiples campos por IDs en batch
+    func fetchCamposByIDs(_ ids: [UUID]) async throws -> [CampoModel] {
+        guard !ids.isEmpty else { return [] }
+        return try await SupabaseQueryOptimizer.fetchCamposByIDs(
+            client: client,
+            ids: ids
+        )
     }
 }

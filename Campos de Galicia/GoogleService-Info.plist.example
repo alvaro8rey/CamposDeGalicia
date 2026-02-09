@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!--
+	INSTRUCCIONES:
+	1. Ve a https://console.firebase.google.com
+	2. Crea un nuevo proyecto o usa uno existente
+	3. Añade una app iOS con el bundle ID de tu app
+	4. Descarga el archivo GoogleService-Info.plist
+	5. Reemplaza este archivo con el descargado
+	6. Renombra a GoogleService-Info.plist (sin .example)
+	7. IMPORTANTE: Añade GoogleService-Info.plist al .gitignore
+	-->
+
+	<key>API_KEY</key>
+	<string>YOUR_API_KEY_HERE</string>
+
+	<key>GCM_SENDER_ID</key>
+	<string>YOUR_SENDER_ID_HERE</string>
+
+	<key>PLIST_VERSION</key>
+	<string>1</string>
+
+	<key>BUNDLE_ID</key>
+	<string>com.tuempresa.camposdegalicia</string>
+
+	<key>PROJECT_ID</key>
+	<string>campos-de-galicia</string>
+
+	<key>STORAGE_BUCKET</key>
+	<string>campos-de-galicia.appspot.com</string>
+
+	<key>IS_ADS_ENABLED</key>
+	<false/>
+
+	<key>IS_ANALYTICS_ENABLED</key>
+	<true/>
+
+	<key>IS_APPINVITE_ENABLED</key>
+	<true/>
+
+	<key>IS_GCM_ENABLED</key>
+	<true/>
+
+	<key>IS_SIGNIN_ENABLED</key>
+	<true/>
+
+	<key>GOOGLE_APP_ID</key>
+	<string>1:123456789012:ios:abcdef1234567890</string>
+
+	<key>DATABASE_URL</key>
+	<string>https://campos-de-galicia.firebaseio.com</string>
+</dict>
+</plist>

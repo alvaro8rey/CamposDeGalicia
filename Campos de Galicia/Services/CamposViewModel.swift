@@ -36,13 +36,10 @@ final class CamposViewModel: ObservableObject {
     }
 
     func loadCachedData() async {
-        if let payload = await cacheStore.load() {
-            campos = payload.campos
-            lastUpdated = payload.lastUpdated
-            campoExtras = payload.campoExtras
-        } else if let cachedCampos = await supabaseManager.cachedCampos() {
+        if let cachedCampos = await supabaseManager.cachedCampos() {
             campos = cachedCampos.campos
             lastUpdated = cachedCampos.lastUpdated
+            Logger.debug("Cached campos loaded: \(campos.count) campos")
         }
     }
 
@@ -78,6 +75,15 @@ final class CamposViewModel: ObservableObject {
         await loadCampos(forceRefresh: true)
     }
 
+    /// Limpia el caché de extras expirados para liberar memoria
+    func cleanExpiredExtras() {
+        let expiredKeys = campoExtras.filter { !isExtrasValid($0.value) }.map { $0.key }
+        expiredKeys.forEach { campoExtras.removeValue(forKey: $0) }
+        if !expiredKeys.isEmpty {
+            Logger.debug("🗑️ Cleaned \(expiredKeys.count) expired extras from memory")
+        }
+    }
+
     func campo(with id: UUID) -> CampoModel? {
         campos.first { $0.id == id }
     }
@@ -86,39 +92,41 @@ final class CamposViewModel: ObservableObject {
         campoExtras[campoID]
     }
 
+    /// Carga los extras de un campo (contribuciones)
+    /// ✅ Mantiene caché en memoria con TTL
+    /// ❌ NO guarda en disco (evita crecimiento exponencial)
     func loadExtras(for campoID: UUID, forceRefresh: Bool = false) async throws -> CampoDetailExtras {
+        // Si está en memoria y es válido, devolver
         if !forceRefresh, let extras = campoExtras[campoID], isExtrasValid(extras) {
+            Logger.debug("✅ Extras from memory cache for campo: \(campoID)")
             return extras
         }
 
-        if let cached = await cacheStore.loadExtras(for: campoID) {
-            campoExtras[campoID] = cached
-            if !forceRefresh, isExtrasValid(cached) {
-                return cached
-            }
-        }
-
+        // Siempre fetch desde servidor
+        Logger.debug("📡 Fetching extras from server for campo: \(campoID)")
         do {
             let contribuciones = try await supabaseManager.fetchContribucionesAprobadas(for: campoID)
             let extras = CampoDetailExtras(contribuciones: contribuciones, lastUpdated: Date())
+
+            // Solo guardar en memoria (NO en disco)
             campoExtras[campoID] = extras
-            await cacheStore.saveExtras(extras, for: campoID)
+
+            Logger.debug("✅ Extras loaded: \(contribuciones.count) contribuciones")
             return extras
         } catch {
+            // Si hay error y tenemos caché en memoria (aunque esté expirado), usarlo
             if let cachedExtras = campoExtras[campoID] {
-                return cachedExtras
-            }
-            if let cachedExtras = await cacheStore.loadExtras(for: campoID) {
-                campoExtras[campoID] = cachedExtras
+                Logger.warning("⚠️ Using expired memory cache due to error: \(error.localizedDescription)")
                 return cachedExtras
             }
             throw error
         }
     }
 
-    func invalidateExtras(for campoID: UUID) async {
+    /// Invalida el caché en memoria de extras para un campo
+    func invalidateExtras(for campoID: UUID) {
         campoExtras.removeValue(forKey: campoID)
-        await cacheStore.removeExtras(for: campoID)
+        Logger.debug("🗑️ Memory cache invalidated for campo: \(campoID)")
     }
 
     private func isExtrasValid(_ extras: CampoDetailExtras) -> Bool {

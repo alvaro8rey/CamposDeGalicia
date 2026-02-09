@@ -417,7 +417,7 @@ final class GeofenceManager: NSObject, ObservableObject, CLLocationManagerDelega
             } catch {
                 Logger.debug("❌ Error al verificar visita previa: \(error.localizedDescription)")
                 // En caso de error, no iniciar el dwell por seguridad
-                self?.endBackgroundTask()
+                self.endBackgroundTask()
             }
         }
     }

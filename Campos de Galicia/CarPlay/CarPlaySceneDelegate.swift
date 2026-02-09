@@ -4,8 +4,6 @@ import MapKit
 import Combine
 
 /// Scene Delegate para manejar la sesión de CarPlay
-/// IMPORTANTE: Solo implementa CPTemplateApplicationSceneDelegate, NO UISceneDelegate
-@objc(CarPlaySceneDelegate)
 class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegate {
 
     // MARK: - Properties
@@ -16,7 +14,7 @@ class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegate {
 
     // MARK: - CPTemplateApplicationSceneDelegate Methods
 
-    func templateApplicationScene(_ templateApplicationScene: CPTemplateApplicationScene,
+    @objc func templateApplicationScene(_ templateApplicationScene: CPTemplateApplicationScene,
                                    didConnect interfaceController: CPInterfaceController) {
         print("")
         print("========================================")
@@ -51,7 +49,7 @@ class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegate {
         AnalyticsManager.shared.trackCustom(name: "carplay_connected", category: .navigation)
     }
 
-    func templateApplicationScene(_ templateApplicationScene: CPTemplateApplicationScene,
+    @objc func templateApplicationScene(_ templateApplicationScene: CPTemplateApplicationScene,
                                    didDisconnect interfaceController: CPInterfaceController) {
         print("========== CARPLAY DESCONECTADO ==========")
         Logger.debug("🚗 CarPlay desconectado")

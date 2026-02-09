@@ -268,7 +268,9 @@ class CarPlayManager: NSObject {
 
         for campo in campos {
             guard let lat = campo.latitud,
-                  let lon = campo.longitud else { continue }
+                  let lon = campo.longitud,
+                  lat >= -90, lat <= 90,
+                  lon >= -180, lon <= 180 else { continue }
 
             let annotation = MKPointAnnotation()
             annotation.coordinate = CLLocationCoordinate2D(latitude: lat, longitude: lon)
@@ -284,9 +286,7 @@ class CarPlayManager: NSObject {
 
         // Ajustar la región del mapa para mostrar todas las anotaciones
         if !mkAnnotations.isEmpty {
-            let coordinates = mkAnnotations.map { $0.coordinate }
-            let region = regionForCoordinates(coordinates)
-            mapView.setRegion(region, animated: true)
+            mapView.showAnnotations(mkAnnotations, animated: true)
             Logger.debug("✅ Región del mapa ajustada")
         }
 
@@ -327,39 +327,6 @@ class CarPlayManager: NSObject {
         }
 
         Logger.debug("✅ \(poiAnnotations.count) POIs configurados para CarPlay")
-    }
-
-    // Helper para calcular región que contenga todas las coordenadas
-    private func regionForCoordinates(_ coordinates: [CLLocationCoordinate2D]) -> MKCoordinateRegion {
-        guard !coordinates.isEmpty else {
-            // Región por defecto centrada en Galicia
-            return MKCoordinateRegion(
-                center: CLLocationCoordinate2D(latitude: 42.8782, longitude: -8.5448),
-                span: MKCoordinateSpan(latitudeDelta: 2.0, longitudeDelta: 2.0)
-            )
-        }
-
-        var minLat = coordinates[0].latitude
-        var maxLat = coordinates[0].latitude
-        var minLon = coordinates[0].longitude
-        var maxLon = coordinates[0].longitude
-
-        for coordinate in coordinates {
-            minLat = min(minLat, coordinate.latitude)
-            maxLat = max(maxLat, coordinate.latitude)
-            minLon = min(minLon, coordinate.longitude)
-            maxLon = max(maxLon, coordinate.longitude)
-        }
-
-        let centerLat = (minLat + maxLat) / 2
-        let centerLon = (minLon + maxLon) / 2
-        let spanLat = (maxLat - minLat) * 1.5  // 1.5x para dar margen
-        let spanLon = (maxLon - minLon) * 1.5
-
-        return MKCoordinateRegion(
-            center: CLLocationCoordinate2D(latitude: centerLat, longitude: centerLon),
-            span: MKCoordinateSpan(latitudeDelta: max(spanLat, 0.1), longitudeDelta: max(spanLon, 0.1))
-        )
     }
 
     // MARK: - List Interface

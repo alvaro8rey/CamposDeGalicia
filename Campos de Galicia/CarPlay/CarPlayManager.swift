@@ -23,14 +23,14 @@ class CarPlayManager: NSObject {
     // MARK: - Initialization
 
     init(interfaceController: CPInterfaceController, window: CPWindow?) {
-        print("========== CARPLAY MANAGER INIT ==========")
+        Logger.debug("🚗 CarPlayManager inicializado")
         self.interfaceController = interfaceController
         self.window = window
         self.locationManager = CLLocationManager()
         super.init()
 
         setupLocationManager()
-        print("========== CARPLAY MANAGER INIT COMPLETE ==========")
+        Logger.debug("✅ CarPlayManager inicialización completa")
     }
 
     // MARK: - MapView Access
@@ -39,7 +39,7 @@ class CarPlayManager: NSObject {
     /// Ahora con reintentos para manejar el timing del sistema
     private func getMapView(retryCount: Int = 0, maxRetries: Int = 5, completion: @escaping (MKMapView?) -> Void) {
         guard let window = window else {
-            print("⚠️ CPWindow es nil")
+            Logger.debug("⚠️ CPWindow es nil")
             completion(nil)
             return
         }
@@ -48,19 +48,19 @@ class CarPlayManager: NSObject {
         // Lo encontramos en la jerarquía de vistas del CPWindow
         if let mapView = findMapView(in: window) {
             self.mapView = mapView
-            print("✅ MKMapView encontrado en la jerarquía de vistas (intento \(retryCount + 1))")
+            Logger.debug("✅ MKMapView encontrado en la jerarquía de vistas (intento \(retryCount + 1))")
             completion(mapView)
             return
         }
 
         // Si no se encuentra y aún hay reintentos disponibles, intentar de nuevo
         if retryCount < maxRetries {
-            print("⏳ MKMapView no encontrado, reintentando en 0.2s... (intento \(retryCount + 1)/\(maxRetries))")
+            Logger.debug("⏳ MKMapView no encontrado, reintentando en 0.2s... (intento \(retryCount + 1)/\(maxRetries))")
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in
                 self?.getMapView(retryCount: retryCount + 1, maxRetries: maxRetries, completion: completion)
             }
         } else {
-            print("⚠️ No se pudo encontrar MKMapView después de \(maxRetries) intentos")
+            Logger.debug("⚠️ No se pudo encontrar MKMapView después de \(maxRetries) intentos")
             completion(nil)
         }
     }
@@ -83,7 +83,6 @@ class CarPlayManager: NSObject {
     // MARK: - Setup
 
     func setupInterface() {
-        print("========== SETUP INTERFACE CARPLAY ==========")
         Logger.debug("🚗 Configurando interfaz de CarPlay")
 
         // Crear el template de mapa
@@ -98,10 +97,8 @@ class CarPlayManager: NSObject {
         // Establecer como root template
         interfaceController.setRootTemplate(mapTemplate, animated: true) { [weak self] success, error in
             if let error = error {
-                print("========== ERROR AL ESTABLECER TEMPLATE: \(error.localizedDescription) ==========")
                 Logger.debug("❌ Error al establecer template: \(error.localizedDescription)")
             } else {
-                print("========== TEMPLATE DE CARPLAY ESTABLECIDO CORRECTAMENTE ==========")
                 Logger.debug("✅ Template de CarPlay establecido correctamente")
 
                 // Ahora que el template está configurado, obtener el MKMapView
@@ -119,17 +116,17 @@ class CarPlayManager: NSObject {
     }
 
     private func configureMapView() {
-        print("🔄 Iniciando configuración de MKMapView...")
+        Logger.debug("🔄 Iniciando configuración de MKMapView...")
 
         // Usar el nuevo método con reintentos
         getMapView { [weak self] mapView in
             guard let mapView = mapView, let self = self else {
-                print("⚠️ No se pudo obtener el MKMapView - CarPlay continuará sin mapa personalizado")
+                Logger.debug("⚠️ No se pudo obtener el MKMapView - CarPlay continuará sin mapa personalizado")
                 // No hacer crash, simplemente continuar sin configurar el mapa
                 return
             }
 
-            print("🗺️ Configurando MKMapView...")
+            Logger.debug("🗺️ Configurando MKMapView...")
             mapView.delegate = self
             mapView.showsUserLocation = true
 
@@ -140,7 +137,7 @@ class CarPlayManager: NSObject {
                 span: MKCoordinateSpan(latitudeDelta: 2.0, longitudeDelta: 2.0)
             )
             mapView.setRegion(region, animated: false)
-            print("✅ MKMapView centrado en Galicia")
+            Logger.debug("✅ MKMapView centrado en Galicia")
         }
     }
 
@@ -243,7 +240,7 @@ class CarPlayManager: NSObject {
 
     private func displayCamposOnMap(campos: [CampoModel]) {
         guard let mapTemplate = mapTemplate else {
-            print("⚠️ MapTemplate no disponible")
+            Logger.debug("⚠️ MapTemplate no disponible")
             return
         }
 
@@ -254,10 +251,10 @@ class CarPlayManager: NSObject {
         }
 
         // Si no tenemos el mapView aún, intentar obtenerlo
-        print("🔄 Obteniendo MKMapView para mostrar campos...")
+        Logger.debug("🔄 Obteniendo MKMapView para mostrar campos...")
         getMapView { [weak self] mapView in
             guard let mapView = mapView, let self = self else {
-                print("⚠️ No se pudo obtener el MKMapView para mostrar campos - continuando sin anotaciones visuales")
+                Logger.debug("⚠️ No se pudo obtener el MKMapView para mostrar campos - continuando sin anotaciones visuales")
                 // Aún podemos mostrar POIs de CarPlay sin el mapa visual
                 self?.displayPOIsOnly(campos: campos, mapTemplate: mapTemplate)
                 return
@@ -269,7 +266,7 @@ class CarPlayManager: NSObject {
 
     /// Configura las anotaciones en el mapa una vez que tenemos el MKMapView
     private func configureAnnotationsOnMap(mapView: MKMapView, campos: [CampoModel], mapTemplate: CPMapTemplate) {
-        print("🗺️ Mostrando \(campos.count) campos en el mapa")
+        Logger.debug("🗺️ Mostrando \(campos.count) campos en el mapa")
 
         // Limpiar anotaciones anteriores
         mapView.removeAnnotations(mapView.annotations)
@@ -291,14 +288,14 @@ class CarPlayManager: NSObject {
 
         // Agregar anotaciones al MKMapView
         mapView.addAnnotations(mkAnnotations)
-        print("✅ \(mkAnnotations.count) anotaciones agregadas al mapa")
+        Logger.debug("✅ \(mkAnnotations.count) anotaciones agregadas al mapa")
 
         // Ajustar la región del mapa para mostrar todas las anotaciones
         if !mkAnnotations.isEmpty {
             let coordinates = mkAnnotations.map { $0.coordinate }
             let region = regionForCoordinates(coordinates)
             mapView.setRegion(region, animated: true)
-            print("✅ Región del mapa ajustada")
+            Logger.debug("✅ Región del mapa ajustada")
         }
 
         // Habilitar interfaz de panning en CarPlay
@@ -341,7 +338,7 @@ class CarPlayManager: NSObject {
             poiAnnotations.append(poi)
         }
 
-        print("✅ \(poiAnnotations.count) POIs configurados para CarPlay")
+        Logger.debug("✅ \(poiAnnotations.count) POIs configurados para CarPlay")
     }
 
     // Helper para calcular región que contenga todas las coordenadas

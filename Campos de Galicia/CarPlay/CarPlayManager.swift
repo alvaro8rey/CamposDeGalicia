@@ -98,6 +98,9 @@ class CarPlayManager: NSObject {
 
         mapView.delegate = self
         mapView.showsUserLocation = true
+        mapView.isScrollEnabled = true
+        mapView.isZoomEnabled = true
+        mapView.isUserInteractionEnabled = true
 
         // Centrar en Galicia por defecto
         let galiciaCenter = CLLocationCoordinate2D(latitude: 42.8782, longitude: -8.5448)
@@ -117,6 +120,17 @@ class CarPlayManager: NSObject {
     }
 
     private func setupMapButtons(for mapTemplate: CPMapTemplate) {
+        // Botón de pan/desplazar mapa
+        let panButton = CPMapButton { [weak self] _ in
+            guard let self = self, let template = self.mapTemplate else { return }
+            if template.isPanningInterfaceVisible {
+                template.dismissPanningInterface(animated: true)
+            } else {
+                template.showPanningInterface(animated: true)
+            }
+        }
+        panButton.image = UIImage(systemName: "hand.draw")
+
         // Botón de lista de campos cercanos
         let nearbyButton = CPMapButton { [weak self] _ in
             self?.showNearbyCamposList()
@@ -129,9 +143,29 @@ class CarPlayManager: NSObject {
         }
         locationButton.image = UIImage(systemName: "location.fill")
 
-        mapTemplate.mapButtons = [nearbyButton, locationButton]
+        // Botón de zoom in
+        let zoomInButton = CPMapButton { [weak self] _ in
+            guard let mapView = self?.mapView else { return }
+            var region = mapView.region
+            region.span.latitudeDelta /= 2
+            region.span.longitudeDelta /= 2
+            mapView.setRegion(region, animated: true)
+        }
+        zoomInButton.image = UIImage(systemName: "plus.magnifyingglass")
 
-        // Configurar botón de búsqueda (aparece en la barra superior izquierda)
+        // Botón de zoom out
+        let zoomOutButton = CPMapButton { [weak self] _ in
+            guard let mapView = self?.mapView else { return }
+            var region = mapView.region
+            region.span.latitudeDelta = min(region.span.latitudeDelta * 2, 20)
+            region.span.longitudeDelta = min(region.span.longitudeDelta * 2, 20)
+            mapView.setRegion(region, animated: true)
+        }
+        zoomOutButton.image = UIImage(systemName: "minus.magnifyingglass")
+
+        mapTemplate.mapButtons = [panButton, zoomInButton, zoomOutButton, nearbyButton, locationButton]
+
+        // Configurar botón de búsqueda
         mapTemplate.leadingNavigationBarButtons = [
             CPBarButton(title: "Buscar") { [weak self] _ in
                 self?.showSearchInterface()
@@ -195,9 +229,11 @@ class CarPlayManager: NSObject {
 
                 await MainActor.run {
                     self.allCampos = response
+                    // Mostrar todos los campos en el mapa
+                    self.displayCamposOnMap(campos: response)
                 }
 
-                Logger.debug("✅ Cargados \(self.allCampos.count) campos totales para búsqueda")
+                Logger.debug("✅ Cargados \(self.allCampos.count) campos totales para búsqueda y mapa")
             } catch {
                 Logger.debug("❌ Error al cargar todos los campos: \(error)")
             }
@@ -254,11 +290,7 @@ class CarPlayManager: NSObject {
             Logger.debug("✅ Región del mapa ajustada")
         }
 
-        // Habilitar interfaz de panning en CarPlay
-        mapTemplate.showPanningInterface(animated: true)
-
-        // Mostrar también POIs de CarPlay
-        displayPOIsOnly(campos: campos, mapTemplate: mapTemplate)
+        Logger.debug("✅ Anotaciones configuradas en el mapa")
     }
 
     /// Muestra solo los POIs de CarPlay sin anotaciones en el mapa
@@ -349,7 +381,7 @@ class CarPlayManager: NSObject {
             )
 
             item.handler = { [weak self] (item: CPSelectableListItem, completion: @escaping () -> Void) in
-                self?.selectCampo(campo)
+                self?.showCampoDetails(campo)
                 completion()
             }
 
@@ -416,45 +448,43 @@ class CarPlayManager: NSObject {
         )
     }
 
-    private func selectCampo(_ campo: CampoModel) {
-        Logger.debug("📍 Campo seleccionado: \(campo.nombre)")
-
-        // Centrar mapa en el campo
-        if let lat = campo.latitud, let lon = campo.longitud {
-            let coordinate = CLLocationCoordinate2D(latitude: lat, longitude: lon)
-            // En CarPlay, mostramos información del campo
-            showCampoDetails(campo)
-        }
-    }
-
     private func showCampoDetails(_ campo: CampoModel) {
-        // Crear información detallada del campo
-        let detailText = """
-        \(campo.localidad)
-        \(campo.provincia)
-        """
+        Logger.debug("📍 Mostrando detalles de: \(campo.nombre)")
 
-        let item = CPListItem(
-            text: campo.nombre,
-            detailText: detailText
+        // Crear items informativos
+        var items: [CPInformationItem] = []
+
+        items.append(CPInformationItem(title: "Dirección", detail: campo.direccion))
+        items.append(CPInformationItem(title: "Localidad", detail: "\(campo.localidad), \(campo.provincia)"))
+
+        if !campo.codigo_postal.isEmpty {
+            items.append(CPInformationItem(title: "CP", detail: campo.codigo_postal))
+        }
+
+        if !campo.tipo.isEmpty {
+            items.append(CPInformationItem(title: "Tipo", detail: campo.tipo))
+        }
+
+        if !campo.superficie.isEmpty {
+            items.append(CPInformationItem(title: "Superficie", detail: campo.superficie))
+        }
+
+        let distance = distanceString(to: campo)
+        items.append(CPInformationItem(title: "Distancia", detail: distance))
+
+        // Botón de navegación
+        let navigateButton = CPTextButton(title: "Navegar", textStyle: .confirm) { [weak self] _ in
+            self?.startNavigation(to: campo)
+        }
+
+        let infoTemplate = CPInformationTemplate(
+            title: campo.nombre,
+            layout: .leading,
+            items: items,
+            actions: [navigateButton]
         )
 
-        item.handler = { [weak self] (item: CPSelectableListItem, completion: @escaping () -> Void) in
-            self?.startNavigation(to: campo)
-            completion()
-        }
-
-        let section = CPListSection(items: [item])
-        let listTemplate = CPListTemplate(title: "Detalles", sections: [section])
-
-        // Botón para navegar
-        listTemplate.trailingNavigationBarButtons = [
-            CPBarButton(title: "Navegar") { [weak self] _ in
-                self?.startNavigation(to: campo)
-            }
-        ]
-
-        interfaceController.pushTemplate(listTemplate, animated: true)
+        interfaceController.pushTemplate(infoTemplate, animated: true)
     }
 
     private func centerOnUserLocation() {
@@ -510,6 +540,23 @@ extension CarPlayManager: CPMapTemplateDelegate {
     func mapTemplate(_ mapTemplate: CPMapTemplate, startedTrip trip: CPTrip, using routeChoice: CPRouteChoice) {
         Logger.debug("🚗 Viaje iniciado")
     }
+
+    func mapTemplate(_ mapTemplate: CPMapTemplate, panWith direction: CPMapTemplate.PanDirection) {
+        guard let mapView = self.mapView else { return }
+        let region = mapView.region
+        let offsetFactor = region.span.latitudeDelta * 0.15
+        var center = region.center
+
+        if direction.contains(.up) { center.latitude += offsetFactor }
+        if direction.contains(.down) { center.latitude -= offsetFactor }
+        if direction.contains(.left) { center.longitude -= offsetFactor }
+        if direction.contains(.right) { center.longitude += offsetFactor }
+
+        mapView.setCenter(center, animated: true)
+    }
+
+    func mapTemplate(_ mapTemplate: CPMapTemplate, panBeganWith direction: CPMapTemplate.PanDirection) {}
+    func mapTemplate(_ mapTemplate: CPMapTemplate, panEndedWith direction: CPMapTemplate.PanDirection) {}
 }
 
 // MARK: - CPSearchTemplateDelegate
@@ -533,8 +580,10 @@ extension CarPlayManager: CPSearchTemplateDelegate {
             )
 
             item.handler = { [weak self] (item: CPSelectableListItem, completion: @escaping () -> Void) in
-                self?.selectCampo(campo)
-                self?.interfaceController.popTemplate(animated: true)
+                // Primero cerrar búsqueda, luego mostrar detalle
+                self?.interfaceController.popTemplate(animated: true) { _, _ in
+                    self?.showCampoDetails(campo)
+                }
                 completion()
             }
 

@@ -33,57 +33,34 @@ class CarPlayManager: NSObject {
         Logger.debug("✅ CarPlayManager inicialización completa")
     }
 
-    // MARK: - MapView Access
+    // MARK: - MapView Setup
 
-    /// Obtiene el MKMapView del CPWindow después de que el template esté configurado
-    /// Ahora con reintentos para manejar el timing del sistema
-    private func getMapView(retryCount: Int = 0, maxRetries: Int = 5, completion: @escaping (MKMapView?) -> Void) {
+    /// Crea el MKMapView y lo añade al CPWindow
+    private func createMapView() {
         guard let window = window else {
-            Logger.debug("⚠️ CPWindow es nil")
-            completion(nil)
+            Logger.debug("⚠️ CPWindow es nil - no se puede crear MKMapView")
             return
         }
 
-        // El MKMapView es creado automáticamente por el sistema cuando asignamos el CPMapTemplate
-        // Lo encontramos en la jerarquía de vistas del CPWindow
-        if let mapView = findMapView(in: window) {
-            self.mapView = mapView
-            Logger.debug("✅ MKMapView encontrado en la jerarquía de vistas (intento \(retryCount + 1))")
-            completion(mapView)
-            return
-        }
+        let mapView = MKMapView(frame: window.bounds)
+        mapView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        self.mapView = mapView
 
-        // Si no se encuentra y aún hay reintentos disponibles, intentar de nuevo
-        if retryCount < maxRetries {
-            Logger.debug("⏳ MKMapView no encontrado, reintentando en 0.2s... (intento \(retryCount + 1)/\(maxRetries))")
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in
-                self?.getMapView(retryCount: retryCount + 1, maxRetries: maxRetries, completion: completion)
-            }
-        } else {
-            Logger.debug("⚠️ No se pudo encontrar MKMapView después de \(maxRetries) intentos")
-            completion(nil)
-        }
-    }
+        // Crear un view controller para el mapa y asignarlo al CPWindow
+        let mapViewController = UIViewController()
+        mapViewController.view = mapView
+        window.rootViewController = mapViewController
 
-    /// Busca recursivamente un MKMapView en la jerarquía de vistas
-    private func findMapView(in view: UIView) -> MKMapView? {
-        if let mapView = view as? MKMapView {
-            return mapView
-        }
-
-        for subview in view.subviews {
-            if let mapView = findMapView(in: subview) {
-                return mapView
-            }
-        }
-
-        return nil
+        Logger.debug("✅ MKMapView creado y añadido al CPWindow")
     }
 
     // MARK: - Setup
 
     func setupInterface() {
         Logger.debug("🚗 Configurando interfaz de CarPlay")
+
+        // Crear el MKMapView y añadirlo al CPWindow
+        createMapView()
 
         // Crear el template de mapa
         let mapTemplate = CPMapTemplate()
@@ -100,10 +77,6 @@ class CarPlayManager: NSObject {
                 Logger.debug("❌ Error al establecer template: \(error.localizedDescription)")
             } else {
                 Logger.debug("✅ Template de CarPlay establecido correctamente")
-
-                // Ahora que el template está configurado, obtener el MKMapView
-                // que el sistema creó automáticamente
-                // Usamos el nuevo método con reintentos para manejar el timing
                 self?.configureMapView()
             }
         }
@@ -116,29 +89,24 @@ class CarPlayManager: NSObject {
     }
 
     private func configureMapView() {
-        Logger.debug("🔄 Iniciando configuración de MKMapView...")
+        Logger.debug("🔄 Configurando MKMapView...")
 
-        // Usar el nuevo método con reintentos
-        getMapView { [weak self] mapView in
-            guard let mapView = mapView, let self = self else {
-                Logger.debug("⚠️ No se pudo obtener el MKMapView - CarPlay continuará sin mapa personalizado")
-                // No hacer crash, simplemente continuar sin configurar el mapa
-                return
-            }
-
-            Logger.debug("🗺️ Configurando MKMapView...")
-            mapView.delegate = self
-            mapView.showsUserLocation = true
-
-            // Centrar en Galicia por defecto
-            let galiciaCenter = CLLocationCoordinate2D(latitude: 42.8782, longitude: -8.5448)
-            let region = MKCoordinateRegion(
-                center: galiciaCenter,
-                span: MKCoordinateSpan(latitudeDelta: 2.0, longitudeDelta: 2.0)
-            )
-            mapView.setRegion(region, animated: false)
-            Logger.debug("✅ MKMapView centrado en Galicia")
+        guard let mapView = self.mapView else {
+            Logger.debug("⚠️ MKMapView no disponible")
+            return
         }
+
+        mapView.delegate = self
+        mapView.showsUserLocation = true
+
+        // Centrar en Galicia por defecto
+        let galiciaCenter = CLLocationCoordinate2D(latitude: 42.8782, longitude: -8.5448)
+        let region = MKCoordinateRegion(
+            center: galiciaCenter,
+            span: MKCoordinateSpan(latitudeDelta: 2.0, longitudeDelta: 2.0)
+        )
+        mapView.setRegion(region, animated: false)
+        Logger.debug("✅ MKMapView centrado en Galicia")
     }
 
     private func setupLocationManager() {
@@ -244,23 +212,11 @@ class CarPlayManager: NSObject {
             return
         }
 
-        // Si ya tenemos el mapView, usarlo directamente
         if let mapView = self.mapView {
             configureAnnotationsOnMap(mapView: mapView, campos: campos, mapTemplate: mapTemplate)
-            return
-        }
-
-        // Si no tenemos el mapView aún, intentar obtenerlo
-        Logger.debug("🔄 Obteniendo MKMapView para mostrar campos...")
-        getMapView { [weak self] mapView in
-            guard let mapView = mapView, let self = self else {
-                Logger.debug("⚠️ No se pudo obtener el MKMapView para mostrar campos - continuando sin anotaciones visuales")
-                // Aún podemos mostrar POIs de CarPlay sin el mapa visual
-                self?.displayPOIsOnly(campos: campos, mapTemplate: mapTemplate)
-                return
-            }
-
-            self.configureAnnotationsOnMap(mapView: mapView, campos: campos, mapTemplate: mapTemplate)
+        } else {
+            Logger.debug("⚠️ MKMapView no disponible - mostrando solo POIs")
+            displayPOIsOnly(campos: campos, mapTemplate: mapTemplate)
         }
     }
 
@@ -423,8 +379,8 @@ class CarPlayManager: NSObject {
         let searchTemplate = CPSearchTemplate()
         searchTemplate.delegate = self
 
-        // Mostrar template
-        interfaceController.presentTemplate(searchTemplate, animated: true) { success, error in
+        // CPSearchTemplate debe usar pushTemplate, no presentTemplate
+        interfaceController.pushTemplate(searchTemplate, animated: true) { success, error in
             if let error = error {
                 Logger.debug("❌ Error al mostrar búsqueda: \(error.localizedDescription)")
             }
@@ -509,31 +465,17 @@ class CarPlayManager: NSObject {
             return
         }
 
-        // Si ya tenemos el mapView, usarlo directamente
-        if let mapView = self.mapView {
-            let region = MKCoordinateRegion(
-                center: userLocation.coordinate,
-                span: MKCoordinateSpan(latitudeDelta: 0.1, longitudeDelta: 0.1)
-            )
-            mapView.setRegion(region, animated: true)
-            Logger.debug("✅ Mapa centrado en ubicación del usuario")
+        guard let mapView = self.mapView else {
+            Logger.debug("⚠️ MKMapView no disponible")
             return
         }
 
-        // Si no, intentar obtenerlo
-        getMapView { [weak self] mapView in
-            guard let mapView = mapView else {
-                Logger.debug("⚠️ No se pudo obtener el MKMapView")
-                return
-            }
-
-            let region = MKCoordinateRegion(
-                center: userLocation.coordinate,
-                span: MKCoordinateSpan(latitudeDelta: 0.1, longitudeDelta: 0.1)
-            )
-            mapView.setRegion(region, animated: true)
-            Logger.debug("✅ Mapa centrado en ubicación del usuario")
-        }
+        let region = MKCoordinateRegion(
+            center: userLocation.coordinate,
+            span: MKCoordinateSpan(latitudeDelta: 0.1, longitudeDelta: 0.1)
+        )
+        mapView.setRegion(region, animated: true)
+        Logger.debug("✅ Mapa centrado en ubicación del usuario")
     }
 
     // MARK: - Helper Methods
@@ -592,7 +534,7 @@ extension CarPlayManager: CPSearchTemplateDelegate {
 
             item.handler = { [weak self] (item: CPSelectableListItem, completion: @escaping () -> Void) in
                 self?.selectCampo(campo)
-                self?.interfaceController.dismissTemplate(animated: true)
+                self?.interfaceController.popTemplate(animated: true)
                 completion()
             }
 

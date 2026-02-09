@@ -18,29 +18,25 @@ class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegate {
 
     func templateApplicationScene(_ templateApplicationScene: CPTemplateApplicationScene,
                                    didConnect interfaceController: CPInterfaceController) {
-        print("")
-        print("========================================")
-        print("🚗🚗🚗 CARPLAY CONECTADO! 🚗🚗🚗")
-        print("========================================")
-        print("")
+        Logger.debug("🚗 CarPlay conectado")
 
         self.interfaceController = interfaceController
         self.window = templateApplicationScene.carWindow
 
-        print("✅ Interface controller asignado")
-        print("✅ Window asignada: \(String(describing: self.window))")
+        Logger.debug("✅ Interface controller asignado")
+        Logger.debug("✅ Window asignada: \(String(describing: self.window))")
 
         // Inicializar el manager de CarPlay
         // IMPORTANTE: NO creamos el MKMapView manualmente.
         // El sistema lo crea automáticamente cuando asignamos el CPMapTemplate.
-        print("📱 Inicializando CarPlayManager...")
+        Logger.debug("📱 Inicializando CarPlayManager...")
         carPlayManager = CarPlayManager(interfaceController: interfaceController, window: self.window)
 
         // Configurar la interfaz inicial
-        print("🎨 Configurando interfaz de CarPlay...")
+        Logger.debug("🎨 Configurando interfaz de CarPlay...")
         carPlayManager?.setupInterface()
 
-        print("✅ CARPLAY CONFIGURADO COMPLETAMENTE")
+        Logger.debug("✅ CarPlay configurado completamente")
 
         // Track evento de analytics
         AnalyticsManager.shared.trackCustom(name: "carplay_connected", category: .navigation)
@@ -48,7 +44,7 @@ class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegate {
 
     func templateApplicationScene(_ templateApplicationScene: CPTemplateApplicationScene,
                                    didDisconnect interfaceController: CPInterfaceController) {
-        print("🚗 CarPlay desconectado")
+        Logger.debug("🚗 CarPlay desconectado")
 
         self.interfaceController = nil
         self.carPlayManager = nil

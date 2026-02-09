@@ -4,6 +4,7 @@ import MapKit
 import Combine
 
 /// Scene Delegate para manejar la sesión de CarPlay
+@objc(CarPlaySceneDelegate)
 class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegate {
 
     // MARK: - Properties

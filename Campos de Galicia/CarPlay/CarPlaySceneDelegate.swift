@@ -12,10 +12,11 @@ class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegate {
     var window: CPWindow?
     private var carPlayManager: CarPlayManager?
 
-    // MARK: - CPTemplateApplicationSceneDelegate Methods
+    // MARK: - CPTemplateApplicationSceneDelegate Methods (iOS 14+)
 
-    @objc func templateApplicationScene(_ templateApplicationScene: CPTemplateApplicationScene,
-                                   didConnect interfaceController: CPInterfaceController) {
+    func templateApplicationScene(_ templateApplicationScene: CPTemplateApplicationScene,
+                                   didConnect interfaceController: CPInterfaceController,
+                                   to window: CPWindow) {
         print("")
         print("========================================")
         print("========================================")
@@ -26,7 +27,7 @@ class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegate {
         Logger.debug("🚗 CarPlay conectado")
 
         self.interfaceController = interfaceController
-        self.window = templateApplicationScene.carWindow
+        self.window = window
 
         print("✅ Interface controller asignado")
         print("✅ Window asignada: \(String(describing: self.window))")
@@ -49,8 +50,9 @@ class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegate {
         AnalyticsManager.shared.trackCustom(name: "carplay_connected", category: .navigation)
     }
 
-    @objc func templateApplicationScene(_ templateApplicationScene: CPTemplateApplicationScene,
-                                   didDisconnect interfaceController: CPInterfaceController) {
+    func templateApplicationScene(_ templateApplicationScene: CPTemplateApplicationScene,
+                                   didDisconnectInterfaceController interfaceController: CPInterfaceController,
+                                   from window: CPWindow) {
         print("========== CARPLAY DESCONECTADO ==========")
         Logger.debug("🚗 CarPlay desconectado")
 

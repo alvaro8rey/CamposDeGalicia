@@ -253,7 +253,15 @@ class CarPlayManager: NSObject {
                   lat >= -90, lat <= 90,
                   lon >= -180, lon <= 180 else { continue }
 
-            let annotation = CampoAnnotation(campo: campo)
+            let item = MapAnnotationItem(
+                coordinate: CLLocationCoordinate2D(latitude: lat, longitude: lon),
+                title: campo.nombre,
+                subtitle: campo.localidad,
+                campo: campo,
+                isFromManualCoordinates: false,
+                isVisited: false
+            )
+            let annotation = CampoAnnotation(annotationItem: item)
             annotations.append(annotation)
         }
 
@@ -572,7 +580,7 @@ extension CarPlayManager: MKMapViewDelegate {
 
     func mapView(_ mapView: MKMapView, annotationView view: MKAnnotationView, calloutAccessoryControlTapped control: UIControl) {
         guard let campoAnnotation = view.annotation as? CampoAnnotation else { return }
-        showCampoDetails(campoAnnotation.campo)
+        showCampoDetails(campoAnnotation.annotationItem.campo)
     }
 
     func mapView(_ mapView: MKMapView, didSelect view: MKAnnotationView) {
@@ -580,24 +588,6 @@ extension CarPlayManager: MKMapViewDelegate {
         if let cluster = view.annotation as? MKClusterAnnotation {
             mapView.showAnnotations(cluster.memberAnnotations, animated: true)
         }
-    }
-}
-
-// MARK: - Custom Annotation
-
-class CampoAnnotation: NSObject, MKAnnotation {
-    let campo: CampoModel
-    let coordinate: CLLocationCoordinate2D
-    var title: String? { campo.nombre }
-    var subtitle: String? { campo.localidad }
-
-    init(campo: CampoModel) {
-        self.campo = campo
-        self.coordinate = CLLocationCoordinate2D(
-            latitude: campo.latitud ?? 0,
-            longitude: campo.longitud ?? 0
-        )
-        super.init()
     }
 }
 

@@ -18,7 +18,6 @@ class AnalyticsManager {
     enum Provider {
         case localLogs
         case firebase
-        case mixpanel
 
         var isAvailable: Bool {
             switch self {
@@ -30,8 +29,6 @@ class AnalyticsManager {
                 #else
                 return false
                 #endif
-            case .mixpanel:
-                return false // Implement when needed
             }
         }
     }
@@ -358,10 +355,6 @@ class AnalyticsManager {
 
         case .firebase:
             sendEventToFirebase(name: name, parameters: parameters)
-
-        case .mixpanel:
-            // TODO: Implement Mixpanel integration
-            break
         }
     }
 
@@ -373,10 +366,6 @@ class AnalyticsManager {
 
         case .firebase:
             sendUserPropertiesToFirebase(properties)
-
-        case .mixpanel:
-            // TODO: Implement Mixpanel integration
-            break
         }
     }
 

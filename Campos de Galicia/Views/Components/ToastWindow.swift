@@ -28,8 +28,11 @@ class ToastWindow: UIWindow {
         self.isHidden = false
     }
 
+    /// Requerido por UIWindow pero no soportado
+    /// Esta ventana solo debe crearse programáticamente, nunca desde Storyboards o XIBs
+    /// Si este método es llamado, indica un error de implementación en el código
     required init?(coder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
+        fatalError("init(coder:) has not been implemented - ToastWindow must be initialized programmatically")
     }
 
     /// Permite que los toques pasen a través cuando no hay toasts

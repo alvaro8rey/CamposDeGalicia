@@ -10,6 +10,8 @@ struct ReviewsSectionView: View {
     @State private var showAddReview: Bool = false
     @State private var showAllReviews: Bool = false
     @State private var reviewToEdit: Review?
+    @State private var reviewToDelete: Review?
+    @State private var showDeleteConfirmation: Bool = false
     @State private var canUserReview: Bool = true
     @State private var isVisible: Bool = false
 
@@ -157,27 +159,36 @@ struct ReviewsSectionView: View {
                     }
                     .padding(.horizontal)
                 } else if let userReview = reviewsManager.reviews.first(where: { $0.user_id == authViewModel.user?.id }) {
-                    // Ya dejó una reseña - mostrar botón para editar
-                    Button(action: {
-                        reviewToEdit = userReview
-                    }) {
-                        HStack {
-                            Image(systemName: "pencil")
-                                .font(.system(size: 16))
-
-                            Text(L(.reviewEditMine))
-                                .font(.callout)
-                                .fontWeight(.medium)
-
-                            Spacer()
-
-                            Image(systemName: "chevron.right")
-                                .font(.caption)
+                    // Ya dejó una reseña - botones para editar y eliminar
+                    HStack(spacing: 10) {
+                        Button(action: {
+                            reviewToEdit = userReview
+                        }) {
+                            HStack {
+                                Image(systemName: "pencil")
+                                    .font(.system(size: 14))
+                                Text(L(.reviewEditMine))
+                                    .font(.callout)
+                                    .fontWeight(.medium)
+                            }
+                            .foregroundColor(.blue)
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(Color(UIColor.secondarySystemBackground))
+                            .cornerRadius(12)
                         }
-                        .foregroundColor(.blue)
-                        .padding()
-                        .background(Color(UIColor.secondarySystemBackground))
-                        .cornerRadius(12)
+
+                        Button(action: {
+                            reviewToDelete = userReview
+                            showDeleteConfirmation = true
+                        }) {
+                            Image(systemName: "trash")
+                                .font(.system(size: 14))
+                                .foregroundColor(.red)
+                                .padding()
+                                .background(Color(UIColor.secondarySystemBackground))
+                                .cornerRadius(12)
+                        }
                     }
                     .padding(.horizontal)
                 } else {
@@ -255,6 +266,21 @@ struct ReviewsSectionView: View {
                     await loadReviews()
                 }
             }
+        }
+        .alert(L(.reviewDeleteConfirmTitle), isPresented: $showDeleteConfirmation) {
+            Button(L(.cancel), role: .cancel) {
+                reviewToDelete = nil
+            }
+            Button(L(.reviewDeleteAction), role: .destructive) {
+                if let review = reviewToDelete {
+                    Task {
+                        await deleteReview(review)
+                    }
+                    reviewToDelete = nil
+                }
+            }
+        } message: {
+            Text(L(.reviewDeleteConfirmMessage))
         }
     }
 

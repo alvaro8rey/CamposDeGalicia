@@ -485,6 +485,8 @@ enum LocalizedKey: String {
     case logrosDetailTitle = "logros.detail.title"
     case logrosDetailCompleted = "logros.detail.completed"
     case logrosDetailProgress = "logros.detail.progress"
+    case reviewDeleteConfirmTitle = "review.delete.confirm.title"
+    case reviewDeleteConfirmMessage = "review.delete.confirm.message"
 }
 
 /// Manager de localización centralizado
@@ -983,6 +985,8 @@ class LocalizationManager: ObservableObject {
             .logrosDetailTitle: "Logro",
             .logrosDetailCompleted: "Completado",
             .logrosDetailProgress: "Progreso",
+            .reviewDeleteConfirmTitle: "Eliminar reseña",
+            .reviewDeleteConfirmMessage: "¿Estás seguro de que quieres eliminar tu reseña? Esta acción no se puede deshacer.",
         ],
 
         // MARK: - Galego
@@ -1449,6 +1453,8 @@ class LocalizationManager: ObservableObject {
             .logrosDetailTitle: "Logro",
             .logrosDetailCompleted: "Completado",
             .logrosDetailProgress: "Progreso",
+            .reviewDeleteConfirmTitle: "Eliminar recensión",
+            .reviewDeleteConfirmMessage: "Estás seguro de que queres eliminar a túa recensión? Esta acción non se pode desfacer.",
         ]
     ]
 }

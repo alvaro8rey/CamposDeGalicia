@@ -271,7 +271,7 @@ final class LevelManager {
                     id: LevelManager.MASTER_ACHIEVEMENT_ID,
                     nombre: L(.logrosMasterName),
                     descripcion: L(.logrosMasterDesc),
-                    condicion: nil,
+                    condicion: "maestro",
                     orden: 999,
                     xp: MASTER_ACHIEVEMENT_XP
                 )

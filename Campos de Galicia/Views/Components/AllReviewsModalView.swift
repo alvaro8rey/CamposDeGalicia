@@ -7,6 +7,7 @@ struct AllReviewsModalView: View {
     let currentUserId: UUID?
     let onEdit: ((Review) -> Void)?
     let onDelete: ((Review) -> Void)?
+    var distinguishedUserIds: Set<UUID> = []
 
     @Environment(\.dismiss) var dismiss
     @State private var sortType: ReviewSortType = .recent
@@ -72,7 +73,8 @@ struct AllReviewsModalView: View {
                                 review: review,
                                 currentUserId: currentUserId,
                                 onEdit: onEdit,
-                                onDelete: onDelete
+                                onDelete: onDelete,
+                                distinguishedUserIds: distinguishedUserIds
                             )
                         }
                     }

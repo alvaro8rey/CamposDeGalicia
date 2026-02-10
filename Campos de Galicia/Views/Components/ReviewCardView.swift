@@ -6,6 +6,7 @@ struct ReviewCardView: View {
     let currentUserId: UUID?
     let onEdit: ((Review) -> Void)?
     let onDelete: ((Review) -> Void)?
+    var distinguishedUserIds: Set<UUID> = []
 
     @State private var selectedPhotoIndex: Int = 0
     @State private var showingImageViewer: Bool = false
@@ -23,7 +24,8 @@ struct ReviewCardView: View {
                 UserAvatarView(
                     avatarURL: review.reviewer_avatar_url,
                     userName: review.displayName,
-                    size: 40
+                    size: 40,
+                    showBadge: distinguishedUserIds.contains(review.user_id)
                 )
 
                 VStack(alignment: .leading, spacing: 4) {
@@ -356,6 +358,7 @@ struct EmptyReviewsView: View {
 /// Card compacta estilo App Store para slider horizontal
 struct CompactReviewCardView: View {
     let review: Review
+    var distinguishedUserIds: Set<UUID> = []
     @State private var isExpanded: Bool = false
 
     private let maxPreviewLength = 150
@@ -459,7 +462,8 @@ struct CompactReviewCardView: View {
                 UserAvatarView(
                     avatarURL: review.reviewer_avatar_url,
                     userName: review.displayName,
-                    size: 24
+                    size: 24,
+                    showBadge: distinguishedUserIds.contains(review.user_id)
                 )
 
                 Text(review.displayName)

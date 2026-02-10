@@ -153,6 +153,9 @@ enum LocalizedKey: String {
     case logrosStreakWeeklyCycle = "logros.streak.weekly.cycle"
     case logrosStreakDaysSingular = "logros.streak.days.singular"
     case logrosStreakDaysPlural = "logros.streak.days.plural"
+    case logrosMasterName = "logros.master.name"
+    case logrosMasterDesc = "logros.master.desc"
+    case logrosMasterToast = "logros.master.toast"
 
     // MARK: - Notifications
     case notifDisabledTitle = "notif.disabled.title"
@@ -642,6 +645,9 @@ class LocalizationManager: ObservableObject {
             .logrosStreakWeeklyCycle: "ciclo semanal",
             .logrosStreakDaysSingular: "día",
             .logrosStreakDaysPlural: "días",
+            .logrosMasterName: "Maestro de Campos",
+            .logrosMasterDesc: "Has completado todos los logros. ¡Eres una leyenda!",
+            .logrosMasterToast: "🏅 ¡Maestro de Campos! +%d XP",
 
             // Notifications
             .notifDisabledTitle: "Notificaciones desactivadas",
@@ -1099,6 +1105,9 @@ class LocalizationManager: ObservableObject {
             .logrosStreakWeeklyCycle: "ciclo semanal",
             .logrosStreakDaysSingular: "día",
             .logrosStreakDaysPlural: "días",
+            .logrosMasterName: "Mestre de Campos",
+            .logrosMasterDesc: "Completaches todos os logros. Es unha lenda!",
+            .logrosMasterToast: "🏅 Mestre de Campos! +%d XP",
 
             // Notifications
             .notifDisabledTitle: "Notificacións desactivadas",

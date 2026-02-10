@@ -9,10 +9,13 @@ final class LevelManager {
     // Cambia a false si no quieres crear/forzar el logro inicial automáticamente
     private let INITIAL_ACHIEVEMENT_ENABLED = true
     private var INITIAL_ACHIEVEMENT_ID: UUID {
-        // Este UUID es una constante conocida y nunca debería fallar
         UUID(uuidString: "00000000-0000-0000-0000-000000000001") ?? UUID()
     }
     private let INITIAL_ACHIEVEMENT_XP = 100
+
+    // Easter egg: logro maestro por completar TODOS los logros
+    static let MASTER_ACHIEVEMENT_ID = UUID(uuidString: "00000000-0000-0000-0000-000000000002")!
+    private let MASTER_ACHIEVEMENT_XP = 500
 
     // MARK: - Public
 
@@ -249,6 +252,49 @@ final class LevelManager {
                 logrosDesbloqueadosIds.insert(INITIAL_ACHIEVEMENT_ID)
             } catch {
                 Logger.debug("⚠️ Error insertando logro inicial: \(error)")
+            }
+        }
+
+        // 10b) Easter egg: logro maestro por completar TODOS los logros
+        let regularLogros = logros.filter { $0.id != LevelManager.MASTER_ACHIEVEMENT_ID }
+        let allRegularCompleted = !regularLogros.isEmpty &&
+            regularLogros.allSatisfy { logrosDesbloqueadosIds.contains($0.id) }
+
+        if allRegularCompleted && !logrosDesbloqueadosIds.contains(LevelManager.MASTER_ACHIEVEMENT_ID) {
+            // Crear logro maestro en la tabla si no existe
+            let existsResp = try await supabase.from("logros")
+                .select("id")
+                .eq("id", value: LevelManager.MASTER_ACHIEVEMENT_ID.uuidString)
+                .execute()
+            if let arr = try JSONSerialization.jsonObject(with: existsResp.data, options: []) as? [[String: Any]], arr.isEmpty {
+                let masterLogro = Logro(
+                    id: LevelManager.MASTER_ACHIEVEMENT_ID,
+                    nombre: L(.logrosMasterName),
+                    descripcion: L(.logrosMasterDesc),
+                    condicion: nil,
+                    orden: 999,
+                    xp: MASTER_ACHIEVEMENT_XP
+                )
+                _ = try await supabase.from("logros").insert(masterLogro).execute()
+            }
+
+            let desbloqueo = LogroDesbloqueado(
+                id: UUID(),
+                id_usuario: userIdUUID,
+                id_logro: LevelManager.MASTER_ACHIEVEMENT_ID,
+                fecha_desbloqueo: Date()
+            )
+            do {
+                try await supabase.from("logros_desbloqueados").insert(desbloqueo).execute()
+                totalXP += MASTER_ACHIEVEMENT_XP
+                newLogros.append(LevelManager.MASTER_ACHIEVEMENT_ID)
+                logrosDesbloqueadosIds.insert(LevelManager.MASTER_ACHIEVEMENT_ID)
+
+                Task { @MainActor in
+                    ToastManager.shared.achievement(L(.logrosMasterToast, self.MASTER_ACHIEVEMENT_XP))
+                }
+            } catch {
+                Logger.debug("⚠️ Error insertando logro maestro: \(error)")
             }
         }
 

@@ -108,7 +108,7 @@ struct ReviewsSectionView: View {
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 12) {
                             ForEach(featuredReviews) { review in
-                                CompactReviewCardView(review: review)
+                                CompactReviewCardView(review: review, distinguishedUserIds: reviewsManager.distinguishedUserIds)
                             }
                         }
                         .padding(.horizontal)
@@ -230,7 +230,8 @@ struct ReviewsSectionView: View {
                     Task {
                         await deleteReview(review)
                     }
-                }
+                },
+                distinguishedUserIds: reviewsManager.distinguishedUserIds
             )
         }
         .onChange(of: showAllReviews) { wasShowing, isShowing in

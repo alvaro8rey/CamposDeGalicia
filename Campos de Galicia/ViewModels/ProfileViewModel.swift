@@ -33,6 +33,11 @@ class ProfileViewModel: ObservableObject {
     private var allLogros: [Logro] = []
     private var logrosDesbloqueados: Set<UUID> = []
 
+    /// True si el usuario ha completado todos los logros (tiene el logro maestro)
+    var allAchievementsCompleted: Bool {
+        logrosDesbloqueados.contains(LevelManager.MASTER_ACHIEVEMENT_ID)
+    }
+
     // Visit History
     @Published var historialCampos: [CampoModel] = []
     @Published var allVisits: [(campo: CampoModel, date: Date)] = []

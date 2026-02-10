@@ -8,6 +8,7 @@ class ReviewsManager: ObservableObject {
     @Published var stats: ReviewStats = ReviewStats(averageRating: 0, totalReviews: 0, ratingDistribution: [:])
     @Published var isLoading: Bool = false
     @Published var errorMessage: String?
+    @Published var distinguishedUserIds: Set<UUID> = []
 
     // MARK: - Fetch Reviews
     func fetchReviews(for campoId: UUID) async {
@@ -66,7 +67,19 @@ class ReviewsManager: ObservableObject {
             // Crear diccionario de user_id -> profile
             let profilesDictionary = Dictionary(uniqueKeysWithValues: userProfiles.map { ($0.id, $0) })
 
-            // 5. Mapear niveles y perfiles a las reseñas usando tipo seguro (Codable)
+            // 5. Obtener usuarios destacados (con logro maestro desbloqueado)
+            struct MasterUnlock: Codable {
+                let id_usuario: UUID
+            }
+            let masterResp = try await supabase.from("logros_desbloqueados")
+                .select("id_usuario")
+                .eq("id_logro", value: LevelManager.MASTER_ACHIEVEMENT_ID.uuidString)
+                .in("id_usuario", values: Array(uniqueUserIds))
+                .execute()
+            let masterUnlocks = (try? decoder.decode([MasterUnlock].self, from: masterResp.data)) ?? []
+            distinguishedUserIds = Set(masterUnlocks.map { $0.id_usuario })
+
+            // 6. Mapear niveles y perfiles a las reseñas usando tipo seguro (Codable)
             reviews = tempReviews.map { review in
                 // Obtener nivel del usuario (default a 1 si no existe)
                 let level = levelsDictionary[review.user_id.uuidString] ?? 1

@@ -146,7 +146,8 @@ struct ProfileView: View {
             UserAvatarView(
                 avatarURL: authViewModel.avatarURL,
                 userName: authViewModel.nombre,
-                size: 60
+                size: 60,
+                showBadge: profileVM.allAchievementsCompleted
             )
 
             VStack(alignment: .leading, spacing: 4) {

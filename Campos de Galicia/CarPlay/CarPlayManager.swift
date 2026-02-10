@@ -4,6 +4,9 @@ import Combine
 import Supabase
 
 /// Manager para gestionar toda la lógica de CarPlay
+/// IMPORTANTE: En CarPlay, toda la interacción es a través de templates.
+/// El CPWindow es solo para mostrar contenido visual (mapa).
+/// Los toques son interceptados por la capa de templates.
 class CarPlayManager: NSObject {
 
     // MARK: - Properties
@@ -15,7 +18,6 @@ class CarPlayManager: NSObject {
     private lazy var supabaseClient: SupabaseClient = supabase
     private var cancellables = Set<AnyCancellable>()
     private weak var mapView: MKMapView?
-    private weak var camposTableView: UITableView?
 
     // Data
     private var allCampos: [CampoModel] = []
@@ -34,67 +36,24 @@ class CarPlayManager: NSObject {
         Logger.debug("✅ CarPlayManager inicialización completa")
     }
 
-    // MARK: - Split View Setup
+    // MARK: - Map Setup
 
-    private func createSplitView() {
+    private func createMapView() {
         guard let window = window else {
             Logger.debug("⚠️ CPWindow es nil")
             return
         }
 
-        let containerVC = UIViewController()
-        containerVC.overrideUserInterfaceStyle = .dark
-        containerVC.view.backgroundColor = .black
-
-        // === Left panel: Table (35%) ===
-        let tableView = UITableView(frame: .zero, style: .plain)
-        tableView.translatesAutoresizingMaskIntoConstraints = false
-        tableView.backgroundColor = UIColor(white: 0.08, alpha: 1)
-        tableView.separatorColor = UIColor(white: 0.2, alpha: 1)
-        tableView.separatorInset = UIEdgeInsets(top: 0, left: 8, bottom: 0, right: 0)
-        tableView.indicatorStyle = .white
-        tableView.dataSource = self
-        tableView.delegate = self
-        tableView.register(CarPlayCampoCell.self, forCellReuseIdentifier: "CampoCell")
-        tableView.rowHeight = 40
-        // Inset para no quedar debajo del nav bar del CPMapTemplate
-        tableView.contentInset = UIEdgeInsets(top: 50, left: 0, bottom: 0, right: 0)
-        tableView.scrollIndicatorInsets = UIEdgeInsets(top: 50, left: 0, bottom: 0, right: 0)
-        self.camposTableView = tableView
-
-        // === Separator ===
-        let separator = UIView()
-        separator.translatesAutoresizingMaskIntoConstraints = false
-        separator.backgroundColor = UIColor(white: 0.25, alpha: 1)
-
-        // === Right panel: Map (65%) ===
-        let mapView = MKMapView(frame: .zero)
-        mapView.translatesAutoresizingMaskIntoConstraints = false
+        let mapView = MKMapView(frame: window.bounds)
+        mapView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
         self.mapView = mapView
 
-        containerVC.view.addSubview(tableView)
-        containerVC.view.addSubview(separator)
-        containerVC.view.addSubview(mapView)
+        let mapVC = UIViewController()
+        mapVC.overrideUserInterfaceStyle = .dark
+        mapVC.view = mapView
+        window.rootViewController = mapVC
 
-        NSLayoutConstraint.activate([
-            tableView.leadingAnchor.constraint(equalTo: containerVC.view.leadingAnchor),
-            tableView.topAnchor.constraint(equalTo: containerVC.view.topAnchor),
-            tableView.bottomAnchor.constraint(equalTo: containerVC.view.bottomAnchor),
-            tableView.widthAnchor.constraint(equalTo: containerVC.view.widthAnchor, multiplier: 0.35),
-
-            separator.leadingAnchor.constraint(equalTo: tableView.trailingAnchor),
-            separator.topAnchor.constraint(equalTo: containerVC.view.topAnchor),
-            separator.bottomAnchor.constraint(equalTo: containerVC.view.bottomAnchor),
-            separator.widthAnchor.constraint(equalToConstant: 1),
-
-            mapView.leadingAnchor.constraint(equalTo: separator.trailingAnchor),
-            mapView.topAnchor.constraint(equalTo: containerVC.view.topAnchor),
-            mapView.bottomAnchor.constraint(equalTo: containerVC.view.bottomAnchor),
-            mapView.trailingAnchor.constraint(equalTo: containerVC.view.trailingAnchor),
-        ])
-
-        window.rootViewController = containerVC
-        Logger.debug("✅ Split view creado (lista 35% + mapa 65%)")
+        Logger.debug("✅ MKMapView creado a pantalla completa")
     }
 
     // MARK: - Setup
@@ -102,29 +61,24 @@ class CarPlayManager: NSObject {
     func setupInterface() {
         Logger.debug("🚗 Configurando interfaz de CarPlay")
 
-        // Crear split view (tabla + mapa)
-        createSplitView()
+        createMapView()
 
-        // Crear el template de mapa
         let mapTemplate = CPMapTemplate()
         mapTemplate.mapDelegate = self
         mapTemplate.automaticallyHidesNavigationBar = false
         self.mapTemplate = mapTemplate
 
-        // Configurar botones del mapa
         setupMapButtons(for: mapTemplate)
 
-        // Establecer como root template
         interfaceController.setRootTemplate(mapTemplate, animated: true) { [weak self] success, error in
             if let error = error {
                 Logger.debug("❌ Error al establecer template: \(error.localizedDescription)")
             } else {
-                Logger.debug("✅ Template de CarPlay establecido correctamente")
+                Logger.debug("✅ Template de CarPlay establecido")
                 self?.configureMapView()
             }
         }
 
-        // Cargar todos los campos
         loadAllCampos()
     }
 
@@ -133,22 +87,18 @@ class CarPlayManager: NSObject {
 
         mapView.delegate = self
         mapView.showsUserLocation = true
-        mapView.isScrollEnabled = true
-        mapView.isZoomEnabled = true
         mapView.isRotateEnabled = false
         mapView.isPitchEnabled = false
-        mapView.isUserInteractionEnabled = true
         mapView.overrideUserInterfaceStyle = .dark
         mapView.pointOfInterestFilter = .excludingAll
 
         // Centrar en Galicia
-        let galiciaCenter = CLLocationCoordinate2D(latitude: 42.8782, longitude: -8.5448)
         let region = MKCoordinateRegion(
-            center: galiciaCenter,
+            center: CLLocationCoordinate2D(latitude: 42.8782, longitude: -8.5448),
             span: MKCoordinateSpan(latitudeDelta: 2.5, longitudeDelta: 2.5)
         )
         mapView.setRegion(region, animated: false)
-        Logger.debug("✅ MKMapView configurado (dark mode, interactivo)")
+        Logger.debug("✅ MKMapView configurado")
     }
 
     private func setupLocationManager() {
@@ -159,6 +109,17 @@ class CarPlayManager: NSObject {
     }
 
     private func setupMapButtons(for mapTemplate: CPMapTemplate) {
+        // Pan (flechas direccionales)
+        let panButton = CPMapButton { [weak self] _ in
+            guard let template = self?.mapTemplate else { return }
+            if template.isPanningInterfaceVisible {
+                template.dismissPanningInterface(animated: true)
+            } else {
+                template.showPanningInterface(animated: true)
+            }
+        }
+        panButton.image = UIImage(systemName: "arrow.up.and.down.and.arrow.left.and.right")
+
         // Zoom in
         let zoomInButton = CPMapButton { [weak self] _ in
             guard let mapView = self?.mapView else { return }
@@ -179,12 +140,6 @@ class CarPlayManager: NSObject {
         }
         zoomOutButton.image = UIImage(systemName: "minus.magnifyingglass")
 
-        // Mi ubicación
-        let locationButton = CPMapButton { [weak self] _ in
-            self?.centerOnUserLocation()
-        }
-        locationButton.image = UIImage(systemName: "location.fill")
-
         // Ver toda Galicia
         let galiciaButton = CPMapButton { [weak self] _ in
             guard let mapView = self?.mapView else { return }
@@ -196,12 +151,18 @@ class CarPlayManager: NSObject {
         }
         galiciaButton.image = UIImage(systemName: "map")
 
-        mapTemplate.mapButtons = [zoomInButton, zoomOutButton, locationButton, galiciaButton]
+        mapTemplate.mapButtons = [panButton, zoomInButton, zoomOutButton, galiciaButton]
 
-        // Botón de búsqueda en nav bar
+        // Nav bar: Buscar (izquierda) + Lista (derecha)
         mapTemplate.leadingNavigationBarButtons = [
             CPBarButton(title: "Buscar") { [weak self] _ in
                 self?.showSearchInterface()
+            }
+        ]
+
+        mapTemplate.trailingNavigationBarButtons = [
+            CPBarButton(title: "Lista") { [weak self] _ in
+                self?.showCamposListByProvincia()
             }
         ]
     }
@@ -219,7 +180,7 @@ class CarPlayManager: NSObject {
 
                 await MainActor.run {
                     self.allCampos = response
-                    self.updateCamposTable()
+                    self.buildProvinciaGroups()
                     self.displayAnnotations(campos: response)
                 }
 
@@ -230,13 +191,11 @@ class CarPlayManager: NSObject {
         }
     }
 
-    private func updateCamposTable() {
+    private func buildProvinciaGroups() {
         let grouped = Dictionary(grouping: allCampos) { $0.provincia }
         camposByProvincia = grouped
             .sorted { $0.key < $1.key }
             .map { (provincia: $0.key, campos: $0.value.sorted { $0.nombre < $1.nombre }) }
-        camposTableView?.reloadData()
-        Logger.debug("✅ Tabla actualizada: \(camposByProvincia.count) provincias")
     }
 
     // MARK: - Map Annotations
@@ -269,7 +228,49 @@ class CarPlayManager: NSObject {
         Logger.debug("✅ \(annotations.count) anotaciones en el mapa")
     }
 
-    // MARK: - Search
+    // MARK: - Lista por Provincia (CPListTemplate)
+
+    private func showCamposListByProvincia() {
+        Logger.debug("📋 Mostrando lista de campos por provincia")
+
+        guard !camposByProvincia.isEmpty else {
+            Logger.debug("⚠️ No hay campos para mostrar")
+            return
+        }
+
+        // Crear secciones por provincia
+        let sections = camposByProvincia.map { group -> CPListSection in
+            let items = group.campos.map { campo -> CPListItem in
+                let distance = distanceString(to: campo)
+                let detail = distance != "—" ? "\(campo.localidad) · \(distance)" : campo.localidad
+                let item = CPListItem(text: campo.nombre, detailText: detail)
+
+                item.handler = { [weak self] (_: CPSelectableListItem, completion: @escaping () -> Void) in
+                    self?.centerMapOnCampo(campo)
+                    self?.showCampoDetails(campo)
+                    completion()
+                }
+
+                return item
+            }
+
+            return CPListSection(
+                items: items,
+                header: "\(group.provincia) (\(group.campos.count))",
+                sectionIndexTitle: String(group.provincia.prefix(3))
+            )
+        }
+
+        let listTemplate = CPListTemplate(title: "Campos de Galicia", sections: sections)
+
+        interfaceController.pushTemplate(listTemplate, animated: true) { success, error in
+            if let error = error {
+                Logger.debug("❌ Error al mostrar lista: \(error.localizedDescription)")
+            }
+        }
+    }
+
+    // MARK: - Búsqueda
 
     private func showSearchInterface() {
         let searchTemplate = CPSearchTemplate()
@@ -277,7 +278,7 @@ class CarPlayManager: NSObject {
         interfaceController.pushTemplate(searchTemplate, animated: true)
     }
 
-    // MARK: - Navigation
+    // MARK: - Navegación
 
     private func startNavigation(to campo: CampoModel) {
         guard let lat = campo.latitud, let lon = campo.longitud else { return }
@@ -300,7 +301,7 @@ class CarPlayManager: NSObject {
         )
     }
 
-    // MARK: - Campo Detail
+    // MARK: - Detalle del Campo
 
     private func showCampoDetails(_ campo: CampoModel) {
         Logger.debug("📍 Detalles de: \(campo.nombre)")
@@ -318,14 +319,14 @@ class CarPlayManager: NSObject {
         }
 
         if !campo.tipo.isEmpty {
-            items.append(CPInformationItem(title: "Tipo de campo", detail: campo.tipo))
+            items.append(CPInformationItem(title: "Tipo", detail: campo.tipo))
         }
 
         if !campo.superficie.isEmpty {
             items.append(CPInformationItem(title: "Superficie", detail: campo.superficie))
         }
 
-        // Extras de contribuciones
+        // Extras
         if let cantina = campo.tiene_cantina {
             items.append(CPInformationItem(title: "Cantina", detail: cantina ? "Sí" : "No"))
         }
@@ -335,27 +336,27 @@ class CarPlayManager: NSObject {
         }
 
         if let estado = campo.estado_cesped, !estado.isEmpty {
-            items.append(CPInformationItem(title: "Estado césped", detail: estado))
+            items.append(CPInformationItem(title: "Césped", detail: estado))
         }
 
         if let medidas = campo.medidas_campo, !medidas.isEmpty {
             items.append(CPInformationItem(title: "Medidas", detail: medidas))
         }
 
-        // Max 10 items en CPInformationTemplate
-        let distance = distanceString(to: campo)
+        // Distancia (si cabe, max 10 items)
         if items.count < 10 {
+            let distance = distanceString(to: campo)
             items.append(CPInformationItem(title: "Distancia", detail: distance))
         }
 
-        // Botones (max 3)
+        // Botones
         let navigateButton = CPTextButton(title: "Navegar", textStyle: .confirm) { [weak self] _ in
             self?.startNavigation(to: campo)
         }
 
         let showOnMapButton = CPTextButton(title: "Ver en mapa", textStyle: .normal) { [weak self] _ in
             self?.centerMapOnCampo(campo)
-            self?.interfaceController.popTemplate(animated: true)
+            self?.interfaceController.popToRootTemplate(animated: true)
         }
 
         let infoTemplate = CPInformationTemplate(
@@ -368,13 +369,15 @@ class CarPlayManager: NSObject {
         interfaceController.pushTemplate(infoTemplate, animated: true)
     }
 
+    // MARK: - Map Control
+
     private func centerMapOnCampo(_ campo: CampoModel) {
         guard let lat = campo.latitud, let lon = campo.longitud,
               let mapView = self.mapView else { return }
 
         let region = MKCoordinateRegion(
             center: CLLocationCoordinate2D(latitude: lat, longitude: lon),
-            span: MKCoordinateSpan(latitudeDelta: 0.02, longitudeDelta: 0.02)
+            span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
         )
         mapView.setRegion(region, animated: true)
     }
@@ -410,55 +413,6 @@ class CarPlayManager: NSObject {
     }
 }
 
-// MARK: - UITableViewDataSource & Delegate
-
-extension CarPlayManager: UITableViewDataSource, UITableViewDelegate {
-
-    func numberOfSections(in tableView: UITableView) -> Int {
-        return camposByProvincia.count
-    }
-
-    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return camposByProvincia[section].campos.count
-    }
-
-    func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        let cell = tableView.dequeueReusableCell(withIdentifier: "CampoCell", for: indexPath) as! CarPlayCampoCell
-        let campo = camposByProvincia[indexPath.section].campos[indexPath.row]
-        cell.configure(nombre: campo.nombre, localidad: campo.localidad)
-        return cell
-    }
-
-    func tableView(_ tableView: UITableView, titleForHeaderInSection section: Int) -> String? {
-        let group = camposByProvincia[section]
-        return "\(group.provincia) (\(group.campos.count))"
-    }
-
-    func tableView(_ tableView: UITableView, willDisplayHeaderView view: UIView, forSection section: Int) {
-        guard let header = view as? UITableViewHeaderFooterView else { return }
-        header.textLabel?.font = UIFont.boldSystemFont(ofSize: 11)
-        header.textLabel?.textColor = .systemGreen
-        var bg = UIBackgroundConfiguration.clear()
-        bg.backgroundColor = UIColor(white: 0.12, alpha: 1)
-        header.backgroundConfiguration = bg
-    }
-
-    func tableView(_ tableView: UITableView, heightForHeaderInSection section: Int) -> CGFloat {
-        return 24
-    }
-
-    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
-        tableView.deselectRow(at: indexPath, animated: true)
-        let campo = camposByProvincia[indexPath.section].campos[indexPath.row]
-
-        // Centrar mapa en el campo
-        centerMapOnCampo(campo)
-
-        // Mostrar detalle
-        showCampoDetails(campo)
-    }
-}
-
 // MARK: - CPMapTemplateDelegate
 
 extension CarPlayManager: CPMapTemplateDelegate {
@@ -470,9 +424,8 @@ extension CarPlayManager: CPMapTemplateDelegate {
 
     func mapTemplate(_ mapTemplate: CPMapTemplate, panWith direction: CPMapTemplate.PanDirection) {
         guard let mapView = self.mapView else { return }
-        let region = mapView.region
-        let offset = region.span.latitudeDelta * 0.15
-        var center = region.center
+        let offset = mapView.region.span.latitudeDelta * 0.2
+        var center = mapView.region.center
 
         if direction.contains(.up) { center.latitude += offset }
         if direction.contains(.down) { center.latitude -= offset }
@@ -561,13 +514,11 @@ extension CarPlayManager: MKMapViewDelegate {
             return view
         }
 
-        // Individual campo
+        // Individual
         let id = "CampoPin"
         var view = mapView.dequeueReusableAnnotationView(withIdentifier: id) as? MKMarkerAnnotationView
         if view == nil {
             view = MKMarkerAnnotationView(annotation: annotation, reuseIdentifier: id)
-            view?.canShowCallout = true
-            view?.rightCalloutAccessoryView = UIButton(type: .detailDisclosure)
         } else {
             view?.annotation = annotation
         }
@@ -575,66 +526,8 @@ extension CarPlayManager: MKMapViewDelegate {
         view?.glyphImage = UIImage(systemName: "sportscourt.fill")
         view?.displayPriority = .defaultLow
         view?.clusteringIdentifier = "campo"
+        view?.titleVisibility = .adaptive
+        view?.subtitleVisibility = .hidden
         return view
-    }
-
-    func mapView(_ mapView: MKMapView, annotationView view: MKAnnotationView, calloutAccessoryControlTapped control: UIControl) {
-        guard let campoAnnotation = view.annotation as? CampoAnnotation else { return }
-        showCampoDetails(campoAnnotation.annotationItem.campo)
-    }
-
-    func mapView(_ mapView: MKMapView, didSelect view: MKAnnotationView) {
-        // Al seleccionar un cluster, hacer zoom
-        if let cluster = view.annotation as? MKClusterAnnotation {
-            mapView.showAnnotations(cluster.memberAnnotations, animated: true)
-        }
-    }
-}
-
-// MARK: - Custom Table Cell
-
-class CarPlayCampoCell: UITableViewCell {
-
-    private let nombreLabel = UILabel()
-    private let localidadLabel = UILabel()
-
-    override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
-        super.init(style: style, reuseIdentifier: reuseIdentifier)
-
-        backgroundColor = .clear
-        selectionStyle = .default
-
-        let selectedBg = UIView()
-        selectedBg.backgroundColor = UIColor.systemGreen.withAlphaComponent(0.15)
-        selectedBackgroundView = selectedBg
-
-        nombreLabel.font = UIFont.boldSystemFont(ofSize: 11)
-        nombreLabel.textColor = .white
-        nombreLabel.numberOfLines = 1
-
-        localidadLabel.font = UIFont.systemFont(ofSize: 9)
-        localidadLabel.textColor = UIColor(white: 0.6, alpha: 1)
-        localidadLabel.numberOfLines = 1
-
-        let stack = UIStackView(arrangedSubviews: [nombreLabel, localidadLabel])
-        stack.axis = .vertical
-        stack.spacing = 1
-        stack.translatesAutoresizingMaskIntoConstraints = false
-        contentView.addSubview(stack)
-
-        NSLayoutConstraint.activate([
-            stack.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 8),
-            stack.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -4),
-            stack.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
-        ])
-    }
-
-    required init?(coder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
-    }
-
-    func configure(nombre: String, localidad: String) {
-        nombreLabel.text = nombre
-        localidadLabel.text = localidad
     }
 }

@@ -308,9 +308,14 @@ struct ProfileView: View {
                             .font(.title2)
                             .foregroundColor(.green)
 
-                        Text(L(.logrosAllCompleted))
-                            .font(.body)
-                            .foregroundColor(.secondary)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(L(.logrosAllCompleted))
+                                .font(.subheadline.bold())
+                                .foregroundColor(.primary)
+                            Text(L(.logrosAllCompletedMessage))
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
 
                         Spacer()
                     }

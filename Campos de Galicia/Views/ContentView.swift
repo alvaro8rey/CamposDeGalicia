@@ -11,6 +11,7 @@ struct ContentView: View {
     // Búsqueda unificada
     @State private var searchText: String = ""
     @State private var filterDebounceTask: Task<Void, Never>?
+    @FocusState private var isSearchFocused: Bool
 
     // Lista de campos y estado de carga gestionados por el view model
     @Binding var distanciaPredeterminada: Double
@@ -57,29 +58,39 @@ struct ContentView: View {
                     // MARK: - Search Bar
                     HStack(spacing: 10) {
                         Image(systemName: "magnifyingglass")
-                            .foregroundColor(.secondary)
+                            .foregroundColor(isSearchFocused ? .blue : .secondary)
                             .font(.subheadline)
 
                         TextField(L(.contentSearchByName), text: $searchText)
                             .textFieldStyle(.plain)
                             .font(.body)
+                            .focused($isSearchFocused)
 
                         if !searchText.isEmpty {
                             Button {
-                                searchText = ""
+                                withAnimation(.spring(response: 0.25, dampingFraction: 0.8)) {
+                                    searchText = ""
+                                }
                             } label: {
                                 Image(systemName: "xmark.circle.fill")
                                     .foregroundColor(.secondary)
                                     .font(.subheadline)
                             }
+                            .transition(.scale.combined(with: .opacity))
                         }
                     }
                     .padding(.horizontal, 14)
-                    .padding(.vertical, 11)
-                    .background(Color(.tertiarySystemBackground))
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .padding(.vertical, 12)
+                    .background(.ultraThinMaterial)
+                    .clipShape(RoundedRectangle(cornerRadius: 16))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 16)
+                            .stroke(isSearchFocused ? Color.blue.opacity(0.4) : Color.gray.opacity(0.15), lineWidth: 1)
+                    )
+                    .shadow(color: Color.black.opacity(0.06), radius: 8, x: 0, y: 4)
                     .padding(.horizontal, 12)
                     .padding(.top, 8)
+                    .animation(.easeInOut(duration: 0.2), value: isSearchFocused)
 
                     // MARK: - Campo Count
                     HStack {
@@ -90,7 +101,7 @@ struct ContentView: View {
                         Spacer()
                     }
                     .padding(.horizontal, 16)
-                    .padding(.top, 8)
+                    .padding(.top, 6)
                     .padding(.bottom, 4)
 
                     // MARK: - Campo List

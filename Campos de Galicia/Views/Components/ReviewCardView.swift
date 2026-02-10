@@ -10,6 +10,7 @@ struct ReviewCardView: View {
 
     @State private var selectedPhotoIndex: Int = 0
     @State private var showingImageViewer: Bool = false
+    @State private var showingDetail: Bool = false
 
     var isOwnReview: Bool {
         guard let userId = currentUserId else { return false }
@@ -129,10 +130,19 @@ struct ReviewCardView: View {
                 }
             }
         }
+        .onTapGesture {
+            showingDetail = true
+        }
         .sheet(isPresented: $showingImageViewer) {
             if let fotos = review.fotos, !fotos.isEmpty {
                 ReviewImageViewer(photos: fotos, initialIndex: selectedPhotoIndex)
             }
+        }
+        .sheet(isPresented: $showingDetail) {
+            ReviewDetailView(
+                review: review,
+                showBadge: distinguishedUserIds.contains(review.user_id)
+            )
         }
     }
 
@@ -141,6 +151,115 @@ struct ReviewCardView: View {
         let formatter = RelativeDateTimeFormatter()
         formatter.unitsStyle = .abbreviated
         return formatter.localizedString(for: date, relativeTo: Date())
+    }
+}
+
+/// Vista de detalle para una reseña (se abre al pulsar)
+struct ReviewDetailView: View {
+    let review: Review
+    var showBadge: Bool = false
+    @Environment(\.dismiss) var dismiss
+    @State private var selectedPhotoIndex: Int = 0
+    @State private var showingImageViewer: Bool = false
+
+    var body: some View {
+        NavigationView {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 20) {
+                    // Header: Avatar + Name
+                    HStack(spacing: 14) {
+                        UserAvatarView(
+                            avatarURL: review.reviewer_avatar_url,
+                            userName: review.displayName,
+                            size: 56,
+                            showBadge: showBadge
+                        )
+
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(review.displayName)
+                                .font(.system(size: 18, weight: .semibold))
+
+                            Text(review.formattedDate)
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                        }
+
+                        Spacer()
+                    }
+
+                    // Star Rating (large)
+                    StarRatingView(rating: review.rating, size: 22, color: .orange)
+
+                    // Full Review Text
+                    Text(review.reseña)
+                        .font(.body)
+                        .foregroundColor(.primary)
+                        .lineSpacing(5)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    // Edited indicator
+                    if review.isEdited, let updatedDate = review.updated_at {
+                        HStack(spacing: 4) {
+                            Image(systemName: "pencil")
+                                .font(.caption)
+                            let fmt = RelativeDateTimeFormatter()
+                            Text(L(.reviewEditedAt, fmt.localizedString(for: updatedDate, relativeTo: Date())))
+                                .font(.subheadline)
+                        }
+                        .foregroundColor(.secondary)
+                    }
+
+                    // Photos (full size grid)
+                    if let fotos = review.fotos, !fotos.isEmpty {
+                        VStack(alignment: .leading, spacing: 10) {
+                            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
+                                ForEach(fotos.indices, id: \.self) { index in
+                                    if let url = URL(string: fotos[index]) {
+                                        CachedAsyncImage(url: url) { image in
+                                            image
+                                                .resizable()
+                                                .scaledToFill()
+                                                .frame(height: 160)
+                                                .clipShape(RoundedRectangle(cornerRadius: 12))
+                                        } placeholder: {
+                                            ZStack {
+                                                Color.gray.opacity(0.2)
+                                                ProgressView()
+                                            }
+                                            .frame(height: 160)
+                                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                                        }
+                                        .onTapGesture {
+                                            selectedPhotoIndex = index
+                                            showingImageViewer = true
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    Spacer(minLength: 20)
+                }
+                .padding(20)
+            }
+            .navigationTitle(L(.reviewDetailTitle))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button { dismiss() } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.title3)
+                            .foregroundColor(.secondary)
+                    }
+                }
+            }
+            .sheet(isPresented: $showingImageViewer) {
+                if let fotos = review.fotos, !fotos.isEmpty {
+                    ReviewImageViewer(photos: fotos, initialIndex: selectedPhotoIndex)
+                }
+            }
+        }
     }
 }
 
@@ -360,6 +479,7 @@ struct CompactReviewCardView: View {
     let review: Review
     var distinguishedUserIds: Set<UUID> = []
     @State private var isExpanded: Bool = false
+    @State private var showingDetail: Bool = false
 
     private let maxPreviewLength = 150
 
@@ -481,6 +601,15 @@ struct CompactReviewCardView: View {
         .frame(width: 300)
         .background(Color(UIColor.secondarySystemBackground))
         .cornerRadius(12)
+        .onTapGesture {
+            showingDetail = true
+        }
+        .sheet(isPresented: $showingDetail) {
+            ReviewDetailView(
+                review: review,
+                showBadge: distinguishedUserIds.contains(review.user_id)
+            )
+        }
     }
 }
 

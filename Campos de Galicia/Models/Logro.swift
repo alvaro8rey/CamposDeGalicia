@@ -1,6 +1,6 @@
 import Foundation
 
-public struct Logro: Identifiable, Codable {
+public struct Logro: Identifiable, Codable, Hashable {
     public let id: UUID
     public let nombre: String
     public let descripcion: String? // Opcional

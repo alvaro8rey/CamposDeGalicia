@@ -479,6 +479,12 @@ enum LocalizedKey: String {
     case settingsThemeLight = "settings.theme.light"
     case settingsThemeDark = "settings.theme.dark"
     case settingsThemeSystem = "settings.theme.system"
+
+    // MARK: - Detail Views
+    case reviewDetailTitle = "review.detail.title"
+    case logrosDetailTitle = "logros.detail.title"
+    case logrosDetailCompleted = "logros.detail.completed"
+    case logrosDetailProgress = "logros.detail.progress"
 }
 
 /// Manager de localización centralizado
@@ -971,6 +977,12 @@ class LocalizationManager: ObservableObject {
             .settingsThemeLight: "Claro",
             .settingsThemeDark: "Oscuro",
             .settingsThemeSystem: "Sistema",
+
+            // Detail Views
+            .reviewDetailTitle: "Reseña",
+            .logrosDetailTitle: "Logro",
+            .logrosDetailCompleted: "Completado",
+            .logrosDetailProgress: "Progreso",
         ],
 
         // MARK: - Galego
@@ -1431,6 +1443,12 @@ class LocalizationManager: ObservableObject {
             .settingsThemeLight: "Claro",
             .settingsThemeDark: "Escuro",
             .settingsThemeSystem: "Sistema",
+
+            // Detail Views
+            .reviewDetailTitle: "Recensión",
+            .logrosDetailTitle: "Logro",
+            .logrosDetailCompleted: "Completado",
+            .logrosDetailProgress: "Progreso",
         ]
     ]
 }

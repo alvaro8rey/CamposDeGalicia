@@ -28,6 +28,10 @@ struct LogrosView: View {
     // Tab selection
     @State private var selectedTab: AchievementTab = .pending
 
+    // Detalle de logro
+    @State private var selectedLogro: Logro? = nil
+    @State private var selectedLogroUnlocked: Bool = false
+
     // Errores / permisos
     @State private var errorMessage: String? = nil
     @State private var showPermissionAlert = false
@@ -109,6 +113,15 @@ struct LogrosView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: .didUpdateVisits)) { _ in
             Task { await refreshAfterVisit() }
+        }
+        .sheet(item: $selectedLogro) { logro in
+            let (current, target) = progress(for: logro)
+            LogroDetailView(
+                logro: logro,
+                isUnlocked: selectedLogroUnlocked,
+                currentProgress: current,
+                targetProgress: target
+            )
         }
     }
 
@@ -276,6 +289,10 @@ struct LogrosView: View {
                                     currentProgress: current,
                                     targetProgress: target
                                 )
+                                .onTapGesture {
+                                    selectedLogro = logro
+                                    selectedLogroUnlocked = false
+                                }
                             }
                         }
                     }
@@ -321,6 +338,10 @@ struct LogrosView: View {
                                     currentProgress: current,
                                     targetProgress: target
                                 )
+                                .onTapGesture {
+                                    selectedLogro = logro
+                                    selectedLogroUnlocked = true
+                                }
                             }
                         }
                     }
@@ -932,6 +953,128 @@ struct CompactAchievementCard: View {
         .background(Color(UIColor.secondarySystemBackground))
         .cornerRadius(12)
         .opacity(isUnlocked ? 1.0 : 0.85)
+    }
+}
+
+/// Vista de detalle para un logro (se abre al pulsar)
+struct LogroDetailView: View {
+    let logro: Logro
+    let isUnlocked: Bool
+    let currentProgress: Int
+    let targetProgress: Int
+    @Environment(\.dismiss) var dismiss
+    @Environment(\.colorScheme) var colorScheme
+
+    var progressPercentage: Double {
+        guard targetProgress > 0 else { return 0 }
+        return min(Double(currentProgress) / Double(targetProgress), 1.0)
+    }
+
+    var body: some View {
+        NavigationView {
+            ScrollView {
+                VStack(spacing: 24) {
+                    // Gran icono central
+                    ZStack {
+                        Circle()
+                            .fill(
+                                isUnlocked
+                                    ? LinearGradient(colors: [.green.opacity(0.3), .green.opacity(0.1)], startPoint: .topLeading, endPoint: .bottomTrailing)
+                                    : LinearGradient(colors: [.gray.opacity(0.2), .gray.opacity(0.1)], startPoint: .topLeading, endPoint: .bottomTrailing)
+                            )
+                            .frame(width: 100, height: 100)
+
+                        Image(systemName: isUnlocked ? "checkmark.seal.fill" : "trophy")
+                            .font(.system(size: 44))
+                            .foregroundColor(isUnlocked ? .green : .gray)
+                    }
+                    .padding(.top, 20)
+
+                    // Nombre
+                    Text(logro.nombre)
+                        .font(.system(size: 22, weight: .bold, design: .rounded))
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 20)
+
+                    // Descripción
+                    if let descripcion = logro.descripcion, !descripcion.isEmpty {
+                        Text(descripcion)
+                            .font(.body)
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
+                            .lineSpacing(4)
+                            .padding(.horizontal, 30)
+                    }
+
+                    // XP
+                    if let xp = logro.xp, xp > 0 {
+                        HStack(spacing: 6) {
+                            Image(systemName: "bolt.fill")
+                                .foregroundColor(.orange)
+                            Text("+\(xp) XP")
+                                .font(.system(size: 18, weight: .bold, design: .rounded))
+                                .foregroundColor(.orange)
+                        }
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 10)
+                        .background(Color.orange.opacity(0.1))
+                        .cornerRadius(12)
+                    }
+
+                    // Estado
+                    if isUnlocked {
+                        // Completado
+                        HStack(spacing: 8) {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundColor(.green)
+                                .font(.title3)
+                            Text(L(.logrosDetailCompleted))
+                                .font(.system(size: 16, weight: .semibold, design: .rounded))
+                                .foregroundColor(.green)
+                        }
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 12)
+                        .background(Color.green.opacity(0.1))
+                        .cornerRadius(12)
+                    } else if targetProgress > 0 {
+                        // Progreso
+                        VStack(spacing: 10) {
+                            Text(L(.logrosDetailProgress))
+                                .font(.system(size: 16, weight: .semibold, design: .rounded))
+                                .foregroundColor(.primary)
+
+                            ProgressView(value: progressPercentage)
+                                .progressViewStyle(LinearProgressViewStyle(tint: .blue))
+                                .frame(height: 10)
+                                .scaleEffect(x: 1, y: 1.5, anchor: .center)
+                                .padding(.horizontal, 20)
+
+                            Text("\(currentProgress) / \(targetProgress)")
+                                .font(.system(size: 15, weight: .medium, design: .rounded))
+                                .foregroundColor(.secondary)
+                        }
+                        .padding(20)
+                        .background(Color(UIColor.secondarySystemBackground))
+                        .cornerRadius(16)
+                        .padding(.horizontal, 20)
+                    }
+
+                    Spacer(minLength: 40)
+                }
+                .padding(20)
+            }
+            .navigationTitle(L(.logrosDetailTitle))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button { dismiss() } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.title3)
+                            .foregroundColor(.secondary)
+                    }
+                }
+            }
+        }
     }
 }
 

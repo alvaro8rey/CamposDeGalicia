@@ -133,6 +133,7 @@ struct ProfileView: View {
             Task {
                 guard let userId = authViewModel.user?.id.uuidString else { return }
                 await profileVM.loadAchievementsCount(for: userId)
+                await profileVM.loadUnlockedAchievements(for: userId)
             }
         }
         .onAppear {

@@ -208,9 +208,9 @@ class CarPlayManager: NSObject {
         Logger.debug("✅ \(annotations.count) anotaciones en el mapa")
     }
 
-    // MARK: - Lista: Provincias -> Campos (dos niveles)
+    // MARK: - Lista: Provincia -> Localidad -> Campos (tres niveles)
 
-    /// Primer nivel: lista de provincias
+    /// Nivel 1: lista de provincias
     private func showProvinciasMenu() {
         Logger.debug("📋 Mostrando provincias")
 
@@ -224,7 +224,7 @@ class CarPlayManager: NSObject {
             item.accessoryType = .disclosureIndicator
 
             item.handler = { [weak self] (_: CPSelectableListItem, completion: @escaping () -> Void) in
-                self?.showCamposForProvincia(group.provincia, campos: group.campos)
+                self?.showLocalidadesForProvincia(group.provincia, campos: group.campos)
                 completion()
             }
 
@@ -237,21 +237,84 @@ class CarPlayManager: NSObject {
         interfaceController.pushTemplate(listTemplate, animated: true)
     }
 
-    /// Segundo nivel: campos de una provincia (con paginación)
-    private func showCamposForProvincia(_ provincia: String, campos: [CampoModel], page: Int = 0) {
+    /// Nivel 2: localidades de una provincia (con paginación)
+    private func showLocalidadesForProvincia(_ provincia: String, campos: [CampoModel], page: Int = 0) {
+        let grouped = Dictionary(grouping: campos) { $0.localidad }
+        let localidades = grouped
+            .sorted { $0.key < $1.key }
+            .map { (localidad: $0.key, campos: $0.value.sorted { $0.nombre < $1.nombre }) }
+
         let maxItems = CPListTemplate.maximumItemCount
-        let pageSize = max(maxItems - 1, 1) // Reservar 1 slot para "Más campos..."
+        let pageSize = max(maxItems - 1, 1)
+        let startIndex = page * pageSize
+        let endIndex = min(startIndex + pageSize, localidades.count)
+        let pageLocalidades = Array(localidades[startIndex..<endIndex])
+        let hasMore = endIndex < localidades.count
+
+        Logger.debug("📋 \(provincia) localidades pág \(page + 1): \(startIndex)-\(endIndex) de \(localidades.count)")
+
+        var items = pageLocalidades.map { group -> CPListItem in
+            let item = CPListItem(
+                text: group.localidad,
+                detailText: group.campos.count == 1
+                    ? group.campos[0].nombre
+                    : "\(group.campos.count) campos"
+            )
+            item.accessoryType = .disclosureIndicator
+
+            item.handler = { [weak self] (_: CPSelectableListItem, completion: @escaping () -> Void) in
+                if group.campos.count == 1 {
+                    let campo = group.campos[0]
+                    self?.centerMapOnCampo(campo)
+                    self?.showCampoDetails(campo)
+                } else {
+                    self?.showCamposForLocalidad(group.localidad, campos: group.campos)
+                }
+                completion()
+            }
+
+            return item
+        }
+
+        if hasMore {
+            let remaining = localidades.count - endIndex
+            let moreItem = CPListItem(text: "Más localidades...", detailText: "\(remaining) restantes")
+            moreItem.handler = { [weak self] (_: CPSelectableListItem, completion: @escaping () -> Void) in
+                self?.interfaceController.popTemplate(animated: false) { _, _ in
+                    self?.showLocalidadesForProvincia(provincia, campos: campos, page: page + 1)
+                }
+                completion()
+            }
+            items.append(moreItem)
+        }
+
+        let totalPages = Int(ceil(Double(localidades.count) / Double(pageSize)))
+        let title: String
+        if totalPages > 1 {
+            title = "\(provincia) (\(page + 1)/\(totalPages))"
+        } else {
+            title = "\(provincia)"
+        }
+
+        let section = CPListSection(items: items)
+        let listTemplate = CPListTemplate(title: title, sections: [section])
+
+        interfaceController.pushTemplate(listTemplate, animated: true)
+    }
+
+    /// Nivel 3: campos de una localidad (con paginación por seguridad)
+    private func showCamposForLocalidad(_ localidad: String, campos: [CampoModel], page: Int = 0) {
+        let maxItems = CPListTemplate.maximumItemCount
+        let pageSize = max(maxItems - 1, 1)
         let startIndex = page * pageSize
         let endIndex = min(startIndex + pageSize, campos.count)
         let pageCampos = Array(campos[startIndex..<endIndex])
         let hasMore = endIndex < campos.count
 
-        Logger.debug("📋 \(provincia) página \(page + 1): items \(startIndex)-\(endIndex) de \(campos.count) (max \(maxItems))")
-
         var items = pageCampos.map { campo -> CPListItem in
             let item = CPListItem(
                 text: campo.nombre,
-                detailText: campo.localidad
+                detailText: campo.direccion
             )
 
             item.handler = { [weak self] (_: CPSelectableListItem, completion: @escaping () -> Void) in
@@ -265,14 +328,10 @@ class CarPlayManager: NSObject {
 
         if hasMore {
             let remaining = campos.count - endIndex
-            let moreItem = CPListItem(
-                text: "Más campos...",
-                detailText: "\(remaining) restantes"
-            )
+            let moreItem = CPListItem(text: "Más campos...", detailText: "\(remaining) restantes")
             moreItem.handler = { [weak self] (_: CPSelectableListItem, completion: @escaping () -> Void) in
-                // Reemplazar página actual por la siguiente
                 self?.interfaceController.popTemplate(animated: false) { _, _ in
-                    self?.showCamposForProvincia(provincia, campos: campos, page: page + 1)
+                    self?.showCamposForLocalidad(localidad, campos: campos, page: page + 1)
                 }
                 completion()
             }
@@ -282,9 +341,9 @@ class CarPlayManager: NSObject {
         let totalPages = Int(ceil(Double(campos.count) / Double(pageSize)))
         let title: String
         if totalPages > 1 {
-            title = "\(provincia) (\(page + 1)/\(totalPages))"
+            title = "\(localidad) (\(page + 1)/\(totalPages))"
         } else {
-            title = "\(provincia) (\(campos.count))"
+            title = "\(localidad) (\(campos.count))"
         }
 
         let section = CPListSection(items: items)

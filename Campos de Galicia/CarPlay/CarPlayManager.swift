@@ -109,19 +109,16 @@ class CarPlayManager: NSObject {
     }
 
     private func setupMapButtons(for mapTemplate: CPMapTemplate) {
-        // Zoom in
         let zoomInButton = CPMapButton { [weak self] _ in
             self?.zoomIn()
         }
-        zoomInButton.image = UIImage(systemName: "plus")
+        zoomInButton.image = UIImage(systemName: "plus.circle.fill")
 
-        // Zoom out
         let zoomOutButton = CPMapButton { [weak self] _ in
             self?.zoomOut()
         }
-        zoomOutButton.image = UIImage(systemName: "minus")
+        zoomOutButton.image = UIImage(systemName: "minus.circle.fill")
 
-        // Pan (flechas direccionales)
         let panButton = CPMapButton { [weak self] _ in
             guard let template = self?.mapTemplate else { return }
             if template.isPanningInterfaceVisible {
@@ -130,20 +127,14 @@ class CarPlayManager: NSObject {
                 template.showPanningInterface(animated: true)
             }
         }
-        panButton.image = UIImage(systemName: "arrow.up.and.down.and.arrow.left.and.right")
+        panButton.image = UIImage(systemName: "move.3d")
 
-        // Ver toda Galicia
-        let galiciaButton = CPMapButton { [weak self] _ in
-            guard let mapView = self?.mapView else { return }
-            let region = MKCoordinateRegion(
-                center: CLLocationCoordinate2D(latitude: 42.8782, longitude: -8.5448),
-                span: MKCoordinateSpan(latitudeDelta: 2.5, longitudeDelta: 2.5)
-            )
-            mapView.setRegion(region, animated: true)
+        let locationButton = CPMapButton { [weak self] _ in
+            self?.centerOnUserLocation()
         }
-        galiciaButton.image = UIImage(systemName: "map")
+        locationButton.image = UIImage(systemName: "location.fill")
 
-        mapTemplate.mapButtons = [zoomInButton, zoomOutButton, panButton, galiciaButton]
+        mapTemplate.mapButtons = [zoomInButton, zoomOutButton, panButton, locationButton]
 
         setDefaultNavBar()
     }
@@ -522,6 +513,9 @@ class CarPlayManager: NSObject {
             }
         ]
         mapTemplate.trailingNavigationBarButtons = [
+            CPBarButton(title: "Galicia") { [weak self] _ in
+                self?.showAllGalicia()
+            },
             CPBarButton(title: "Hecho") { [weak self] _ in
                 self?.mapTemplate?.dismissPanningInterface(animated: true)
             }
@@ -529,6 +523,26 @@ class CarPlayManager: NSObject {
     }
 
     // MARK: - Map Control
+
+    private func centerOnUserLocation() {
+        guard let userLocation = locationManager.location,
+              let mapView = self.mapView else { return }
+
+        let region = MKCoordinateRegion(
+            center: userLocation.coordinate,
+            span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
+        )
+        mapView.setRegion(region, animated: true)
+    }
+
+    private func showAllGalicia() {
+        guard let mapView = self.mapView else { return }
+        let region = MKCoordinateRegion(
+            center: CLLocationCoordinate2D(latitude: 42.8782, longitude: -8.5448),
+            span: MKCoordinateSpan(latitudeDelta: 2.5, longitudeDelta: 2.5)
+        )
+        mapView.setRegion(region, animated: true)
+    }
 
     private func centerMapOnCampo(_ campo: CampoModel) {
         guard let lat = campo.latitud, let lon = campo.longitud,
@@ -572,13 +586,14 @@ extension CarPlayManager: CPMapTemplateDelegate {
 
     func mapTemplate(_ mapTemplate: CPMapTemplate, panWith direction: CPMapTemplate.PanDirection) {
         guard let mapView = self.mapView else { return }
-        let offset = mapView.region.span.latitudeDelta * 0.2
+        let latOffset = mapView.region.span.latitudeDelta * 0.1
+        let lonOffset = mapView.region.span.longitudeDelta * 0.1
         var center = mapView.region.center
 
-        if direction.contains(.up) { center.latitude += offset }
-        if direction.contains(.down) { center.latitude -= offset }
-        if direction.contains(.left) { center.longitude -= offset }
-        if direction.contains(.right) { center.longitude += offset }
+        if direction.contains(.up) { center.latitude += latOffset }
+        if direction.contains(.down) { center.latitude -= latOffset }
+        if direction.contains(.left) { center.longitude -= lonOffset }
+        if direction.contains(.right) { center.longitude += lonOffset }
 
         mapView.setCenter(center, animated: true)
     }

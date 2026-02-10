@@ -12,7 +12,8 @@ struct ContentView: View {
     @State private var searchNombre: String = ""
     @State private var searchLocalidad: String = ""
     @State private var selectedProvincia: String = ""
-    @State private var isFilterExpanded: Bool = false // Controla si el contenedor de filtros está abierto
+    @State private var showFilterSheet: Bool = false
+    @State private var filterDebounceTask: Task<Void, Never>?
 
     // Lista de provincias disponibles
     var provincias: [String] {
@@ -67,27 +68,138 @@ struct ContentView: View {
                         LoadingView(message: L(.loadingCampos), style: .skeleton)
                     }
                 } else {
-                    // Barra de botones y filtros
-                    FilterBarView(
-                        isGridView: $isGridView,
-                        isFilterExpanded: $isFilterExpanded,
-                        hasActiveFilters: hasActiveFilters
-                    )
+                    // MARK: - Search Bar
+                    HStack(spacing: 10) {
+                        Image(systemName: "magnifyingglass")
+                            .foregroundColor(.secondary)
+                            .font(.subheadline)
 
-                    // Contenedor de filtros colapsable
-                    if isFilterExpanded {
-                        FiltersView(
-                            searchNombre: $searchNombre,
-                            searchLocalidad: $searchLocalidad,
-                            selectedProvincia: $selectedProvincia,
-                            provincias: provincias,
-                            applyAction: applyFilters,
-                            resetAction: resetFilters
-                        )
-                        .padding(.top, 4)
+                        TextField(L(.contentSearchByName), text: $searchNombre)
+                            .textFieldStyle(.plain)
+                            .font(.body)
+
+                        if !searchNombre.isEmpty {
+                            Button {
+                                searchNombre = ""
+                            } label: {
+                                Image(systemName: "xmark.circle.fill")
+                                    .foregroundColor(.secondary)
+                                    .font(.subheadline)
+                            }
+                        }
                     }
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 11)
+                    .background(.ultraThinMaterial)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(Color.gray.opacity(0.15), lineWidth: 1)
+                    )
+                    .padding(.horizontal, 12)
+                    .padding(.top, 8)
 
-                    // Texto con el conteo de campos mostrados
+                    // MARK: - Province Chips + Locality Filter
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 8) {
+                            // Province chips
+                            ForEach(provincias, id: \.self) { provincia in
+                                let isSelected = selectedProvincia == provincia
+                                Button {
+                                    HapticFeedback.light()
+                                    withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                                        selectedProvincia = provincia
+                                    }
+                                } label: {
+                                    Text(provincia)
+                                        .font(.subheadline)
+                                        .fontWeight(isSelected ? .semibold : .medium)
+                                        .padding(.horizontal, 14)
+                                        .padding(.vertical, 8)
+                                        .background(isSelected ? Color.blue : Color(.tertiarySystemBackground))
+                                        .foregroundColor(isSelected ? .white : .primary)
+                                        .clipShape(Capsule())
+                                        .overlay(
+                                            Capsule()
+                                                .stroke(isSelected ? Color.clear : Color.gray.opacity(0.15), lineWidth: 1)
+                                        )
+                                }
+                            }
+
+                            // Separador
+                            Rectangle()
+                                .fill(Color.secondary.opacity(0.3))
+                                .frame(width: 1, height: 22)
+                                .padding(.horizontal, 2)
+
+                            // Locality filter chip
+                            Button {
+                                HapticFeedback.light()
+                                showFilterSheet = true
+                            } label: {
+                                HStack(spacing: 5) {
+                                    Image(systemName: "mappin.circle.fill")
+                                        .font(.subheadline)
+
+                                    if !searchLocalidad.isEmpty {
+                                        Text(searchLocalidad)
+                                            .font(.subheadline)
+                                            .fontWeight(.medium)
+                                            .lineLimit(1)
+
+                                        Button {
+                                            withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                                                searchLocalidad = ""
+                                            }
+                                        } label: {
+                                            Image(systemName: "xmark.circle.fill")
+                                                .font(.caption2)
+                                        }
+                                    } else {
+                                        Text(L(.contentSearchByLocation))
+                                            .font(.subheadline)
+                                            .fontWeight(.medium)
+                                    }
+                                }
+                                .padding(.horizontal, 14)
+                                .padding(.vertical, 8)
+                                .background(!searchLocalidad.isEmpty ? Color.green.opacity(0.15) : Color(.tertiarySystemBackground))
+                                .foregroundColor(!searchLocalidad.isEmpty ? .green : .secondary)
+                                .clipShape(Capsule())
+                                .overlay(
+                                    Capsule()
+                                        .stroke(!searchLocalidad.isEmpty ? Color.green.opacity(0.3) : Color.gray.opacity(0.15), lineWidth: 1)
+                                )
+                            }
+
+                            // Reset chip (solo si hay filtros activos)
+                            if hasActiveFilters {
+                                Button {
+                                    HapticFeedback.light()
+                                    withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                                        resetFilters()
+                                    }
+                                } label: {
+                                    HStack(spacing: 4) {
+                                        Image(systemName: "arrow.counterclockwise")
+                                            .font(.caption)
+                                        Text(L(.contentReset))
+                                            .font(.subheadline)
+                                            .fontWeight(.medium)
+                                    }
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 8)
+                                    .background(Color.red.opacity(0.1))
+                                    .foregroundColor(.red)
+                                    .clipShape(Capsule())
+                                }
+                            }
+                        }
+                        .padding(.horizontal, 12)
+                    }
+                    .padding(.top, 8)
+
+                    // MARK: - Campo Count
                     HStack {
                         Text(L(.contentShownFields, camposMostrados))
                             .font(.caption)
@@ -96,14 +208,13 @@ struct ContentView: View {
                         Spacer()
                     }
                     .padding(.horizontal, 16)
-                    .padding(.top, isFilterExpanded ? 12 : 8)
+                    .padding(.top, 8)
                     .padding(.bottom, 4)
 
-                    // Lista de campos filtrada
+                    // MARK: - Campo List
                     CampoListView(
                         filteredCampos: filteredCampos,
                         isGridView: isGridView,
-                        isFilterExpanded: $isFilterExpanded,
                         onRefresh: {
                             await camposViewModel.refreshCampos()
                         }
@@ -121,6 +232,28 @@ struct ContentView: View {
                     .font(.title3)
                     .foregroundColor(.primary)
             }
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    HapticFeedback.light()
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                        isGridView.toggle()
+                    }
+                } label: {
+                    Image(systemName: isGridView ? "list.bullet" : "square.grid.2x2")
+                        .font(.body)
+                        .foregroundColor(.blue)
+                }
+            }
+        }
+        // Real-time filtering con debounce para campos de texto
+        .onChange(of: searchNombre) { _, _ in
+            applyFiltersDebounced()
+        }
+        .onChange(of: selectedProvincia) { _, _ in
+            applyFilters()
+        }
+        .onChange(of: searchLocalidad) { _, _ in
+            applyFiltersDebounced()
         }
         .onChange(of: camposViewModel.campos) { oldCampos, newCampos in
             Logger.debug("Campos cambió, actualizando filteredCampos: \(newCampos.count) campos")
@@ -146,10 +279,10 @@ struct ContentView: View {
             camposMostrados = filteredCampos.count
             showOnboarding = !hasSeenOnboarding
 
-            // 📊 Analytics: Track screen view
+            // Analytics: Track screen view
             AnalyticsManager.shared.trackScreen("home")
         }
-        // 📊 Analytics: Track view mode changes
+        // Analytics: Track view mode changes
         .onChange(of: isGridView) { _, newValue in
             AnalyticsManager.shared.trackButton(
                 name: newValue ? "grid_view" : "list_view",
@@ -162,6 +295,12 @@ struct ContentView: View {
         }
         .fullScreenCover(isPresented: $showOnboarding) {
             OnboardingView() // Este view marca hasSeenOnboarding = true al terminar
+        }
+        // Sheet para filtro de localidad
+        .sheet(isPresented: $showFilterSheet) {
+            LocalityFilterSheet(searchLocalidad: $searchLocalidad)
+                .presentationDetents([.fraction(0.25)])
+                .presentationDragIndicator(.visible)
         }
         // NavigationLink invisible para navegación desde notificaciones
         .background(
@@ -184,14 +323,22 @@ struct ContentView: View {
         )
     }
 
+    // MARK: - Debounced Filtering
+
+    private func applyFiltersDebounced() {
+        filterDebounceTask?.cancel()
+        filterDebounceTask = Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 300_000_000) // 300ms
+            guard !Task.isCancelled else { return }
+            applyFilters()
+        }
+    }
+
     func applyFilters() {
         // Si no hay filtros activos, ordenar alfabéticamente
         if !hasActiveFilters {
             filteredCampos = sortCamposAlphabetically(camposViewModel.campos)
-            withAnimation(.easeInOut) {
-                isFilterExpanded = false
-                camposMostrados = filteredCampos.count
-            }
+            camposMostrados = filteredCampos.count
             return
         }
 
@@ -241,12 +388,9 @@ struct ContentView: View {
             .sorted { $0.score > $1.score }
             .map { $0.campo }
 
-        withAnimation(.easeInOut) {
-            isFilterExpanded = false
-            camposMostrados = filteredCampos.count
-        }
+        camposMostrados = filteredCampos.count
 
-        // 📊 Analytics: Track filter usage
+        // Analytics: Track filter usage
         if !searchNombre.isEmpty {
             AnalyticsManager.shared.trackSearch(query: searchNombre, resultsCount: filteredCampos.count)
         }
@@ -259,10 +403,6 @@ struct ContentView: View {
     }
 
     /// Calcula un score de similitud entre el texto de búsqueda y el objetivo
-    /// - Parameters:
-    ///   - search: Texto de búsqueda
-    ///   - target: Texto objetivo donde buscar
-    /// - Returns: Score entre 0.0 (sin similitud) y 1.0 (coincidencia perfecta)
     private func calculateMatchScore(search: String, target: String) -> Double {
         if search.isEmpty || target.isEmpty { return 0.0 }
 
@@ -316,26 +456,19 @@ struct ContentView: View {
 
             if wordMatchCount == searchWords.count && wordMatchCount > 0 {
                 let avgSimilarity = totalWordSimilarity / Double(searchWords.count)
-                return avgSimilarity * 0.85 // Reducir un poco el score de palabras
+                return avgSimilarity * 0.85
             }
         }
 
         // 6. Similitud por Levenshtein Distance = 0.0-0.70
         let similarity = stringSimilarity(searchNoSpaces, targetNoSpaces)
-        return similarity * 0.70 // Reducir el peso de similitud pura
+        return similarity * 0.70
     }
 
     /// Búsqueda difusa que tolera errores de escritura, espacios, etc.
-    /// - Parameters:
-    ///   - search: Texto de búsqueda
-    ///   - target: Texto objetivo donde buscar
-    ///   - threshold: Umbral de similitud (0.0 a 1.0). Por defecto 0.5 (50%)
-    /// - Returns: true si hay coincidencia o similitud suficiente
     private func fuzzyMatch(search: String, target: String, threshold: Double = 0.5) -> Bool {
-        // Si está vacío, no filtramos
         if search.isEmpty { return true }
 
-        // 1. Coincidencia exacta (sin espacios)
         let searchNoSpaces = search.replacingOccurrences(of: " ", with: "")
         let targetNoSpaces = target.replacingOccurrences(of: " ", with: "")
 
@@ -343,16 +476,13 @@ struct ContentView: View {
             return true
         }
 
-        // 2. Coincidencia con espacios
         if target.contains(search) {
             return true
         }
 
-        // 3. Coincidencia de palabras individuales
         let searchWords = search.split(separator: " ").map(String.init)
         let targetWords = target.split(separator: " ").map(String.init)
 
-        // Si todas las palabras de búsqueda están en el target
         let allWordsMatch = searchWords.allSatisfy { searchWord in
             targetWords.contains { targetWord in
                 targetWord.contains(searchWord) || stringSimilarity(searchWord, targetWord) >= threshold
@@ -363,15 +493,12 @@ struct ContentView: View {
             return true
         }
 
-        // 4. Similitud global usando Levenshtein
         let similarity = stringSimilarity(searchNoSpaces, targetNoSpaces)
         return similarity >= threshold
     }
 
     /// Calcula la similitud entre dos strings usando Levenshtein Distance
-    /// - Returns: Valor entre 0.0 (sin similitud) y 1.0 (idénticos)
     private func stringSimilarity(_ s1: String, _ s2: String) -> Double {
-        // Si alguno está vacío
         if s1.isEmpty || s2.isEmpty {
             return s1.isEmpty && s2.isEmpty ? 1.0 : 0.0
         }
@@ -379,12 +506,10 @@ struct ContentView: View {
         let distance = levenshteinDistance(s1, s2)
         let maxLength = max(s1.count, s2.count)
 
-        // Convertir distancia a similitud (1.0 = idénticos, 0.0 = muy diferentes)
         return 1.0 - (Double(distance) / Double(maxLength))
     }
 
-    /// Algoritmo de Levenshtein Distance - calcula el número mínimo de ediciones
-    /// (inserciones, eliminaciones o sustituciones) para transformar s1 en s2
+    /// Algoritmo de Levenshtein Distance
     private func levenshteinDistance(_ s1: String, _ s2: String) -> Int {
         let s1Array = Array(s1)
         let s2Array = Array(s2)
@@ -392,10 +517,8 @@ struct ContentView: View {
         let m = s1Array.count
         let n = s2Array.count
 
-        // Crear matriz de distancias
         var dp = Array(repeating: Array(repeating: 0, count: n + 1), count: m + 1)
 
-        // Inicializar primera fila y columna
         for i in 0...m {
             dp[i][0] = i
         }
@@ -403,7 +526,6 @@ struct ContentView: View {
             dp[0][j] = j
         }
 
-        // Calcular distancias
         for i in 1...m {
             for j in 1...n {
                 let cost = s1Array[i - 1] == s2Array[j - 1] ? 0 : 1
@@ -436,217 +558,72 @@ struct ContentView: View {
     }
 }
 
-// Subcomponente para la barra de botones de vista y filtros
-struct FilterBarView: View {
-    @Binding var isGridView: Bool
-    @Binding var isFilterExpanded: Bool
-    let hasActiveFilters: Bool
+// MARK: - Locality Filter Sheet
 
-    var body: some View {
-        HStack(spacing: 16) {
-            Button(action: {
-                HapticFeedback.light()
-                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                    isGridView = true
-                }
-            }) {
-                Image(systemName: "square.grid.2x2.fill")
-                    .font(.title3)
-                    .foregroundColor(isGridView ? .blue : .secondary)
-                    .frame(width: 44, height: 44)
-                    .background(isGridView ? Color.blue.opacity(0.15) : Color.clear)
-                    .clipShape(Circle())
-            }
-
-            Button(action: {
-                HapticFeedback.light()
-                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                    isGridView = false
-                }
-            }) {
-                Image(systemName: "line.3.horizontal")
-                    .font(.title3)
-                    .foregroundColor(!isGridView ? .blue : .secondary)
-                    .frame(width: 44, height: 44)
-                    .background(!isGridView ? Color.blue.opacity(0.15) : Color.clear)
-                    .clipShape(Circle())
-            }
-
-            Spacer()
-
-            // Botón de filtros (solo ícono)
-            Button(action: {
-                HapticFeedback.light()
-                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                    isFilterExpanded.toggle()
-                }
-            }) {
-                HStack(spacing: 6) {
-                    Image(systemName: "line.horizontal.3.decrease.circle.fill")
-                        .font(.title3)
-                    Text(L(.contentFilterLabel))
-                        .font(.subheadline)
-                        .fontWeight(.medium)
-                }
-                .foregroundColor((isFilterExpanded || hasActiveFilters) ? .blue : .secondary)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 10)
-                .background((isFilterExpanded || hasActiveFilters) ? Color.blue.opacity(0.15) : Color.clear)
-                .clipShape(Capsule())
-            }
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 14)
-        .background(
-            .ultraThinMaterial
-        )
-        .cornerRadius(18)
-        .overlay(
-            RoundedRectangle(cornerRadius: 18)
-                .stroke(Color.gray.opacity(0.2), lineWidth: 1)
-        )
-        .shadow(color: Color.black.opacity(0.08), radius: 12, x: 0, y: 4)
-        .padding(.horizontal, 12)
-        .padding(.top, 8)
-    }
-}
-
-// Subcomponente para el contenedor de filtros
-struct FiltersView: View {
-    @Binding var searchNombre: String
+struct LocalityFilterSheet: View {
     @Binding var searchLocalidad: String
-    @Binding var selectedProvincia: String
-    let provincias: [String]
-    let applyAction: () -> Void
-    let resetAction: () -> Void
+    @Environment(\.dismiss) private var dismiss
+    @FocusState private var isFieldFocused: Bool
 
     var body: some View {
-        VStack(spacing: 16) {
-            HStack {
-                Text(L(.contentFilterLabel))
-                    .font(.headline)
-                    .foregroundColor(.primary)
-                Spacer()
-            }
+        NavigationStack {
+            VStack(spacing: 16) {
+                HStack(spacing: 12) {
+                    Image(systemName: "mappin.circle")
+                        .foregroundColor(.secondary)
+                        .font(.subheadline)
 
-            // Filtro por nombre con icono
-            HStack(spacing: 12) {
-                Image(systemName: "magnifyingglass")
-                    .foregroundColor(.secondary)
-                TextField(L(.contentSearchByName), text: $searchNombre)
-            }
-            .padding(14)
-            .background(Color(.tertiarySystemBackground))
-            .cornerRadius(14)
-            .overlay(
-                RoundedRectangle(cornerRadius: 14)
-                    .stroke(Color.gray.opacity(0.2), lineWidth: 1)
-            )
+                    TextField(L(.contentSearchByLocation), text: $searchLocalidad)
+                        .textFieldStyle(.plain)
+                        .font(.body)
+                        .focused($isFieldFocused)
+                        .submitLabel(.done)
+                        .onSubmit {
+                            dismiss()
+                        }
 
-            // Filtro por localidad con icono
-            HStack(spacing: 12) {
-                Image(systemName: "mappin.circle")
-                    .foregroundColor(.secondary)
-                TextField(L(.contentSearchByLocation), text: $searchLocalidad)
-            }
-            .padding(14)
-            .background(Color(.tertiarySystemBackground))
-            .cornerRadius(14)
-            .overlay(
-                RoundedRectangle(cornerRadius: 14)
-                    .stroke(Color.gray.opacity(0.2), lineWidth: 1)
-            )
-
-            // Filtro por provincia
-            VStack(alignment: .leading, spacing: 8) {
-                Text(L(.contentProvince))
-                    .font(.subheadline)
-                    .fontWeight(.medium)
-                    .foregroundColor(.secondary)
-
-                Picker(L(.contentProvince), selection: $selectedProvincia) {
-                    ForEach(provincias, id: \.self) { provincia in
-                        Text(provincia).tag(provincia)
+                    if !searchLocalidad.isEmpty {
+                        Button {
+                            searchLocalidad = ""
+                        } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .foregroundColor(.secondary)
+                                .font(.subheadline)
+                        }
                     }
                 }
-                .pickerStyle(MenuPickerStyle())
                 .padding(14)
                 .background(Color(.tertiarySystemBackground))
-                .cornerRadius(14)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 14)
-                        .stroke(Color.gray.opacity(0.2), lineWidth: 1)
-                )
-            }
+                .clipShape(RoundedRectangle(cornerRadius: 12))
 
-            // Botones de aplicar y resetear
-            HStack(spacing: 12) {
-                Button(action: {
-                    HapticFeedback.medium()
-                    applyAction()
-                }) {
-                    HStack(spacing: 6) {
-                        Image(systemName: "checkmark.circle.fill")
-                        Text(L(.contentApply))
+                Spacer()
+            }
+            .padding()
+            .navigationTitle(L(.contentSearchByLocation))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button {
+                        dismiss()
+                    } label: {
+                        Text("OK")
                             .fontWeight(.semibold)
                     }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 14)
-                    .background(
-                        LinearGradient(
-                            gradient: Gradient(colors: [Color.blue, Color.blue.opacity(0.8)]),
-                            startPoint: .leading,
-                            endPoint: .trailing
-                        )
-                    )
-                    .foregroundColor(.white)
-                    .cornerRadius(14)
-                    .shadow(color: Color.blue.opacity(0.3), radius: 8, x: 0, y: 4)
-                }
-
-                Button(action: {
-                    HapticFeedback.light()
-                    resetAction()
-                }) {
-                    HStack(spacing: 6) {
-                        Image(systemName: "arrow.counterclockwise")
-                        Text(L(.contentReset))
-                            .fontWeight(.semibold)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 14)
-                    .background(Color(.tertiarySystemBackground))
-                    .foregroundColor(.secondary)
-                    .cornerRadius(14)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 14)
-                            .stroke(Color.gray.opacity(0.3), lineWidth: 1)
-                    )
                 }
             }
-            .padding(.top, 4)
+            .onAppear {
+                isFieldFocused = true
+            }
         }
-        .padding(18)
-        .background(
-            .ultraThinMaterial
-        )
-        .cornerRadius(18)
-        .overlay(
-            RoundedRectangle(cornerRadius: 18)
-                .stroke(Color.gray.opacity(0.2), lineWidth: 1)
-        )
-        .shadow(color: Color.black.opacity(0.08), radius: 12, x: 0, y: 4)
-        .padding(.horizontal, 12)
-        .transition(.move(edge: .top).combined(with: .opacity))
     }
 }
 
-// Subcomponente para la lista de campos
+// MARK: - Campo List View
+
 struct CampoListView: View {
     @EnvironmentObject var authViewModel: AuthViewModel
     let filteredCampos: [CampoModel]
     let isGridView: Bool
-    @Binding var isFilterExpanded: Bool
     let onRefresh: () async -> Void
 
     // URL de la imagen predeterminada de Supabase
@@ -718,7 +695,8 @@ struct CampoListView: View {
                                     .padding(.vertical, 8)
                                 }
                                 .frame(width: itemWidth, height: 162)
-                                .background(.ultraThinMaterial)                                .cornerRadius(14)
+                                .background(.ultraThinMaterial)
+                                .cornerRadius(14)
                                 .shadow(color: Color.black.opacity(0.08), radius: 8, x: 0, y: 4)
 
                                 // Indicador de campo visitado
@@ -803,7 +781,8 @@ struct CampoListView: View {
                                     .foregroundColor(.secondary)
                             }
                             .padding(16)
-                            .background(.ultraThinMaterial)                            .cornerRadius(16)
+                            .background(.ultraThinMaterial)
+                            .cornerRadius(16)
                             .shadow(color: Color.black.opacity(0.08), radius: 8, x: 0, y: 4)
                         }
                         .buttonStyle(PlainButtonStyle())
@@ -814,24 +793,14 @@ struct CampoListView: View {
                 .padding(.bottom, 100)
             }
         }
-        .scrollContentBackground(.hidden) // <--- Esto ya lo debes tener
+        .scrollContentBackground(.hidden)
         .background(Color.clear)
         .ignoresSafeArea(.all, edges: .bottom)
+        .scrollDismissesKeyboard(.interactively)
         .refreshable {
             await onRefresh()
         }
         .background(Color.clear)
-        .simultaneousGesture(
-            DragGesture(minimumDistance: 10)
-                .onChanged { _ in
-                    // Cerrar el desplegable de filtros al detectar scroll
-                    if isFilterExpanded {
-                        withAnimation(.easeOut(duration: 0.3)) {
-                            isFilterExpanded = false
-                        }
-                    }
-                }
-        )
         .onAppear {
             loadVisitedCampos()
         }

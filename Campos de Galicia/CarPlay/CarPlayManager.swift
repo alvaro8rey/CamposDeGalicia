@@ -110,21 +110,13 @@ class CarPlayManager: NSObject {
     private func setupMapButtons(for mapTemplate: CPMapTemplate) {
         // Zoom in
         let zoomInButton = CPMapButton { [weak self] _ in
-            guard let mapView = self?.mapView else { return }
-            var region = mapView.region
-            region.span.latitudeDelta = max(region.span.latitudeDelta / 2, 0.002)
-            region.span.longitudeDelta = max(region.span.longitudeDelta / 2, 0.002)
-            mapView.setRegion(region, animated: true)
+            self?.zoomIn()
         }
         zoomInButton.image = UIImage(systemName: "plus")
 
         // Zoom out
         let zoomOutButton = CPMapButton { [weak self] _ in
-            guard let mapView = self?.mapView else { return }
-            var region = mapView.region
-            region.span.latitudeDelta = min(region.span.latitudeDelta * 2, 20)
-            region.span.longitudeDelta = min(region.span.longitudeDelta * 2, 20)
-            mapView.setRegion(region, animated: true)
+            self?.zoomOut()
         }
         zoomOutButton.image = UIImage(systemName: "minus")
 
@@ -152,18 +144,7 @@ class CarPlayManager: NSObject {
 
         mapTemplate.mapButtons = [zoomInButton, zoomOutButton, panButton, galiciaButton]
 
-        // Nav bar: Buscar (izquierda) + Lista (derecha)
-        mapTemplate.leadingNavigationBarButtons = [
-            CPBarButton(title: "Buscar") { [weak self] _ in
-                self?.showSearchInterface()
-            }
-        ]
-
-        mapTemplate.trailingNavigationBarButtons = [
-            CPBarButton(title: "Lista") { [weak self] _ in
-                self?.showProvinciasMenu()
-            }
-        ]
+        setDefaultNavBar()
     }
 
     // MARK: - Data Loading
@@ -256,11 +237,18 @@ class CarPlayManager: NSObject {
         interfaceController.pushTemplate(listTemplate, animated: true)
     }
 
-    /// Segundo nivel: campos de una provincia
-    private func showCamposForProvincia(_ provincia: String, campos: [CampoModel]) {
-        Logger.debug("📋 Mostrando campos de \(provincia)")
+    /// Segundo nivel: campos de una provincia (con paginación)
+    private func showCamposForProvincia(_ provincia: String, campos: [CampoModel], page: Int = 0) {
+        let maxItems = CPListTemplate.maximumItemCount
+        let pageSize = max(maxItems - 1, 1) // Reservar 1 slot para "Más campos..."
+        let startIndex = page * pageSize
+        let endIndex = min(startIndex + pageSize, campos.count)
+        let pageCampos = Array(campos[startIndex..<endIndex])
+        let hasMore = endIndex < campos.count
 
-        let items = campos.map { campo -> CPListItem in
+        Logger.debug("📋 \(provincia) página \(page + 1): items \(startIndex)-\(endIndex) de \(campos.count) (max \(maxItems))")
+
+        var items = pageCampos.map { campo -> CPListItem in
             let item = CPListItem(
                 text: campo.nombre,
                 detailText: campo.localidad
@@ -275,8 +263,32 @@ class CarPlayManager: NSObject {
             return item
         }
 
+        if hasMore {
+            let remaining = campos.count - endIndex
+            let moreItem = CPListItem(
+                text: "Más campos...",
+                detailText: "\(remaining) restantes"
+            )
+            moreItem.handler = { [weak self] (_: CPSelectableListItem, completion: @escaping () -> Void) in
+                // Reemplazar página actual por la siguiente
+                self?.interfaceController.popTemplate(animated: false) { _, _ in
+                    self?.showCamposForProvincia(provincia, campos: campos, page: page + 1)
+                }
+                completion()
+            }
+            items.append(moreItem)
+        }
+
+        let totalPages = Int(ceil(Double(campos.count) / Double(pageSize)))
+        let title: String
+        if totalPages > 1 {
+            title = "\(provincia) (\(page + 1)/\(totalPages))"
+        } else {
+            title = "\(provincia) (\(campos.count))"
+        }
+
         let section = CPListSection(items: items)
-        let listTemplate = CPListTemplate(title: "\(provincia) (\(campos.count))", sections: [section])
+        let listTemplate = CPListTemplate(title: title, sections: [section])
 
         interfaceController.pushTemplate(listTemplate, animated: true)
     }
@@ -377,6 +389,57 @@ class CarPlayManager: NSObject {
         interfaceController.pushTemplate(infoTemplate, animated: true)
     }
 
+    // MARK: - Zoom
+
+    private func zoomIn() {
+        guard let mapView = self.mapView else { return }
+        var region = mapView.region
+        region.span.latitudeDelta = max(region.span.latitudeDelta / 2, 0.002)
+        region.span.longitudeDelta = max(region.span.longitudeDelta / 2, 0.002)
+        mapView.setRegion(region, animated: true)
+    }
+
+    private func zoomOut() {
+        guard let mapView = self.mapView else { return }
+        var region = mapView.region
+        region.span.latitudeDelta = min(region.span.latitudeDelta * 2, 20)
+        region.span.longitudeDelta = min(region.span.longitudeDelta * 2, 20)
+        mapView.setRegion(region, animated: true)
+    }
+
+    // MARK: - Nav Bar (normal vs panning)
+
+    private func setDefaultNavBar() {
+        guard let mapTemplate = self.mapTemplate else { return }
+        mapTemplate.leadingNavigationBarButtons = [
+            CPBarButton(title: "Buscar") { [weak self] _ in
+                self?.showSearchInterface()
+            }
+        ]
+        mapTemplate.trailingNavigationBarButtons = [
+            CPBarButton(title: "Lista") { [weak self] _ in
+                self?.showProvinciasMenu()
+            }
+        ]
+    }
+
+    private func setPanningNavBar() {
+        guard let mapTemplate = self.mapTemplate else { return }
+        mapTemplate.leadingNavigationBarButtons = [
+            CPBarButton(title: "+") { [weak self] _ in
+                self?.zoomIn()
+            },
+            CPBarButton(title: "−") { [weak self] _ in
+                self?.zoomOut()
+            }
+        ]
+        mapTemplate.trailingNavigationBarButtons = [
+            CPBarButton(title: "Hecho") { [weak self] _ in
+                self?.mapTemplate?.dismissPanningInterface(animated: true)
+            }
+        ]
+    }
+
     // MARK: - Map Control
 
     private func centerMapOnCampo(_ campo: CampoModel) {
@@ -434,6 +497,16 @@ extension CarPlayManager: CPMapTemplateDelegate {
 
     func mapTemplate(_ mapTemplate: CPMapTemplate, panBeganWith direction: CPMapTemplate.PanDirection) {}
     func mapTemplate(_ mapTemplate: CPMapTemplate, panEndedWith direction: CPMapTemplate.PanDirection) {}
+
+    func mapTemplateDidShowPanningInterface(_ mapTemplate: CPMapTemplate) {
+        Logger.debug("🗺️ Panning activado - mostrando zoom en nav bar")
+        setPanningNavBar()
+    }
+
+    func mapTemplateDidDismissPanningInterface(_ mapTemplate: CPMapTemplate) {
+        Logger.debug("🗺️ Panning desactivado - restaurando nav bar")
+        setDefaultNavBar()
+    }
 }
 
 // MARK: - CPSearchTemplateDelegate
@@ -499,6 +572,25 @@ extension CarPlayManager: CLLocationManagerDelegate {
 // MARK: - MKMapViewDelegate
 
 extension CarPlayManager: MKMapViewDelegate {
+
+    func mapView(_ mapView: MKMapView, didSelect annotation: MKAnnotation) {
+        mapView.deselectAnnotation(annotation, animated: true)
+
+        if let campoAnnotation = annotation as? CampoAnnotation {
+            let campo = campoAnnotation.annotationItem.campo
+            Logger.debug("📍 Chincheta seleccionada: \(campo.nombre)")
+            centerMapOnCampo(campo)
+            showCampoDetails(campo)
+        } else if let cluster = annotation as? MKClusterAnnotation {
+            // Zoom in al cluster
+            let region = MKCoordinateRegion(
+                center: cluster.coordinate,
+                span: MKCoordinateSpan(latitudeDelta: mapView.region.span.latitudeDelta / 3,
+                                       longitudeDelta: mapView.region.span.longitudeDelta / 3)
+            )
+            mapView.setRegion(region, animated: true)
+        }
+    }
 
     func mapView(_ mapView: MKMapView, viewFor annotation: MKAnnotation) -> MKAnnotationView? {
         if annotation is MKUserLocation { return nil }

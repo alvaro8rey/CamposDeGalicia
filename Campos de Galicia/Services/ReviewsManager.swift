@@ -240,14 +240,11 @@ class ReviewsManager: ObservableObject {
                 is_anonymous: isAnonymous
             )
 
-            let encoder = JSONEncoder()
-            let updateData = try encoder.encode(update)
-
-            // Realizar UPDATE con select para obtener la fila actualizada
+            // Pasar el struct directamente (Supabase lo codifica internamente)
             let response = try await supabase.from("reseñas")
-                .update(updateData)
+                .update(update)
                 .eq("id", value: reviewId)
-                .eq("user_id", value: userId.uuidString)
+                .eq("user_id", value: userId.uuidString.lowercased())
                 .select()
                 .execute()
 
@@ -288,7 +285,7 @@ class ReviewsManager: ObservableObject {
             _ = try await supabase.from("reseñas")
                 .delete()
                 .eq("id", value: reviewId)
-                .eq("user_id", value: userId.uuidString)
+                .eq("user_id", value: userId.uuidString.lowercased())
                 .execute()
 
             // Remove from local array

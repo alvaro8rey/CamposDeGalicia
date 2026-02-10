@@ -8,20 +8,12 @@ struct ContentView: View {
     @EnvironmentObject var geofenceManager: GeofenceManager
     @Environment(\.colorScheme) var colorScheme
 
-    // Estados para los filtros
-    @State private var searchNombre: String = ""
-    @State private var searchLocalidad: String = ""
-    @State private var selectedProvincia: String = ""
-    @State private var showFilterSheet: Bool = false
+    // Búsqueda unificada
+    @State private var searchText: String = ""
     @State private var filterDebounceTask: Task<Void, Never>?
 
-    // Lista de provincias disponibles
-    var provincias: [String] {
-        [L(.contentAllProvinces), L(.provinceACoruna), L(.provinceOurense), L(.provinceLugo), L(.provincePontevedra)]
-    }
-
     // Lista de campos y estado de carga gestionados por el view model
-    @Binding var distanciaPredeterminada: Double // Añadimos el binding
+    @Binding var distanciaPredeterminada: Double
 
     // Binding para navegación desde notificaciones
     @Binding var notificationCampoID: UUID?
@@ -30,7 +22,7 @@ struct ContentView: View {
     @State private var filteredCampos: [CampoModel] = []
 
     // Estado para controlar la vista (predeterminada como lista)
-    @State private var isGridView: Bool = false // False para vista de lista, True para vista en cuadrados
+    @State private var isGridView: Bool = false
 
     // Estado para el conteo de campos mostrados
     @State private var camposMostrados: Int = 0
@@ -39,16 +31,12 @@ struct ContentView: View {
     @AppStorage("hasSeenOnboarding") private var hasSeenOnboarding: Bool = false
     @State private var showOnboarding: Bool = false
 
-    // Computed property para saber si hay filtros activos
     private var hasActiveFilters: Bool {
-        !searchNombre.isEmpty ||
-        !searchLocalidad.isEmpty ||
-        selectedProvincia != L(.contentAllProvinces)
+        !searchText.isEmpty
     }
 
     var body: some View {
         ZStack {
-            // Fondo que se extiende por completo
             LinearGradient(
                 gradient: Gradient(colors: [
                     Color.blue.opacity(colorScheme == .dark ? 0.1 : 0.05),
@@ -58,10 +46,8 @@ struct ContentView: View {
             )
             .ignoresSafeArea()
 
-            // Contenido
             VStack(spacing: 0) {
                 if camposViewModel.isLoading && filteredCampos.isEmpty {
-                    // Usar skeleton loading para mejor UX
                     if isGridView {
                         SkeletonGridView()
                     } else {
@@ -74,13 +60,13 @@ struct ContentView: View {
                             .foregroundColor(.secondary)
                             .font(.subheadline)
 
-                        TextField(L(.contentSearchByName), text: $searchNombre)
+                        TextField(L(.contentSearchByName), text: $searchText)
                             .textFieldStyle(.plain)
                             .font(.body)
 
-                        if !searchNombre.isEmpty {
+                        if !searchText.isEmpty {
                             Button {
-                                searchNombre = ""
+                                searchText = ""
                             } label: {
                                 Image(systemName: "xmark.circle.fill")
                                     .foregroundColor(.secondary)
@@ -90,113 +76,9 @@ struct ContentView: View {
                     }
                     .padding(.horizontal, 14)
                     .padding(.vertical, 11)
-                    .background(.ultraThinMaterial)
+                    .background(Color(.tertiarySystemBackground))
                     .clipShape(RoundedRectangle(cornerRadius: 12))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12)
-                            .stroke(Color.gray.opacity(0.15), lineWidth: 1)
-                    )
                     .padding(.horizontal, 12)
-                    .padding(.top, 8)
-
-                    // MARK: - Province Chips + Locality Filter
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 8) {
-                            // Province chips
-                            ForEach(provincias, id: \.self) { provincia in
-                                let isSelected = selectedProvincia == provincia
-                                Button {
-                                    HapticFeedback.light()
-                                    withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
-                                        selectedProvincia = provincia
-                                    }
-                                } label: {
-                                    Text(provincia)
-                                        .font(.subheadline)
-                                        .fontWeight(isSelected ? .semibold : .medium)
-                                        .padding(.horizontal, 14)
-                                        .padding(.vertical, 8)
-                                        .background(isSelected ? Color.blue : Color(.tertiarySystemBackground))
-                                        .foregroundColor(isSelected ? .white : .primary)
-                                        .clipShape(Capsule())
-                                        .overlay(
-                                            Capsule()
-                                                .stroke(isSelected ? Color.clear : Color.gray.opacity(0.15), lineWidth: 1)
-                                        )
-                                }
-                            }
-
-                            // Separador
-                            Rectangle()
-                                .fill(Color.secondary.opacity(0.3))
-                                .frame(width: 1, height: 22)
-                                .padding(.horizontal, 2)
-
-                            // Locality filter chip
-                            Button {
-                                HapticFeedback.light()
-                                showFilterSheet = true
-                            } label: {
-                                HStack(spacing: 5) {
-                                    Image(systemName: "mappin.circle.fill")
-                                        .font(.subheadline)
-
-                                    if !searchLocalidad.isEmpty {
-                                        Text(searchLocalidad)
-                                            .font(.subheadline)
-                                            .fontWeight(.medium)
-                                            .lineLimit(1)
-
-                                        Button {
-                                            withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
-                                                searchLocalidad = ""
-                                            }
-                                        } label: {
-                                            Image(systemName: "xmark.circle.fill")
-                                                .font(.caption2)
-                                        }
-                                    } else {
-                                        Text(L(.contentSearchByLocation))
-                                            .font(.subheadline)
-                                            .fontWeight(.medium)
-                                    }
-                                }
-                                .padding(.horizontal, 14)
-                                .padding(.vertical, 8)
-                                .background(!searchLocalidad.isEmpty ? Color.green.opacity(0.15) : Color(.tertiarySystemBackground))
-                                .foregroundColor(!searchLocalidad.isEmpty ? .green : .secondary)
-                                .clipShape(Capsule())
-                                .overlay(
-                                    Capsule()
-                                        .stroke(!searchLocalidad.isEmpty ? Color.green.opacity(0.3) : Color.gray.opacity(0.15), lineWidth: 1)
-                                )
-                            }
-
-                            // Reset chip (solo si hay filtros activos)
-                            if hasActiveFilters {
-                                Button {
-                                    HapticFeedback.light()
-                                    withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
-                                        resetFilters()
-                                    }
-                                } label: {
-                                    HStack(spacing: 4) {
-                                        Image(systemName: "arrow.counterclockwise")
-                                            .font(.caption)
-                                        Text(L(.contentReset))
-                                            .font(.subheadline)
-                                            .fontWeight(.medium)
-                                    }
-                                    .padding(.horizontal, 12)
-                                    .padding(.vertical, 8)
-                                    .background(Color.red.opacity(0.1))
-                                    .foregroundColor(.red)
-                                    .clipShape(Capsule())
-                                }
-                            }
-                        }
-                        .padding(.horizontal, 12)
-                    }
                     .padding(.top, 8)
 
                     // MARK: - Campo Count
@@ -245,19 +127,11 @@ struct ContentView: View {
                 }
             }
         }
-        // Real-time filtering con debounce para campos de texto
-        .onChange(of: searchNombre) { _, _ in
-            applyFiltersDebounced()
-        }
-        .onChange(of: selectedProvincia) { _, _ in
-            applyFilters()
-        }
-        .onChange(of: searchLocalidad) { _, _ in
+        .onChange(of: searchText) { _, _ in
             applyFiltersDebounced()
         }
         .onChange(of: camposViewModel.campos) { oldCampos, newCampos in
             Logger.debug("Campos cambió, actualizando filteredCampos: \(newCampos.count) campos")
-            // Si no hay filtros activos, ordenar alfabéticamente
             if hasActiveFilters {
                 applyFilters()
             } else {
@@ -271,38 +145,23 @@ struct ContentView: View {
             }
         }
         .onAppear {
-            // Inicializar provincia predeterminada
-            if selectedProvincia.isEmpty {
-                selectedProvincia = L(.contentAllProvinces)
-            }
             filteredCampos = sortCamposAlphabetically(camposViewModel.campos)
             camposMostrados = filteredCampos.count
             showOnboarding = !hasSeenOnboarding
-
-            // Analytics: Track screen view
             AnalyticsManager.shared.trackScreen("home")
         }
-        // Analytics: Track view mode changes
         .onChange(of: isGridView) { _, newValue in
             AnalyticsManager.shared.trackButton(
                 name: newValue ? "grid_view" : "list_view",
                 screen: "home"
             )
         }
-        // Cerrar el cover cuando el onboarding marque la flag
         .onChange(of: hasSeenOnboarding) { wasSeen, seen in
             if seen { showOnboarding = false }
         }
         .fullScreenCover(isPresented: $showOnboarding) {
-            OnboardingView() // Este view marca hasSeenOnboarding = true al terminar
+            OnboardingView()
         }
-        // Sheet para filtro de localidad
-        .sheet(isPresented: $showFilterSheet) {
-            LocalityFilterSheet(searchLocalidad: $searchLocalidad)
-                .presentationDetents([.fraction(0.25)])
-                .presentationDragIndicator(.visible)
-        }
-        // NavigationLink invisible para navegación desde notificaciones
         .background(
             NavigationLink(
                 destination: notificationCampoID.map {
@@ -323,113 +182,66 @@ struct ContentView: View {
         )
     }
 
-    // MARK: - Debounced Filtering
+    // MARK: - Filtering
 
     private func applyFiltersDebounced() {
         filterDebounceTask?.cancel()
         filterDebounceTask = Task { @MainActor in
-            try? await Task.sleep(nanoseconds: 300_000_000) // 300ms
+            try? await Task.sleep(nanoseconds: 300_000_000)
             guard !Task.isCancelled else { return }
             applyFilters()
         }
     }
 
     func applyFilters() {
-        // Si no hay filtros activos, ordenar alfabéticamente
         if !hasActiveFilters {
             filteredCampos = sortCamposAlphabetically(camposViewModel.campos)
             camposMostrados = filteredCampos.count
             return
         }
 
-        // Calcular similitud para cada campo y filtrar
+        let normalizedSearch = searchText
+            .folding(options: [.diacriticInsensitive, .caseInsensitive], locale: .current)
+
         let camposConSimilitud = camposViewModel.campos.compactMap { campo -> (campo: CampoModel, score: Double)? in
-            // Normalizar strings para comparación (sin acentos ni diferencias de mayúsculas)
-            let normalizedSearchNombre = searchNombre
+            let normalizedNombre = campo.nombre
                 .folding(options: [.diacriticInsensitive, .caseInsensitive], locale: .current)
-            let normalizedCampoNombre = campo.nombre
-                .folding(options: [.diacriticInsensitive, .caseInsensitive], locale: .current)
-
-            let normalizedSearchLocalidad = searchLocalidad
-                .folding(options: [.diacriticInsensitive, .caseInsensitive], locale: .current)
-            let normalizedCampoLocalidad = (campo.localidad ?? "")
+            let normalizedLocalidad = (campo.localidad ?? "")
                 .folding(options: [.diacriticInsensitive, .caseInsensitive], locale: .current)
 
-            // Verificar provincia primero
-            let matchesProvincia = selectedProvincia == L(.contentAllProvinces) || campo.provincia == selectedProvincia
-            if !matchesProvincia {
-                return nil
-            }
+            // Buscar en nombre y localidad, quedarse con el mejor score
+            let scoreNombre = calculateMatchScore(search: normalizedSearch, target: normalizedNombre)
+            let scoreLocalidad = calculateMatchScore(search: normalizedSearch, target: normalizedLocalidad)
+            let bestScore = max(scoreNombre, scoreLocalidad)
 
-            // Calcular scores de similitud
-            let scoreNombre = searchNombre.isEmpty ? 1.0 : calculateMatchScore(
-                search: normalizedSearchNombre,
-                target: normalizedCampoNombre
-            )
-
-            let scoreLocalidad = searchLocalidad.isEmpty ? 1.0 : calculateMatchScore(
-                search: normalizedSearchLocalidad,
-                target: normalizedCampoLocalidad
-            )
-
-            // Filtrar los que cumplen el umbral (50%)
-            if (searchNombre.isEmpty || scoreNombre >= 0.5) &&
-               (searchLocalidad.isEmpty || scoreLocalidad >= 0.5) {
-                // Score combinado (promedio ponderado)
-                let combinedScore = (scoreNombre + scoreLocalidad) / 2.0
-                return (campo, combinedScore)
+            // Umbral mínimo del 50%
+            if bestScore >= 0.5 {
+                return (campo, bestScore)
             }
 
             return nil
         }
 
-        // Ordenar por score descendente (más similares primero)
         filteredCampos = camposConSimilitud
             .sorted { $0.score > $1.score }
             .map { $0.campo }
 
         camposMostrados = filteredCampos.count
 
-        // Analytics: Track filter usage
-        if !searchNombre.isEmpty {
-            AnalyticsManager.shared.trackSearch(query: searchNombre, resultsCount: filteredCampos.count)
-        }
-        if !searchLocalidad.isEmpty {
-            AnalyticsManager.shared.trackFilter(filterType: "localidad", value: searchLocalidad)
-        }
-        if selectedProvincia != L(.contentAllProvinces) {
-            AnalyticsManager.shared.trackFilter(filterType: "provincia", value: selectedProvincia)
-        }
+        AnalyticsManager.shared.trackSearch(query: searchText, resultsCount: filteredCampos.count)
     }
 
-    /// Calcula un score de similitud entre el texto de búsqueda y el objetivo
     private func calculateMatchScore(search: String, target: String) -> Double {
         if search.isEmpty || target.isEmpty { return 0.0 }
 
         let searchNoSpaces = search.replacingOccurrences(of: " ", with: "")
         let targetNoSpaces = target.replacingOccurrences(of: " ", with: "")
 
-        // 1. Coincidencia exacta (sin espacios) = 1.0
-        if targetNoSpaces == searchNoSpaces {
-            return 1.0
-        }
+        if targetNoSpaces == searchNoSpaces { return 1.0 }
+        if target == search { return 0.98 }
+        if targetNoSpaces.contains(searchNoSpaces) { return 0.95 }
+        if target.contains(search) { return 0.90 }
 
-        // 2. Coincidencia exacta con espacios = 0.98
-        if target == search {
-            return 0.98
-        }
-
-        // 3. Target contiene search completo (sin espacios) = 0.95
-        if targetNoSpaces.contains(searchNoSpaces) {
-            return 0.95
-        }
-
-        // 4. Target contiene search con espacios = 0.90
-        if target.contains(search) {
-            return 0.90
-        }
-
-        // 5. Coincidencia de palabras individuales = 0.70-0.85
         let searchWords = search.split(separator: " ").map(String.init)
         let targetWords = target.split(separator: " ").map(String.init)
 
@@ -460,160 +272,47 @@ struct ContentView: View {
             }
         }
 
-        // 6. Similitud por Levenshtein Distance = 0.0-0.70
         let similarity = stringSimilarity(searchNoSpaces, targetNoSpaces)
         return similarity * 0.70
     }
 
-    /// Búsqueda difusa que tolera errores de escritura, espacios, etc.
-    private func fuzzyMatch(search: String, target: String, threshold: Double = 0.5) -> Bool {
-        if search.isEmpty { return true }
-
-        let searchNoSpaces = search.replacingOccurrences(of: " ", with: "")
-        let targetNoSpaces = target.replacingOccurrences(of: " ", with: "")
-
-        if targetNoSpaces.contains(searchNoSpaces) {
-            return true
-        }
-
-        if target.contains(search) {
-            return true
-        }
-
-        let searchWords = search.split(separator: " ").map(String.init)
-        let targetWords = target.split(separator: " ").map(String.init)
-
-        let allWordsMatch = searchWords.allSatisfy { searchWord in
-            targetWords.contains { targetWord in
-                targetWord.contains(searchWord) || stringSimilarity(searchWord, targetWord) >= threshold
-            }
-        }
-
-        if allWordsMatch && !searchWords.isEmpty {
-            return true
-        }
-
-        let similarity = stringSimilarity(searchNoSpaces, targetNoSpaces)
-        return similarity >= threshold
-    }
-
-    /// Calcula la similitud entre dos strings usando Levenshtein Distance
     private func stringSimilarity(_ s1: String, _ s2: String) -> Double {
         if s1.isEmpty || s2.isEmpty {
             return s1.isEmpty && s2.isEmpty ? 1.0 : 0.0
         }
-
         let distance = levenshteinDistance(s1, s2)
         let maxLength = max(s1.count, s2.count)
-
         return 1.0 - (Double(distance) / Double(maxLength))
     }
 
-    /// Algoritmo de Levenshtein Distance
     private func levenshteinDistance(_ s1: String, _ s2: String) -> Int {
         let s1Array = Array(s1)
         let s2Array = Array(s2)
-
         let m = s1Array.count
         let n = s2Array.count
 
         var dp = Array(repeating: Array(repeating: 0, count: n + 1), count: m + 1)
-
-        for i in 0...m {
-            dp[i][0] = i
-        }
-        for j in 0...n {
-            dp[0][j] = j
-        }
+        for i in 0...m { dp[i][0] = i }
+        for j in 0...n { dp[0][j] = j }
 
         for i in 1...m {
             for j in 1...n {
                 let cost = s1Array[i - 1] == s2Array[j - 1] ? 0 : 1
                 dp[i][j] = min(
-                    dp[i - 1][j] + 1,      // Eliminación
-                    dp[i][j - 1] + 1,      // Inserción
-                    dp[i - 1][j - 1] + cost // Sustitución
+                    dp[i - 1][j] + 1,
+                    dp[i][j - 1] + 1,
+                    dp[i - 1][j - 1] + cost
                 )
             }
         }
-
         return dp[m][n]
     }
 
-    func resetFilters() {
-        searchNombre = ""
-        searchLocalidad = ""
-        selectedProvincia = L(.contentAllProvinces)
-        filteredCampos = sortCamposAlphabetically(camposViewModel.campos)
-        camposMostrados = filteredCampos.count
-    }
-
-    /// Ordena los campos alfabéticamente por nombre, ignorando tildes y diferencias de mayúsculas
     private func sortCamposAlphabetically(_ campos: [CampoModel]) -> [CampoModel] {
         return campos.sorted { campo1, campo2 in
             let nombre1 = campo1.nombre.folding(options: [.diacriticInsensitive, .caseInsensitive], locale: .current)
             let nombre2 = campo2.nombre.folding(options: [.diacriticInsensitive, .caseInsensitive], locale: .current)
             return nombre1 < nombre2
-        }
-    }
-}
-
-// MARK: - Locality Filter Sheet
-
-struct LocalityFilterSheet: View {
-    @Binding var searchLocalidad: String
-    @Environment(\.dismiss) private var dismiss
-    @FocusState private var isFieldFocused: Bool
-
-    var body: some View {
-        NavigationStack {
-            VStack(spacing: 16) {
-                HStack(spacing: 12) {
-                    Image(systemName: "mappin.circle")
-                        .foregroundColor(.secondary)
-                        .font(.subheadline)
-
-                    TextField(L(.contentSearchByLocation), text: $searchLocalidad)
-                        .textFieldStyle(.plain)
-                        .font(.body)
-                        .focused($isFieldFocused)
-                        .submitLabel(.done)
-                        .onSubmit {
-                            dismiss()
-                        }
-
-                    if !searchLocalidad.isEmpty {
-                        Button {
-                            searchLocalidad = ""
-                        } label: {
-                            Image(systemName: "xmark.circle.fill")
-                                .foregroundColor(.secondary)
-                                .font(.subheadline)
-                        }
-                    }
-                }
-                .padding(14)
-                .background(Color(.tertiarySystemBackground))
-                .clipShape(RoundedRectangle(cornerRadius: 12))
-
-                Spacer()
-            }
-            .padding()
-            .navigationTitle(L(.contentSearchByLocation))
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button {
-                        dismiss()
-                    } label: {
-                        Text("OK")
-                            .fontWeight(.semibold)
-                    }
-                }
-            }
-            .onAppear {
-                isFieldFocused = true
-            }
         }
     }
 }
@@ -626,16 +325,13 @@ struct CampoListView: View {
     let isGridView: Bool
     let onRefresh: () async -> Void
 
-    // URL de la imagen predeterminada de Supabase
     private let defaultImageURL = "https://ooqdrhkzsexjnmnvpwqw.supabase.co/storage/v1/object/public/fotos-campos/sin-imagen.png"
 
-    // Campos visitados por el usuario
     @State private var visitedCampoIds: Set<UUID> = []
 
     var body: some View {
         ScrollView {
             if isGridView {
-                // Vista en cuadrados (2 columnas)
                 let screenWidth = UIScreen.main.bounds.width
                 let horizontalPadding: CGFloat = 12 * 2
                 let gridSpacing: CGFloat = 16
@@ -652,7 +348,6 @@ struct CampoListView: View {
                             .environmentObject(authViewModel)) {
                             ZStack(alignment: .topTrailing) {
                                 VStack(alignment: .leading, spacing: 0) {
-                                    // Imagen con tamaño fijo
                                     let imageURL = (campo.foto_url?.isEmpty == false ? campo.foto_url : nil) ?? defaultImageURL
                                     if let url = URL(string: imageURL) {
                                         CachedAsyncImage(
@@ -670,7 +365,6 @@ struct CampoListView: View {
                                         }
                                     }
 
-                                    // Textos con altura fija
                                     VStack(alignment: .leading, spacing: 4) {
                                         Text(campo.nombre)
                                             .font(.caption)
@@ -699,7 +393,6 @@ struct CampoListView: View {
                                 .cornerRadius(14)
                                 .shadow(color: Color.black.opacity(0.08), radius: 8, x: 0, y: 4)
 
-                                // Indicador de campo visitado
                                 if visitedCampoIds.contains(campo.id) {
                                     Image(systemName: "checkmark.circle.fill")
                                         .font(.system(size: 22))
@@ -720,7 +413,6 @@ struct CampoListView: View {
                 .padding(.top, 8)
                 .padding(.bottom, 40)
             } else {
-                // Vista en lista con diseño mejorado
                 LazyVStack(spacing: 12) {
                     ForEach(filteredCampos, id: \.id) { campo in
                         NavigationLink(destination: CampoDetalleView(campoID: campo.id)
@@ -745,7 +437,6 @@ struct CampoListView: View {
                                                 .cornerRadius(12)
                                         }
 
-                                        // Indicador de campo visitado
                                         if visitedCampoIds.contains(campo.id) {
                                             Image(systemName: "checkmark.circle.fill")
                                                 .font(.system(size: 20))

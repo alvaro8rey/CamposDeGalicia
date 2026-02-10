@@ -573,25 +573,6 @@ extension CarPlayManager: CLLocationManagerDelegate {
 
 extension CarPlayManager: MKMapViewDelegate {
 
-    func mapView(_ mapView: MKMapView, didSelect annotation: MKAnnotation) {
-        mapView.deselectAnnotation(annotation, animated: true)
-
-        if let campoAnnotation = annotation as? CampoAnnotation {
-            let campo = campoAnnotation.annotationItem.campo
-            Logger.debug("📍 Chincheta seleccionada: \(campo.nombre)")
-            centerMapOnCampo(campo)
-            showCampoDetails(campo)
-        } else if let cluster = annotation as? MKClusterAnnotation {
-            // Zoom in al cluster
-            let region = MKCoordinateRegion(
-                center: cluster.coordinate,
-                span: MKCoordinateSpan(latitudeDelta: mapView.region.span.latitudeDelta / 3,
-                                       longitudeDelta: mapView.region.span.longitudeDelta / 3)
-            )
-            mapView.setRegion(region, animated: true)
-        }
-    }
-
     func mapView(_ mapView: MKMapView, viewFor annotation: MKAnnotation) -> MKAnnotationView? {
         if annotation is MKUserLocation { return nil }
 

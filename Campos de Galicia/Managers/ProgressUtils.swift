@@ -24,16 +24,6 @@ enum ProgressUtils {
         return false
     }
 
-    static func nextLevel(from totalXP: Int, cap: Int) -> (level: Int, xpToNextLevel: Int) {
-        var level = 1
-        var next = 100
-        while totalXP >= next && level < cap {
-            level += 1
-            next = level * 100
-        }
-        return (level, next)
-    }
-
     static func consecutiveDays(from isoDates: [String]) -> Int {
         guard !isoDates.isEmpty else { return 0 }
         let iso = ISO8601DateFormatter()

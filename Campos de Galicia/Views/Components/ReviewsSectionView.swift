@@ -17,12 +17,19 @@ struct ReviewsSectionView: View {
 
     var featuredReviews: [Review] {
         // Mostrar las 5 mejores reseñas ordenadas por:
-        // 1. Nivel del usuario (más alto primero) - usuarios VIP tienen prioridad
-        // 2. Rating (más alto primero)
-        // 3. Fecha (más reciente primero)
+        // 1. Usuarios destacados (insignia maestro) primero
+        // 2. Nivel del usuario (más alto primero)
+        // 3. Rating (más alto primero)
+        // 4. Fecha (más reciente primero)
+        let distinguished = reviewsManager.distinguishedUserIds
         return reviewsManager.reviews
             .sorted { review1, review2 in
-                // Primero por nivel del usuario
+                // Primero usuarios destacados
+                let d1 = distinguished.contains(review1.user_id)
+                let d2 = distinguished.contains(review2.user_id)
+                if d1 != d2 { return d1 }
+
+                // Luego por nivel del usuario
                 let level1 = review1.reviewer_level ?? 1
                 let level2 = review2.reviewer_level ?? 1
                 if level1 != level2 {

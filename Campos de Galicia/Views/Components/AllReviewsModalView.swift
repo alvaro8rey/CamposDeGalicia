@@ -15,7 +15,16 @@ struct AllReviewsModalView: View {
     var sortedReviews: [Review] {
         switch sortType {
         case .recent:
-            return reviews.sorted { ($0.created_at ?? Date.distantPast) > ($1.created_at ?? Date.distantPast) }
+            // Usuarios destacados primero, luego por fecha
+            return reviews.sorted { r1, r2 in
+                let d1 = distinguishedUserIds.contains(r1.user_id)
+                let d2 = distinguishedUserIds.contains(r2.user_id)
+                if d1 != d2 { return d1 }
+                let l1 = r1.reviewer_level ?? 1
+                let l2 = r2.reviewer_level ?? 1
+                if l1 != l2 { return l1 > l2 }
+                return (r1.created_at ?? Date.distantPast) > (r2.created_at ?? Date.distantPast)
+            }
         case .oldest:
             return reviews.sorted { ($0.created_at ?? Date.distantPast) < ($1.created_at ?? Date.distantPast) }
         case .highest:

@@ -30,7 +30,6 @@ struct LogrosView: View {
 
     // Detalle de logro
     @State private var selectedLogro: Logro? = nil
-    @State private var selectedLogroUnlocked: Bool = false
 
     // Errores / permisos
     @State private var errorMessage: String? = nil
@@ -115,10 +114,11 @@ struct LogrosView: View {
             Task { await refreshAfterVisit() }
         }
         .sheet(item: $selectedLogro) { logro in
+            let unlocked = logrosDesbloqueados.contains(logro.id)
             let (current, target) = progress(for: logro)
             LogroDetailView(
                 logro: logro,
-                isUnlocked: selectedLogroUnlocked,
+                isUnlocked: unlocked,
                 currentProgress: current,
                 targetProgress: target
             )
@@ -291,7 +291,6 @@ struct LogrosView: View {
                                 )
                                 .onTapGesture {
                                     selectedLogro = logro
-                                    selectedLogroUnlocked = false
                                 }
                             }
                         }
@@ -340,7 +339,6 @@ struct LogrosView: View {
                                 )
                                 .onTapGesture {
                                     selectedLogro = logro
-                                    selectedLogroUnlocked = true
                                 }
                             }
                         }

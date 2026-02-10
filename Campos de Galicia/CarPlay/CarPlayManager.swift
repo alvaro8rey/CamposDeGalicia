@@ -22,6 +22,7 @@ class CarPlayManager: NSObject {
     private var allCampos: [CampoModel] = []
     private var camposByProvincia: [(provincia: String, campos: [CampoModel])] = []
     private var currentSearchResults: [CampoModel] = []
+    private var visitedCampoIds: Set<UUID> = []
 
     // MARK: - Initialization
 
@@ -152,11 +153,15 @@ class CarPlayManager: NSObject {
     private func loadAllCampos() {
         Task {
             do {
-                let response: [CampoModel] = try await supabaseClient
+                async let camposRequest: [CampoModel] = supabaseClient
                     .from("campos")
                     .select()
                     .execute()
                     .value
+                async let visitasRequest = loadVisitedCampoIds()
+
+                let response = try await camposRequest
+                _ = await visitasRequest
 
                 await MainActor.run {
                     self.allCampos = response
@@ -164,10 +169,34 @@ class CarPlayManager: NSObject {
                     self.displayAnnotations(campos: response)
                 }
 
-                Logger.debug("✅ Cargados \(self.allCampos.count) campos")
+                Logger.debug("✅ Cargados \(response.count) campos, \(self.visitedCampoIds.count) visitados")
             } catch {
                 Logger.debug("❌ Error al cargar campos: \(error)")
             }
+        }
+    }
+
+    private func loadVisitedCampoIds() async {
+        guard let userId = supabaseClient.auth.currentUser?.id.uuidString else {
+            Logger.debug("⚠️ No hay usuario autenticado para cargar visitas")
+            return
+        }
+
+        do {
+            let response = try await supabaseClient.from("visitas")
+                .select("id_campo")
+                .eq("id_usuario", value: userId)
+                .execute()
+
+            if let jsonData = try? JSONSerialization.jsonObject(with: response.data) as? [[String: Any]] {
+                let ids = jsonData.compactMap { dict -> UUID? in
+                    guard let idString = dict["id_campo"] as? String else { return nil }
+                    return UUID(uuidString: idString)
+                }
+                visitedCampoIds = Set(ids)
+            }
+        } catch {
+            Logger.debug("⚠️ Error al cargar visitas: \(error)")
         }
     }
 
@@ -198,7 +227,7 @@ class CarPlayManager: NSObject {
                 subtitle: campo.localidad,
                 campo: campo,
                 isFromManualCoordinates: false,
-                isVisited: false
+                isVisited: visitedCampoIds.contains(campo.id)
             )
             let annotation = CampoAnnotation(annotationItem: item)
             annotations.append(annotation)
@@ -652,15 +681,24 @@ extension CarPlayManager: MKMapViewDelegate {
         }
 
         // Individual
-        let id = "CampoPin"
+        let campoAnno = annotation as? CampoAnnotation
+        let isVisited = campoAnno?.annotationItem.isVisited ?? false
+        let id = isVisited ? "CampoPinVisited" : "CampoPin"
+
         var view = mapView.dequeueReusableAnnotationView(withIdentifier: id) as? MKMarkerAnnotationView
         if view == nil {
             view = MKMarkerAnnotationView(annotation: annotation, reuseIdentifier: id)
         } else {
             view?.annotation = annotation
         }
-        view?.markerTintColor = .systemGreen
-        view?.glyphImage = UIImage(systemName: "sportscourt.fill")
+
+        if isVisited {
+            view?.markerTintColor = .systemOrange
+            view?.glyphImage = UIImage(systemName: "checkmark.circle.fill")
+        } else {
+            view?.markerTintColor = .systemGreen
+            view?.glyphImage = UIImage(systemName: "sportscourt.fill")
+        }
         view?.displayPriority = .defaultLow
         view?.clusteringIdentifier = "campo"
         view?.titleVisibility = .adaptive

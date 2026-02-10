@@ -3,10 +3,9 @@ import MapKit
 import Combine
 import Supabase
 
-/// Manager para gestionar toda la lógica de CarPlay
-/// IMPORTANTE: En CarPlay, toda la interacción es a través de templates.
+/// Manager para gestionar toda la lógica de CarPlay.
+/// En CarPlay, toda la interacción es a través de templates.
 /// El CPWindow es solo para mostrar contenido visual (mapa).
-/// Los toques son interceptados por la capa de templates.
 class CarPlayManager: NSObject {
 
     // MARK: - Properties
@@ -22,6 +21,7 @@ class CarPlayManager: NSObject {
     // Data
     private var allCampos: [CampoModel] = []
     private var camposByProvincia: [(provincia: String, campos: [CampoModel])] = []
+    private var currentSearchResults: [CampoModel] = []
 
     // MARK: - Initialization
 
@@ -72,7 +72,7 @@ class CarPlayManager: NSObject {
 
         interfaceController.setRootTemplate(mapTemplate, animated: true) { [weak self] success, error in
             if let error = error {
-                Logger.debug("❌ Error al establecer template: \(error.localizedDescription)")
+                Logger.debug("❌ Error: \(error.localizedDescription)")
             } else {
                 Logger.debug("✅ Template de CarPlay establecido")
                 self?.configureMapView()
@@ -92,7 +92,6 @@ class CarPlayManager: NSObject {
         mapView.overrideUserInterfaceStyle = .dark
         mapView.pointOfInterestFilter = .excludingAll
 
-        // Centrar en Galicia
         let region = MKCoordinateRegion(
             center: CLLocationCoordinate2D(latitude: 42.8782, longitude: -8.5448),
             span: MKCoordinateSpan(latitudeDelta: 2.5, longitudeDelta: 2.5)
@@ -109,6 +108,26 @@ class CarPlayManager: NSObject {
     }
 
     private func setupMapButtons(for mapTemplate: CPMapTemplate) {
+        // Zoom in
+        let zoomInButton = CPMapButton { [weak self] _ in
+            guard let mapView = self?.mapView else { return }
+            var region = mapView.region
+            region.span.latitudeDelta = max(region.span.latitudeDelta / 2, 0.002)
+            region.span.longitudeDelta = max(region.span.longitudeDelta / 2, 0.002)
+            mapView.setRegion(region, animated: true)
+        }
+        zoomInButton.image = UIImage(systemName: "plus")
+
+        // Zoom out
+        let zoomOutButton = CPMapButton { [weak self] _ in
+            guard let mapView = self?.mapView else { return }
+            var region = mapView.region
+            region.span.latitudeDelta = min(region.span.latitudeDelta * 2, 20)
+            region.span.longitudeDelta = min(region.span.longitudeDelta * 2, 20)
+            mapView.setRegion(region, animated: true)
+        }
+        zoomOutButton.image = UIImage(systemName: "minus")
+
         // Pan (flechas direccionales)
         let panButton = CPMapButton { [weak self] _ in
             guard let template = self?.mapTemplate else { return }
@@ -119,26 +138,6 @@ class CarPlayManager: NSObject {
             }
         }
         panButton.image = UIImage(systemName: "arrow.up.and.down.and.arrow.left.and.right")
-
-        // Zoom in
-        let zoomInButton = CPMapButton { [weak self] _ in
-            guard let mapView = self?.mapView else { return }
-            var region = mapView.region
-            region.span.latitudeDelta /= 2
-            region.span.longitudeDelta /= 2
-            mapView.setRegion(region, animated: true)
-        }
-        zoomInButton.image = UIImage(systemName: "plus.magnifyingglass")
-
-        // Zoom out
-        let zoomOutButton = CPMapButton { [weak self] _ in
-            guard let mapView = self?.mapView else { return }
-            var region = mapView.region
-            region.span.latitudeDelta = min(region.span.latitudeDelta * 2, 20)
-            region.span.longitudeDelta = min(region.span.longitudeDelta * 2, 20)
-            mapView.setRegion(region, animated: true)
-        }
-        zoomOutButton.image = UIImage(systemName: "minus.magnifyingglass")
 
         // Ver toda Galicia
         let galiciaButton = CPMapButton { [weak self] _ in
@@ -151,7 +150,7 @@ class CarPlayManager: NSObject {
         }
         galiciaButton.image = UIImage(systemName: "map")
 
-        mapTemplate.mapButtons = [panButton, zoomInButton, zoomOutButton, galiciaButton]
+        mapTemplate.mapButtons = [zoomInButton, zoomOutButton, panButton, galiciaButton]
 
         // Nav bar: Buscar (izquierda) + Lista (derecha)
         mapTemplate.leadingNavigationBarButtons = [
@@ -162,7 +161,7 @@ class CarPlayManager: NSObject {
 
         mapTemplate.trailingNavigationBarButtons = [
             CPBarButton(title: "Lista") { [weak self] _ in
-                self?.showCamposListByProvincia()
+                self?.showProvinciasMenu()
             }
         ]
     }
@@ -228,51 +227,64 @@ class CarPlayManager: NSObject {
         Logger.debug("✅ \(annotations.count) anotaciones en el mapa")
     }
 
-    // MARK: - Lista por Provincia (CPListTemplate)
+    // MARK: - Lista: Provincias -> Campos (dos niveles)
 
-    private func showCamposListByProvincia() {
-        Logger.debug("📋 Mostrando lista de campos por provincia")
+    /// Primer nivel: lista de provincias
+    private func showProvinciasMenu() {
+        Logger.debug("📋 Mostrando provincias")
 
-        guard !camposByProvincia.isEmpty else {
-            Logger.debug("⚠️ No hay campos para mostrar")
-            return
-        }
+        guard !camposByProvincia.isEmpty else { return }
 
-        // Crear secciones por provincia
-        let sections = camposByProvincia.map { group -> CPListSection in
-            let items = group.campos.map { campo -> CPListItem in
-                let distance = distanceString(to: campo)
-                let detail = distance != "—" ? "\(campo.localidad) · \(distance)" : campo.localidad
-                let item = CPListItem(text: campo.nombre, detailText: detail)
-
-                item.handler = { [weak self] (_: CPSelectableListItem, completion: @escaping () -> Void) in
-                    self?.centerMapOnCampo(campo)
-                    self?.showCampoDetails(campo)
-                    completion()
-                }
-
-                return item
-            }
-
-            return CPListSection(
-                items: items,
-                header: "\(group.provincia) (\(group.campos.count))",
-                sectionIndexTitle: String(group.provincia.prefix(3))
+        let items = camposByProvincia.map { group -> CPListItem in
+            let item = CPListItem(
+                text: group.provincia,
+                detailText: "\(group.campos.count) campos"
             )
-        }
+            item.accessoryType = .disclosureIndicator
 
-        let listTemplate = CPListTemplate(title: "Campos de Galicia", sections: sections)
-
-        interfaceController.pushTemplate(listTemplate, animated: true) { success, error in
-            if let error = error {
-                Logger.debug("❌ Error al mostrar lista: \(error.localizedDescription)")
+            item.handler = { [weak self] (_: CPSelectableListItem, completion: @escaping () -> Void) in
+                self?.showCamposForProvincia(group.provincia, campos: group.campos)
+                completion()
             }
+
+            return item
         }
+
+        let section = CPListSection(items: items)
+        let listTemplate = CPListTemplate(title: "Provincias", sections: [section])
+
+        interfaceController.pushTemplate(listTemplate, animated: true)
+    }
+
+    /// Segundo nivel: campos de una provincia
+    private func showCamposForProvincia(_ provincia: String, campos: [CampoModel]) {
+        Logger.debug("📋 Mostrando campos de \(provincia)")
+
+        let items = campos.map { campo -> CPListItem in
+            let item = CPListItem(
+                text: campo.nombre,
+                detailText: campo.localidad
+            )
+
+            item.handler = { [weak self] (_: CPSelectableListItem, completion: @escaping () -> Void) in
+                self?.centerMapOnCampo(campo)
+                self?.showCampoDetails(campo)
+                completion()
+            }
+
+            return item
+        }
+
+        let section = CPListSection(items: items)
+        let listTemplate = CPListTemplate(title: "\(provincia) (\(campos.count))", sections: [section])
+
+        interfaceController.pushTemplate(listTemplate, animated: true)
     }
 
     // MARK: - Búsqueda
 
     private func showSearchInterface() {
+        currentSearchResults = []
         let searchTemplate = CPSearchTemplate()
         searchTemplate.delegate = self
         interfaceController.pushTemplate(searchTemplate, animated: true)
@@ -308,7 +320,6 @@ class CarPlayManager: NSObject {
 
         var items: [CPInformationItem] = []
 
-        // Info principal
         if !campo.direccion.isEmpty {
             items.append(CPInformationItem(title: "Dirección", detail: campo.direccion))
         }
@@ -326,7 +337,6 @@ class CarPlayManager: NSObject {
             items.append(CPInformationItem(title: "Superficie", detail: campo.superficie))
         }
 
-        // Extras
         if let cantina = campo.tiene_cantina {
             items.append(CPInformationItem(title: "Cantina", detail: cantina ? "Sí" : "No"))
         }
@@ -343,13 +353,11 @@ class CarPlayManager: NSObject {
             items.append(CPInformationItem(title: "Medidas", detail: medidas))
         }
 
-        // Distancia (si cabe, max 10 items)
         if items.count < 10 {
             let distance = distanceString(to: campo)
             items.append(CPInformationItem(title: "Distancia", detail: distance))
         }
 
-        // Botones
         let navigateButton = CPTextButton(title: "Navegar", textStyle: .confirm) { [weak self] _ in
             self?.startNavigation(to: campo)
         }
@@ -378,17 +386,6 @@ class CarPlayManager: NSObject {
         let region = MKCoordinateRegion(
             center: CLLocationCoordinate2D(latitude: lat, longitude: lon),
             span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
-        )
-        mapView.setRegion(region, animated: true)
-    }
-
-    private func centerOnUserLocation() {
-        guard let userLocation = locationManager.location,
-              let mapView = self.mapView else { return }
-
-        let region = MKCoordinateRegion(
-            center: userLocation.coordinate,
-            span: MKCoordinateSpan(latitudeDelta: 0.1, longitudeDelta: 0.1)
         )
         mapView.setRegion(region, animated: true)
     }
@@ -444,6 +441,7 @@ extension CarPlayManager: CPMapTemplateDelegate {
 extension CarPlayManager: CPSearchTemplateDelegate {
     func searchTemplate(_ searchTemplate: CPSearchTemplate, updatedSearchText searchText: String, completionHandler: @escaping ([CPListItem]) -> Void) {
         guard !searchText.isEmpty else {
+            currentSearchResults = []
             completionHandler([])
             return
         }
@@ -454,27 +452,34 @@ extension CarPlayManager: CPSearchTemplateDelegate {
             campo.provincia.localizedCaseInsensitiveContains(searchText)
         }
 
-        let items = filtered.prefix(12).map { campo -> CPListItem in
-            let item = CPListItem(
+        currentSearchResults = Array(filtered.prefix(12))
+
+        let items = currentSearchResults.map { campo -> CPListItem in
+            CPListItem(
                 text: campo.nombre,
                 detailText: "\(campo.localidad), \(campo.provincia)"
             )
-
-            item.handler = { [weak self] (_: CPSelectableListItem, completion: @escaping () -> Void) in
-                self?.interfaceController.popTemplate(animated: true) { _, _ in
-                    self?.centerMapOnCampo(campo)
-                    self?.showCampoDetails(campo)
-                }
-                completion()
-            }
-
-            return item
         }
 
-        completionHandler(Array(items))
+        completionHandler(items)
     }
 
     func searchTemplate(_ searchTemplate: CPSearchTemplate, selectedResult item: CPListItem, completionHandler: @escaping () -> Void) {
+        // Buscar el campo correspondiente al resultado seleccionado
+        guard let text = item.text,
+              let campo = currentSearchResults.first(where: { $0.nombre == text }) else {
+            completionHandler()
+            return
+        }
+
+        Logger.debug("🔍 Resultado seleccionado: \(campo.nombre)")
+
+        // Cerrar búsqueda, centrar mapa, mostrar detalle
+        interfaceController.popTemplate(animated: true) { [weak self] _, _ in
+            self?.centerMapOnCampo(campo)
+            self?.showCampoDetails(campo)
+        }
+
         completionHandler()
     }
 }

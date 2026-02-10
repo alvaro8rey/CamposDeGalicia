@@ -247,6 +247,7 @@ class ReviewsManager: ObservableObject {
             let response = try await supabase.from("reseñas")
                 .update(updateData)
                 .eq("id", value: reviewId)
+                .eq("user_id", value: userId.uuidString)
                 .select()
                 .execute()
 

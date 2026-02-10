@@ -82,8 +82,9 @@ final class ProgressStore: ObservableObject {
                 let fechasISO = visitasData.compactMap { $0["created_at"] as? String }
                 diasConsecutivos = ProgressUtils.consecutiveDays(from: fechasISO)
 
-                // Daily XP basado en días consecutivos
-                dailyXP = ProgressUtils.dailyXP(for: diasConsecutivos)
+                // Daily XP basado en el día del ciclo semanal
+                let cycleDay = ProgressUtils.cycleDayFrom(consecutiveDays: diasConsecutivos)
+                dailyXP = ProgressUtils.dailyXP(for: cycleDay)
             }
 
             // 3. Verificar si ya reclamó la recompensa hoy

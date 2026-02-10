@@ -140,14 +140,82 @@ struct LogrosView: View {
             HStack(spacing: 12) {
                 StatCard(icon: "map.fill", value: "\(camposVisitados)", label: L(.logrosProgressCampos), color: .green)
                 StatCard(icon: "mappin.and.ellipse", value: "\(provinciasVisitadas)", label: L(.logrosProgressProvincias), color: .orange)
-                StatCard(icon: "flame.fill", value: "\(diasConsecutivos)", label: L(.logrosProgressRacha), color: .red)
                 StatCard(icon: "star.bubble.fill", value: "\(reseñasEscritas)", label: L(.logrosProgressReviews), color: .purple)
             }
+
+            // Streak card - full width, more prominent
+            streakCard
         }
         .padding(16)
         .background(Color(UIColor.secondarySystemBackground))
         .cornerRadius(15)
         .shadow(color: Color.black.opacity(0.05), radius: 5, x: 0, y: 2)
+    }
+
+    private var streakCard: some View {
+        HStack(spacing: 14) {
+            ZStack {
+                Circle()
+                    .fill(
+                        LinearGradient(
+                            colors: [.orange, .red],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: 48, height: 48)
+
+                Image(systemName: "flame.fill")
+                    .font(.system(size: 22))
+                    .foregroundColor(.white)
+            }
+
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(alignment: .firstTextBaseline, spacing: 4) {
+                    Text("\(diasConsecutivos)")
+                        .font(.system(size: 26, weight: .bold, design: .rounded))
+                    Text(diasConsecutivos == 1 ? L(.logrosStreakDaysSingular) : L(.logrosStreakDaysPlural))
+                        .font(.system(size: 15, weight: .medium, design: .rounded))
+                        .foregroundColor(.secondary)
+                }
+
+                Text(L(.logrosStreakCurrent))
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+
+            Spacer()
+
+            VStack(spacing: 4) {
+                HStack(spacing: 5) {
+                    ForEach(1...7, id: \.self) { day in
+                        Circle()
+                            .fill(
+                                day < currentDay ? Color.green :
+                                (day == currentDay ? Color.orange : Color.gray.opacity(0.3))
+                            )
+                            .frame(width: 8, height: 8)
+                    }
+                }
+                Text(L(.logrosStreakWeeklyCycle))
+                    .font(.system(size: 10))
+                    .foregroundColor(.secondary)
+            }
+        }
+        .padding(14)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color(UIColor.tertiarySystemBackground))
+                .overlay(
+                    LinearGradient(
+                        colors: [Color.orange.opacity(0.08), Color.red.opacity(0.04), Color.clear],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                    .cornerRadius(12)
+                )
+        )
+        .cornerRadius(12)
     }
 
     private var achievementsTabSection: some View {
@@ -384,6 +452,7 @@ struct LogrosView: View {
         await loadLogrosDesbloqueados()
         await updateDailyState()
         scheduleDailyRewardNotification()
+        scheduleStreakWarningNotification()
         isLoadingLogros = false
     }
 
@@ -502,14 +571,14 @@ struct LogrosView: View {
                 )
                 let _ = try await supabase.from("accesos_diarios").insert(newAccess).execute()
                 currentDay = 1
-                dailyXP = dailyXPValue(for: currentDay)
+                dailyXP = ProgressUtils.dailyXP(for: 1)
                 hasClaimedToday = false
                 isButtonDisabled = false
                 return
             }
 
-            currentDay = row.dias_consecutivos
-            dailyXP = dailyXPValue(for: currentDay)
+            currentDay = ProgressUtils.cycleDayFrom(consecutiveDays: row.dias_consecutivos)
+            dailyXP = ProgressUtils.dailyXP(for: currentDay)
 
             let today = Calendar.current.startOfDay(for: Date())
             if let claimed = row.ultima_recompensa_reclamada {
@@ -542,8 +611,9 @@ struct LogrosView: View {
             hasClaimedToday = true
 
             // Si se reclama antes de las 15:00, cancelar la notificación de hoy
-            // y re-programar para mañana
+            // y re-programar para mañana. También cancelar aviso de racha.
             scheduleDailyRewardNotification()
+            scheduleStreakWarningNotification()
         } catch {
             errorMessage = "No se pudo reclamar la recompensa: \(error.localizedDescription)"
             isButtonDisabled = false
@@ -634,15 +704,7 @@ struct LogrosView: View {
     }
 
     private func dailyXPValue(for day: Int) -> Int {
-        switch day {
-        case 1: return 20
-        case 2: return 30
-        case 3: return 40
-        case 4: return 50
-        case 5: return 70
-        case 6: return 70
-        default: return 20
-        }
+        ProgressUtils.dailyXP(for: day)
     }
 
     private func refreshAfterVisit() async {
@@ -722,6 +784,56 @@ struct LogrosView: View {
                 dateFormatter.dateStyle = .short
                 dateFormatter.timeStyle = .short
                 Logger.debug("✅ Notificación diaria programada para: \(dateFormatter.string(from: targetDate))")
+            }
+        }
+    }
+
+    private func scheduleStreakWarningNotification() {
+        // Notificación de aviso de pérdida de racha:
+        // Se programa para el día DESPUÉS de la notificación normal de recompensa.
+        // Solo se programa si el usuario tiene una racha > 1 (algo que perder).
+
+        UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: ["dailyStreakWarning"])
+
+        // Si ya reclamó hoy, no hay riesgo inmediato; programar para pasado mañana a las 10:00
+        // Si no reclamó hoy, programar para mañana a las 10:00
+        guard diasConsecutivos > 1 else { return }
+
+        let now = Date()
+        let calendar = Calendar.current
+
+        // La notificación normal está a las 15:00 hoy/mañana.
+        // El aviso de racha va 1 día después, a las 10:00 de la mañana.
+        let daysToAdd = hasClaimedToday ? 2 : 1
+
+        var warningComponents = calendar.dateComponents([.year, .month, .day], from: now)
+        warningComponents.hour = 10
+        warningComponents.minute = 0
+
+        guard let baseDate = calendar.date(from: warningComponents),
+              let targetDate = calendar.date(byAdding: .day, value: daysToAdd, to: baseDate) else {
+            return
+        }
+
+        let triggerDate = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: targetDate)
+
+        let content = UNMutableNotificationContent()
+        content.title = L(.appName)
+        content.body = L(.dailyStreakWarningBody, diasConsecutivos)
+        content.sound = .default
+        content.userInfo = ["type": "dailyReward"]
+
+        let trigger = UNCalendarNotificationTrigger(dateMatching: triggerDate, repeats: false)
+        let request = UNNotificationRequest(identifier: "dailyStreakWarning", content: content, trigger: trigger)
+
+        UNUserNotificationCenter.current().add(request) { err in
+            if let err = err {
+                Logger.debug("Error al programar aviso de racha: \(err.localizedDescription)")
+            } else {
+                let dateFormatter = DateFormatter()
+                dateFormatter.dateStyle = .short
+                dateFormatter.timeStyle = .short
+                Logger.debug("Aviso de racha programado para: \(dateFormatter.string(from: targetDate))")
             }
         }
     }

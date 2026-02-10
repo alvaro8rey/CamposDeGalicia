@@ -339,7 +339,8 @@ final class LevelManager {
         let accessArray = try decoder.decode([AccesoDiario].self, from: accResp.data)
         guard let accessData = accessArray.first else { throw LevelManagerError.noAccessData }
 
-        let dailyXP = ProgressUtils.dailyXP(for: accessData.dias_consecutivos)
+        let cycleDay = ProgressUtils.cycleDayFrom(consecutiveDays: accessData.dias_consecutivos)
+        let dailyXP = ProgressUtils.dailyXP(for: cycleDay)
 
         // Marca recompensa reclamada hoy
         let update = AccesoDiarioUpdate(
@@ -466,7 +467,7 @@ final class LevelManager {
             let delta = cal.dateComponents([.day], from: lastDay, to: today).day ?? 0
 
             if delta >= 1 {
-                let newStreak = (delta == 1) ? min(accessData.dias_consecutivos + 1, 6) : 1
+                let newStreak = (delta == 1) ? accessData.dias_consecutivos + 1 : 1
                 let update = AccesoDiarioUpdate(
                     ultimo_acceso: df.string(from: today),
                     dias_consecutivos: newStreak,
@@ -476,11 +477,13 @@ final class LevelManager {
                     .update(update)
                     .eq("id_usuario", value: userId.uuidString)
                     .execute()
-                return (ProgressUtils.dailyXP(for: newStreak), hasClaimedToday)
+                let cycleDay = ProgressUtils.cycleDayFrom(consecutiveDays: newStreak)
+                return (ProgressUtils.dailyXP(for: cycleDay), hasClaimedToday)
             }
         }
 
-        return (ProgressUtils.dailyXP(for: accessData.dias_consecutivos), hasClaimedToday)
+        let cycleDay = ProgressUtils.cycleDayFrom(consecutiveDays: accessData.dias_consecutivos)
+        return (ProgressUtils.dailyXP(for: cycleDay), hasClaimedToday)
     }
 }
 

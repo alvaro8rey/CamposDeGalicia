@@ -214,13 +214,15 @@ struct LevelsInfoView: View {
                     icon: "calendar.badge.clock",
                     title: L(.levelsDailyReward),
                     description: L(.levelsDailyRewardDesc),
-                    xpRange: "20-70 XP",
+                    xpRange: "20-150 XP",
                     details: [
                         L(.levelsDailyDay, 1, 20),
                         L(.levelsDailyDay, 2, 30),
                         L(.levelsDailyDay, 3, 40),
                         L(.levelsDailyDay, 4, 50),
-                        "Día 5-6: 70 XP"
+                        L(.levelsDailyDay, 5, 70),
+                        L(.levelsDailyDay, 6, 100),
+                        L(.levelsDailyDay, 7, 150)
                     ],
                     expandedCardId: $expandedCardId
                 )

@@ -148,6 +148,11 @@ enum LocalizedKey: String {
     case dailyRewardProcessing = "daily.reward.processing"
     case dailyRewardNotificationTitle = "daily.reward.notification.title"
     case dailyRewardNotificationBody = "daily.reward.notification.body"
+    case dailyStreakWarningBody = "daily.streak.warning.body"
+    case logrosStreakCurrent = "logros.streak.current"
+    case logrosStreakWeeklyCycle = "logros.streak.weekly.cycle"
+    case logrosStreakDaysSingular = "logros.streak.days.singular"
+    case logrosStreakDaysPlural = "logros.streak.days.plural"
 
     // MARK: - Notifications
     case notifDisabledTitle = "notif.disabled.title"
@@ -632,6 +637,11 @@ class LocalizationManager: ObservableObject {
             .dailyRewardProcessing: "Procesando...",
             .dailyRewardNotificationTitle: "Campos de Galicia",
             .dailyRewardNotificationBody: "¡Tu recompensa diaria te espera! Reclámala ahora en la sección de Logros 🎁",
+            .dailyStreakWarningBody: "¡Tu racha de %d días está en peligro! Entra y reclama tu recompensa para no perderla 🔥",
+            .logrosStreakCurrent: "racha actual",
+            .logrosStreakWeeklyCycle: "ciclo semanal",
+            .logrosStreakDaysSingular: "día",
+            .logrosStreakDaysPlural: "días",
 
             // Notifications
             .notifDisabledTitle: "Notificaciones desactivadas",
@@ -1084,6 +1094,11 @@ class LocalizationManager: ObservableObject {
             .dailyRewardProcessing: "Procesando...",
             .dailyRewardNotificationTitle: "Campos de Galicia",
             .dailyRewardNotificationBody: "A túa recompensa diaria espérate! Recláma agora na sección de Logros 🎁",
+            .dailyStreakWarningBody: "A túa racha de %d días está en perigo! Entra e reclama a túa recompensa para non perdela 🔥",
+            .logrosStreakCurrent: "racha actual",
+            .logrosStreakWeeklyCycle: "ciclo semanal",
+            .logrosStreakDaysSingular: "día",
+            .logrosStreakDaysPlural: "días",
 
             // Notifications
             .notifDisabledTitle: "Notificacións desactivadas",

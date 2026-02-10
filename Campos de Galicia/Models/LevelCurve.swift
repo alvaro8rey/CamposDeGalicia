@@ -26,12 +26,13 @@ enum LevelCurve {
     }
 
     /// Devuelve (nivelActual, xpAcumuladaParaSiguienteNivel)
+    /// - Sin nivel máximo: la curva crece indefinidamente.
     /// - xpAcumuladaParaSiguienteNivel es el umbral *acumulado* (para mostrar como denominador).
-    static func levelAndNextThreshold(for totalXP: Int, maxLevelCap: Int = 200) -> (level: Int, nextThresholdXP: Int) {
+    static func levelAndNextThreshold(for totalXP: Int) -> (level: Int, nextThresholdXP: Int) {
         var level = 1
-        // subimos hasta que el siguiente umbral supere el totalXP
-        // (cap de seguridad para no bucles infinitos)
-        while level < maxLevelCap && totalXP >= xpNeededToReachLevel(level + 1) {
+        // Subimos hasta que el siguiente umbral supere el totalXP.
+        // La XP necesaria crece con cada nivel, así que el bucle termina para cualquier XP finito.
+        while totalXP >= xpNeededToReachLevel(level + 1) {
             level += 1
         }
         let nextThreshold = xpNeededToReachLevel(level + 1)

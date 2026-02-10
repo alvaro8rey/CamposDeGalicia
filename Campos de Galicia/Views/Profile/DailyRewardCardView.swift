@@ -161,15 +161,7 @@ struct DailyRewardCardView: View {
 
     // MARK: - Helpers
     private func dailyXPValue(for day: Int) -> Int {
-        switch day {
-        case 1: return 10
-        case 2: return 20
-        case 3: return 30
-        case 4: return 50
-        case 5: return 75
-        case 6: return 100
-        default: return 150
-        }
+        ProgressUtils.dailyXP(for: day)
     }
 }
 

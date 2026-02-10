@@ -1,16 +1,24 @@
 import Foundation
 
 enum ProgressUtils {
-    static func dailyXP(for day: Int) -> Int {
-        switch day {
+    /// Devuelve el XP de la recompensa diaria según el día del ciclo semanal (1-7).
+    static func dailyXP(for cycleDay: Int) -> Int {
+        switch cycleDay {
         case 1: return 20
         case 2: return 30
         case 3: return 40
         case 4: return 50
         case 5: return 70
-        case 6: return 70
+        case 6: return 100
+        case 7: return 150
         default: return 20
         }
+    }
+
+    /// Calcula el día del ciclo semanal (1-7) a partir de los días consecutivos totales.
+    static func cycleDayFrom(consecutiveDays: Int) -> Int {
+        guard consecutiveDays > 0 else { return 1 }
+        return ((consecutiveDays - 1) % 7) + 1
     }
 
     static func evaluate(condition: String, campos: Int, provincias: Int, dias: Int, reseñas: Int = 0) -> Bool {

@@ -159,89 +159,167 @@ struct ReviewDetailView: View {
     let review: Review
     var showBadge: Bool = false
     @Environment(\.dismiss) var dismiss
+    @Environment(\.colorScheme) var colorScheme
     @State private var selectedPhotoIndex: Int = 0
     @State private var showingImageViewer: Bool = false
+
+    private var ratingDescription: String {
+        switch review.rating {
+        case 1: return L(.reviewRatingVeryBad)
+        case 2: return L(.reviewRatingBad)
+        case 3: return L(.reviewRatingRegular)
+        case 4: return L(.reviewRatingGood)
+        case 5: return L(.reviewRatingExcellent)
+        default: return ""
+        }
+    }
 
     var body: some View {
         NavigationView {
             ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
-                    // Header: Avatar + Name
-                    HStack(spacing: 14) {
-                        UserAvatarView(
-                            avatarURL: review.reviewer_avatar_url,
-                            userName: review.displayName,
-                            size: 56,
-                            showBadge: showBadge
-                        )
+                VStack(alignment: .leading, spacing: 0) {
+                    // Header card con avatar, nombre y rating
+                    VStack(spacing: 16) {
+                        HStack(spacing: 14) {
+                            UserAvatarView(
+                                avatarURL: review.reviewer_avatar_url,
+                                userName: review.displayName,
+                                size: 56,
+                                showBadge: showBadge
+                            )
 
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(review.displayName)
-                                .font(.system(size: 18, weight: .semibold))
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(review.displayName)
+                                    .font(.system(size: 18, weight: .bold, design: .rounded))
 
-                            Text(review.formattedDate)
-                                .font(.subheadline)
-                                .foregroundColor(.secondary)
-                        }
-
-                        Spacer()
-                    }
-
-                    // Star Rating (large)
-                    StarRatingView(rating: review.rating, size: 22, color: .orange)
-
-                    // Full Review Text
-                    Text(review.reseña)
-                        .font(.body)
-                        .foregroundColor(.primary)
-                        .lineSpacing(5)
-                        .fixedSize(horizontal: false, vertical: true)
-
-                    // Edited indicator
-                    if review.isEdited, let updatedDate = review.updated_at {
-                        HStack(spacing: 4) {
-                            Image(systemName: "pencil")
-                                .font(.caption)
-                            let fmt = RelativeDateTimeFormatter()
-                            Text(L(.reviewEditedAt, fmt.localizedString(for: updatedDate, relativeTo: Date())))
-                                .font(.subheadline)
-                        }
-                        .foregroundColor(.secondary)
-                    }
-
-                    // Photos (full size grid)
-                    if let fotos = review.fotos, !fotos.isEmpty {
-                        VStack(alignment: .leading, spacing: 10) {
-                            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
-                                ForEach(fotos.indices, id: \.self) { index in
-                                    if let url = URL(string: fotos[index]) {
-                                        CachedAsyncImage(url: url) { image in
-                                            image
-                                                .resizable()
-                                                .scaledToFill()
-                                                .frame(height: 160)
-                                                .clipShape(RoundedRectangle(cornerRadius: 12))
-                                        } placeholder: {
-                                            ZStack {
-                                                Color.gray.opacity(0.2)
-                                                ProgressView()
-                                            }
-                                            .frame(height: 160)
-                                            .clipShape(RoundedRectangle(cornerRadius: 12))
-                                        }
-                                        .onTapGesture {
-                                            selectedPhotoIndex = index
-                                            showingImageViewer = true
-                                        }
+                                if let level = review.reviewer_level, level > 0 {
+                                    HStack(spacing: 4) {
+                                        Image(systemName: "star.circle.fill")
+                                            .font(.caption)
+                                            .foregroundColor(.orange)
+                                        Text(L(.profileLevel, level))
+                                            .font(.caption)
+                                            .fontWeight(.medium)
+                                            .foregroundColor(.secondary)
                                     }
                                 }
                             }
+
+                            Spacer()
+
+                            Text(review.formattedDate)
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+
+                        // Rating prominente
+                        HStack(spacing: 12) {
+                            StarRatingView(rating: review.rating, size: 20, color: .orange)
+                            Text(ratingDescription)
+                                .font(.system(size: 15, weight: .medium, design: .rounded))
+                                .foregroundColor(.secondary)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    .padding(18)
+                    .background(Color(UIColor.secondarySystemBackground))
+                    .cornerRadius(16)
+                    .padding(.horizontal, 16)
+                    .padding(.top, 16)
+
+                    // Texto de la reseña
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text(review.reseña)
+                            .font(.system(size: 16))
+                            .foregroundColor(.primary)
+                            .lineSpacing(6)
+                            .fixedSize(horizontal: false, vertical: true)
+
+                        if review.isEdited, let updatedDate = review.updated_at {
+                            HStack(spacing: 4) {
+                                Image(systemName: "pencil")
+                                    .font(.caption2)
+                                let fmt = RelativeDateTimeFormatter()
+                                Text(L(.reviewEditedAt, fmt.localizedString(for: updatedDate, relativeTo: Date())))
+                                    .font(.caption)
+                            }
+                            .foregroundColor(.secondary.opacity(0.7))
                         }
                     }
+                    .padding(18)
+                    .padding(.horizontal, 16)
 
-                    Spacer(minLength: 20)
+                    // Fotos
+                    if let fotos = review.fotos, !fotos.isEmpty {
+                        VStack(alignment: .leading, spacing: 12) {
+                            HStack(spacing: 6) {
+                                Image(systemName: "photo.on.rectangle.angled")
+                                    .font(.subheadline)
+                                    .foregroundColor(.secondary)
+                                Text("\(fotos.count) \(fotos.count == 1 ? "foto" : "fotos")")
+                                    .font(.subheadline)
+                                    .foregroundColor(.secondary)
+                            }
+                            .padding(.horizontal, 16)
+
+                            if fotos.count == 1 {
+                                // Una sola foto a ancho completo
+                                if let url = URL(string: fotos[0]) {
+                                    CachedAsyncImage(url: url) { image in
+                                        image
+                                            .resizable()
+                                            .scaledToFill()
+                                            .frame(maxWidth: .infinity)
+                                            .frame(height: 220)
+                                            .clipShape(RoundedRectangle(cornerRadius: 14))
+                                    } placeholder: {
+                                        ZStack {
+                                            Color.gray.opacity(0.15)
+                                            ProgressView()
+                                        }
+                                        .frame(height: 220)
+                                        .clipShape(RoundedRectangle(cornerRadius: 14))
+                                    }
+                                    .onTapGesture {
+                                        selectedPhotoIndex = 0
+                                        showingImageViewer = true
+                                    }
+                                    .padding(.horizontal, 16)
+                                }
+                            } else {
+                                // Grid de fotos
+                                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
+                                    ForEach(fotos.indices, id: \.self) { index in
+                                        if let url = URL(string: fotos[index]) {
+                                            CachedAsyncImage(url: url) { image in
+                                                image
+                                                    .resizable()
+                                                    .scaledToFill()
+                                                    .frame(height: 160)
+                                                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                                            } placeholder: {
+                                                ZStack {
+                                                    Color.gray.opacity(0.15)
+                                                    ProgressView()
+                                                }
+                                                .frame(height: 160)
+                                                .clipShape(RoundedRectangle(cornerRadius: 12))
+                                            }
+                                            .onTapGesture {
+                                                selectedPhotoIndex = index
+                                                showingImageViewer = true
+                                            }
+                                        }
+                                    }
+                                }
+                                .padding(.horizontal, 16)
+                            }
+                        }
+                        .padding(.bottom, 20)
+                    }
+
+                    Spacer(minLength: 40)
                 }
-                .padding(20)
             }
             .navigationTitle(L(.reviewDetailTitle))
             .navigationBarTitleDisplayMode(.inline)

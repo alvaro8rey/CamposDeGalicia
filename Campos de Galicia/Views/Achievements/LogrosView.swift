@@ -965,9 +965,14 @@ struct LogroDetailView: View {
     @Environment(\.dismiss) var dismiss
     @Environment(\.colorScheme) var colorScheme
 
+    /// Si está desbloqueado, el progreso real es target/target
+    private var displayProgress: Int {
+        isUnlocked ? targetProgress : currentProgress
+    }
+
     var progressPercentage: Double {
         guard targetProgress > 0 else { return 0 }
-        return min(Double(currentProgress) / Double(targetProgress), 1.0)
+        return min(Double(displayProgress) / Double(targetProgress), 1.0)
     }
 
     var body: some View {
@@ -1021,9 +1026,28 @@ struct LogroDetailView: View {
                         .cornerRadius(12)
                     }
 
-                    // Estado
-                    if isUnlocked {
-                        // Completado
+                    // Progreso / Estado
+                    if targetProgress > 0 {
+                        VStack(spacing: 10) {
+                            Text(isUnlocked ? L(.logrosDetailCompleted) : L(.logrosDetailProgress))
+                                .font(.system(size: 16, weight: .semibold, design: .rounded))
+                                .foregroundColor(isUnlocked ? .green : .primary)
+
+                            ProgressView(value: progressPercentage)
+                                .progressViewStyle(LinearProgressViewStyle(tint: isUnlocked ? .green : .blue))
+                                .frame(height: 10)
+                                .scaleEffect(x: 1, y: 1.5, anchor: .center)
+                                .padding(.horizontal, 20)
+
+                            Text("\(displayProgress) / \(targetProgress)")
+                                .font(.system(size: 15, weight: .medium, design: .rounded))
+                                .foregroundColor(.secondary)
+                        }
+                        .padding(20)
+                        .background(Color(UIColor.secondarySystemBackground))
+                        .cornerRadius(16)
+                        .padding(.horizontal, 20)
+                    } else if isUnlocked {
                         HStack(spacing: 8) {
                             Image(systemName: "checkmark.circle.fill")
                                 .foregroundColor(.green)
@@ -1036,27 +1060,6 @@ struct LogroDetailView: View {
                         .padding(.vertical, 12)
                         .background(Color.green.opacity(0.1))
                         .cornerRadius(12)
-                    } else if targetProgress > 0 {
-                        // Progreso
-                        VStack(spacing: 10) {
-                            Text(L(.logrosDetailProgress))
-                                .font(.system(size: 16, weight: .semibold, design: .rounded))
-                                .foregroundColor(.primary)
-
-                            ProgressView(value: progressPercentage)
-                                .progressViewStyle(LinearProgressViewStyle(tint: .blue))
-                                .frame(height: 10)
-                                .scaleEffect(x: 1, y: 1.5, anchor: .center)
-                                .padding(.horizontal, 20)
-
-                            Text("\(currentProgress) / \(targetProgress)")
-                                .font(.system(size: 15, weight: .medium, design: .rounded))
-                                .foregroundColor(.secondary)
-                        }
-                        .padding(20)
-                        .background(Color(UIColor.secondarySystemBackground))
-                        .cornerRadius(16)
-                        .padding(.horizontal, 20)
                     }
 
                     Spacer(minLength: 40)

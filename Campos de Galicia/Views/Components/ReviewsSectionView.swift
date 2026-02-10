@@ -111,14 +111,21 @@ struct ReviewsSectionView: View {
                     .padding(.horizontal)
             } else {
                 // SLIDER DE RESEÑAS DESTACADAS
-                if !reviewsManager.reviews.isEmpty && !featuredReviews.isEmpty {
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 12) {
-                            ForEach(featuredReviews) { review in
-                                CompactReviewCardView(review: review, distinguishedUserIds: reviewsManager.distinguishedUserIds)
+                if !featuredReviews.isEmpty {
+                    if featuredReviews.count == 1 {
+                        // Una sola reseña: centrada
+                        CompactReviewCardView(review: featuredReviews[0], distinguishedUserIds: reviewsManager.distinguishedUserIds)
+                            .frame(maxWidth: .infinity)
+                            .padding(.horizontal)
+                    } else {
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 12) {
+                                ForEach(featuredReviews) { review in
+                                    CompactReviewCardView(review: review, distinguishedUserIds: reviewsManager.distinguishedUserIds)
+                                }
                             }
+                            .padding(.horizontal)
                         }
-                        .padding(.horizontal)
                     }
                 }
             }

@@ -46,8 +46,8 @@ class ReviewsManager: ObservableObject {
 
             let userLevels = try decoder.decode([UserLevel].self, from: levelsResponse.data)
 
-            // Crear diccionario de user_id -> level
-            let levelsDictionary = Dictionary(uniqueKeysWithValues: userLevels.map { ($0.id_usuario, $0.level) })
+            // Crear diccionario de user_id -> level (lowercase para coincidir con UUID)
+            let levelsDictionary = Dictionary(uniqueKeysWithValues: userLevels.map { ($0.id_usuario.lowercased(), $0.level) })
 
             // 4. Obtener perfiles de esos usuarios (para nombre y avatar)
             struct UserProfile: Codable {
@@ -64,8 +64,8 @@ class ReviewsManager: ObservableObject {
 
             let userProfiles = try decoder.decode([UserProfile].self, from: profilesResponse.data)
 
-            // Crear diccionario de user_id -> profile
-            let profilesDictionary = Dictionary(uniqueKeysWithValues: userProfiles.map { ($0.id, $0) })
+            // Crear diccionario de user_id -> profile (lowercase para coincidir con UUID)
+            let profilesDictionary = Dictionary(uniqueKeysWithValues: userProfiles.map { ($0.id.lowercased(), $0) })
 
             // 5. Obtener usuarios destacados (con logro maestro desbloqueado)
             struct MasterUnlock: Codable {
@@ -82,10 +82,11 @@ class ReviewsManager: ObservableObject {
             // 6. Mapear niveles y perfiles a las reseñas usando tipo seguro (Codable)
             reviews = tempReviews.map { review in
                 // Obtener nivel del usuario (default a 1 si no existe)
-                let level = levelsDictionary[review.user_id.uuidString] ?? 1
+                let userKey = review.user_id.uuidString.lowercased()
+                let level = levelsDictionary[userKey] ?? 1
 
                 // Obtener perfil del usuario para datos actualizados
-                let profile = profilesDictionary[review.user_id.uuidString]
+                let profile = profilesDictionary[userKey]
 
                 // Construir nombre completo desde perfil si está disponible
                 var reviewerName = review.reviewer_name ?? "Usuario"

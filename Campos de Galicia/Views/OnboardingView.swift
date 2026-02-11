@@ -156,7 +156,7 @@ struct OnboardingView: View {
         .scrollIndicators(.hidden)
     }
 
-    private func languageButton(language: LocalizationManager.Language, flag: String, name: String) -> some View {
+    private func languageButton(language: Language, flag: String, name: String) -> some View {
         let isSelected = localization.currentLanguage == language
         return Button {
             HapticFeedback.light()

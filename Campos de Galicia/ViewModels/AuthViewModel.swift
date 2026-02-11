@@ -75,8 +75,21 @@ class AuthViewModel: ObservableObject {
         let perfil = Perfil(id: userId, nombre: nombre, apellidos: apellidos, isAdmin: false)
         try await supabase.from("perfiles").insert(perfil).execute()
 
+        // Auto-login: establecer estado autenticado
+        self.user = authResp.user
+        self.isAuthenticated = true
+        self.nombre = nombre
+        self.apellidos = apellidos
+
         Logger.success("✅ Registro exitoso para: \(email)")
         AnalyticsManager.shared.track(.register)
+        AnalyticsManager.shared.setUserProperties([
+            "user_id": userId,
+            "email": email
+        ])
+
+        // Cargar datos iniciales de progreso
+        await ProgressStore.shared.loadInitialData(for: userId)
 
         return userId
     }

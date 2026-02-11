@@ -324,7 +324,7 @@ struct MapaView: View {
             }
 
             // MARK: - Botón de Filtro Visitados (esquina superior izquierda, discreto)
-            if !externalIsNavigating && !showRouteSummary && !isSearching {
+            if !externalIsNavigating && !showRouteSummary && !isSearching && authViewModel.isAuthenticated {
                 VStack {
                     HStack {
                         Button {
@@ -360,6 +360,7 @@ struct MapaView: View {
         .onChange(of: authViewModel.isAuthenticated) { _, isAuthenticated in
             if !isAuthenticated {
                 visitedCampoIds = []
+                showOnlyVisited = false
                 applyFiltros()
             } else {
                 loadVisitedCampos()

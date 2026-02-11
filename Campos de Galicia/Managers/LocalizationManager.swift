@@ -76,6 +76,11 @@ enum LocalizedKey: String {
     case onboardingAccountBullet1 = "onboarding.account.bullet1"
     case onboardingAccountBullet2 = "onboarding.account.bullet2"
     case onboardingAccountBullet3 = "onboarding.account.bullet3"
+    case onboardingAccountCreateButton = "onboarding.account.create"
+    case onboardingAccountSkip = "onboarding.account.skip"
+    case onboardingAccountCreating = "onboarding.account.creating"
+    case onboardingAccountSuccess = "onboarding.account.success"
+    case onboardingAccountSuccessMessage = "onboarding.account.success.message"
 
     // MARK: - Auth
     case loginTitle = "auth.login.title"
@@ -591,6 +596,11 @@ class LocalizationManager: ObservableObject {
             .onboardingAccountBullet1: "Guardar tus visitas y progreso.",
             .onboardingAccountBullet2: "Desbloquear logros y ganar XP.",
             .onboardingAccountBullet3: "Escribir reseñas y participar en la comunidad.",
+            .onboardingAccountCreateButton: "Crear cuenta",
+            .onboardingAccountSkip: "Continuar sin cuenta",
+            .onboardingAccountCreating: "Creando cuenta...",
+            .onboardingAccountSuccess: "¡Cuenta creada!",
+            .onboardingAccountSuccessMessage: "Ya puedes disfrutar de todas las funcionalidades.",
 
             // Auth
             .loginTitle: "Campos de Galicia",
@@ -1074,6 +1084,11 @@ class LocalizationManager: ObservableObject {
             .onboardingAccountBullet1: "Gardar as túas visitas e progreso.",
             .onboardingAccountBullet2: "Desbloquear logros e gañar XP.",
             .onboardingAccountBullet3: "Escribir recensións e participar na comunidade.",
+            .onboardingAccountCreateButton: "Crear conta",
+            .onboardingAccountSkip: "Continuar sen conta",
+            .onboardingAccountCreating: "Creando conta...",
+            .onboardingAccountSuccess: "¡Conta creada!",
+            .onboardingAccountSuccessMessage: "Xa podes gozar de todas as funcionalidades.",
 
             // Auth
             .loginTitle: "Campos de Galicia",

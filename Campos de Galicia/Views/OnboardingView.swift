@@ -45,8 +45,19 @@ struct OnboardingView: View {
     @EnvironmentObject var localization: LocalizationManager
     @ObservedObject private var themeManager = ThemeManager.shared
 
+    @EnvironmentObject var authViewModel: AuthViewModel
+
     @StateObject private var locationPerm = LocationPermissionManager()
     @State private var notifStatus: UNAuthorizationStatus = .notDetermined
+
+    // Account creation state
+    @State private var regNombre: String = ""
+    @State private var regApellidos: String = ""
+    @State private var regEmail: String = ""
+    @State private var regPassword: String = ""
+    @State private var regError: String? = nil
+    @State private var regLoading: Bool = false
+    @State private var regSuccess: Bool = false
 
     @State private var page = 0
     private let totalPages = 5
@@ -168,6 +179,8 @@ struct OnboardingView: View {
                 Text(flag).font(.title2)
                 Text(name)
                     .font(.subheadline).fontWeight(.medium)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
                 Spacer()
                 if isSelected {
                     Image(systemName: "checkmark.circle.fill")
@@ -432,37 +445,187 @@ struct OnboardingView: View {
     // MARK: - Page 4: Account
 
     private var accountPage: some View {
-        VStack(spacing: 24) {
-            Spacer(minLength: 20)
+        ScrollView {
+            VStack(spacing: 20) {
+                Spacer(minLength: 12)
 
-            Image(systemName: "person.crop.circle.badge.plus")
-                .font(.system(size: 56))
-                .foregroundStyle(.linearGradient(
-                    colors: [.green, .mint],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                ))
+                if regSuccess {
+                    // Success state
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 64))
+                        .foregroundColor(.green)
+                        .transition(.scale.combined(with: .opacity))
 
-            VStack(spacing: 12) {
-                Text(L(.onboardingAccountTitle))
-                    .font(.title2).fontWeight(.bold)
+                    Text(L(.onboardingAccountSuccess))
+                        .font(.title2).fontWeight(.bold)
+                        .foregroundColor(.green)
 
-                Text(L(.onboardingAccountMessage))
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-                    .multilineTextAlignment(.center)
+                    Text(L(.onboardingAccountSuccessMessage))
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 24)
+                } else {
+                    // Header
+                    Image(systemName: "person.crop.circle.badge.plus")
+                        .font(.system(size: 48))
+                        .foregroundStyle(.linearGradient(
+                            colors: [.green, .mint],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ))
+
+                    Text(L(.onboardingAccountTitle))
+                        .font(.title2).fontWeight(.bold)
+
+                    Text(L(.onboardingAccountMessage))
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 24)
+
+                    // Registration form
+                    VStack(spacing: 12) {
+                        // Name fields in HStack
+                        HStack(spacing: 10) {
+                            formField(
+                                icon: "person.fill",
+                                placeholder: L(.registerNamePlaceholder),
+                                text: $regNombre
+                            )
+                            .autocapitalization(.words)
+
+                            formField(
+                                icon: "person.fill",
+                                placeholder: L(.registerSurnamePlaceholder),
+                                text: $regApellidos
+                            )
+                            .autocapitalization(.words)
+                        }
+
+                        // Email
+                        formField(
+                            icon: "envelope.fill",
+                            placeholder: L(.loginEmailPlaceholder),
+                            text: $regEmail
+                        )
+                        .autocapitalization(.none)
+                        .keyboardType(.emailAddress)
+                        .textContentType(.emailAddress)
+
+                        // Password
+                        SecureFormField(
+                            icon: "lock.fill",
+                            placeholder: "********",
+                            text: $regPassword
+                        )
+
+                        // Password hint
+                        HStack(spacing: 4) {
+                            Image(systemName: "info.circle")
+                                .font(.caption2)
+                            Text(L(.registerPasswordHint))
+                                .font(.caption2)
+                        }
+                        .foregroundColor(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+
+                        // Error message
+                        if let error = regError {
+                            HStack(spacing: 6) {
+                                Image(systemName: "exclamationmark.triangle.fill")
+                                    .font(.caption2)
+                                Text(error)
+                                    .font(.caption)
+                            }
+                            .foregroundColor(.red)
+                            .padding(10)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(Color.red.opacity(0.08))
+                            .clipShape(RoundedRectangle(cornerRadius: 10))
+                        }
+
+                        // Create account button
+                        Button {
+                            Task { await createAccount() }
+                        } label: {
+                            HStack(spacing: 8) {
+                                if regLoading {
+                                    ProgressView()
+                                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                        .scaleEffect(0.8)
+                                }
+                                Text(regLoading ? L(.onboardingAccountCreating) : L(.onboardingAccountCreateButton))
+                                    .fontWeight(.semibold)
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 14)
+                            .background(
+                                LinearGradient(
+                                    colors: isRegFormValid ? [.green, .mint] : [.gray.opacity(0.4), .gray.opacity(0.4)],
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
+                            )
+                            .foregroundColor(.white)
+                            .clipShape(RoundedRectangle(cornerRadius: 14))
+                        }
+                        .disabled(!isRegFormValid || regLoading)
+                    }
                     .padding(.horizontal, 24)
-            }
+                }
 
-            VStack(spacing: 14) {
-                featureRow(icon: "checkmark.circle.fill", color: .green, text: L(.onboardingAccountBullet1))
-                featureRow(icon: "star.circle.fill", color: .orange, text: L(.onboardingAccountBullet2))
-                featureRow(icon: "bubble.left.circle.fill", color: .blue, text: L(.onboardingAccountBullet3))
+                Spacer(minLength: 20)
             }
-            .padding(.horizontal, 24)
-
-            Spacer()
         }
+        .scrollIndicators(.hidden)
+        .scrollDismissesKeyboard(.interactively)
+    }
+
+    private var isRegFormValid: Bool {
+        !regNombre.trimmingCharacters(in: .whitespaces).isEmpty &&
+        !regApellidos.trimmingCharacters(in: .whitespaces).isEmpty &&
+        !regEmail.trimmingCharacters(in: .whitespaces).isEmpty &&
+        !regPassword.isEmpty
+    }
+
+    private func formField(icon: String, placeholder: String, text: Binding<String>) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: icon)
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .frame(width: 20)
+            TextField(placeholder, text: text)
+                .font(.subheadline)
+        }
+        .padding(12)
+        .background(Color(.tertiarySystemBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .disabled(regLoading)
+    }
+
+    private func createAccount() async {
+        regError = nil
+        regLoading = true
+        HapticFeedback.light()
+
+        do {
+            _ = try await authViewModel.register(
+                email: regEmail.trimmingCharacters(in: .whitespaces),
+                password: regPassword,
+                nombre: regNombre.trimmingCharacters(in: .whitespaces),
+                apellidos: regApellidos.trimmingCharacters(in: .whitespaces)
+            )
+            withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
+                regSuccess = true
+            }
+            HapticFeedback.success()
+        } catch {
+            regError = error.localizedDescription
+            HapticFeedback.error()
+        }
+
+        regLoading = false
     }
 
     // MARK: - Bottom Bar
@@ -514,22 +677,37 @@ struct OnboardingView: View {
                     .clipShape(Capsule())
                 }
             } else {
-                Button {
-                    HapticFeedback.light()
-                    hasSeenOnboarding = true
-                    dismiss()
-                } label: {
-                    HStack(spacing: 6) {
-                        Text(L(.start))
-                            .fontWeight(.semibold)
-                        Image(systemName: "arrow.right")
-                            .font(.caption.weight(.semibold))
+                // Last page: "Skip" to enter without account, or "Start" if account created
+                if !regSuccess {
+                    Button {
+                        HapticFeedback.light()
+                        hasSeenOnboarding = true
+                        dismiss()
+                    } label: {
+                        Text(L(.onboardingAccountSkip))
+                            .font(.subheadline).fontWeight(.medium)
+                            .foregroundColor(.secondary)
                     }
-                    .padding(.horizontal, 24)
-                    .padding(.vertical, 12)
-                    .background(Color.green)
-                    .foregroundColor(.white)
-                    .clipShape(Capsule())
+                }
+
+                if regSuccess {
+                    Button {
+                        HapticFeedback.light()
+                        hasSeenOnboarding = true
+                        dismiss()
+                    } label: {
+                        HStack(spacing: 6) {
+                            Text(L(.start))
+                                .fontWeight(.semibold)
+                            Image(systemName: "arrow.right")
+                                .font(.caption.weight(.semibold))
+                        }
+                        .padding(.horizontal, 24)
+                        .padding(.vertical, 12)
+                        .background(Color.green)
+                        .foregroundColor(.white)
+                        .clipShape(Capsule())
+                    }
                 }
             }
         }
@@ -554,14 +732,37 @@ struct OnboardingView: View {
     }
 }
 
+// MARK: - SecureFormField
+private struct SecureFormField: View {
+    let icon: String
+    let placeholder: String
+    @Binding var text: String
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Image(systemName: icon)
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .frame(width: 20)
+            SecureField(placeholder, text: $text)
+                .font(.subheadline)
+        }
+        .padding(12)
+        .background(Color(.tertiarySystemBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+    }
+}
+
 // MARK: - Preview
 #Preview {
     OnboardingView()
         .environmentObject(LocalizationManager.shared)
+        .environmentObject(AuthViewModel.shared)
 }
 
 #Preview("Modo Oscuro") {
     OnboardingView()
         .environmentObject(LocalizationManager.shared)
+        .environmentObject(AuthViewModel.shared)
         .preferredColorScheme(.dark)
 }

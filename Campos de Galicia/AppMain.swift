@@ -199,7 +199,6 @@ struct AppMain: App {
                 .ignoresSafeArea(.all, edges: .bottom)
                 // ------------------------------------
             }
-            .id(themeManager.currentTheme.rawValue)
             .accentColor(.blue)
             .environmentObject(geofenceManager)
             .environmentObject(camposViewModel)

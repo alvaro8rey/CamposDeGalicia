@@ -61,6 +61,21 @@ enum LocalizedKey: String {
     case onboardingPermissionsUnknown = "onboarding.permissions.unknown"
     case onboardingLocationServicesDisabled = "onboarding.location.services.disabled"
     case onboardingOpenSettings = "onboarding.open.settings"
+    case onboardingSettingsTitle = "onboarding.settings.title"
+    case onboardingSettingsLanguage = "onboarding.settings.language"
+    case onboardingSettingsTheme = "onboarding.settings.theme"
+    case onboardingFeaturesTitle = "onboarding.features.title"
+    case onboardingFeaturesBullet1 = "onboarding.features.bullet1"
+    case onboardingFeaturesBullet2 = "onboarding.features.bullet2"
+    case onboardingFeaturesBullet3 = "onboarding.features.bullet3"
+    case onboardingFeaturesBullet4 = "onboarding.features.bullet4"
+    case onboardingPermissionsTitle = "onboarding.permissions.title"
+    case onboardingPermissionsMessage = "onboarding.permissions.message"
+    case onboardingAccountTitle = "onboarding.account.title"
+    case onboardingAccountMessage = "onboarding.account.message"
+    case onboardingAccountBullet1 = "onboarding.account.bullet1"
+    case onboardingAccountBullet2 = "onboarding.account.bullet2"
+    case onboardingAccountBullet3 = "onboarding.account.bullet3"
 
     // MARK: - Auth
     case loginTitle = "auth.login.title"
@@ -561,6 +576,21 @@ class LocalizationManager: ObservableObject {
             .onboardingPermissionsUnknown: "Estado desconocido",
             .onboardingLocationServicesDisabled: "Servicios de localización desactivados",
             .onboardingOpenSettings: "Abrir Ajustes",
+            .onboardingSettingsTitle: "Personaliza tu experiencia",
+            .onboardingSettingsLanguage: "Idioma",
+            .onboardingSettingsTheme: "Apariencia",
+            .onboardingFeaturesTitle: "Cómo funciona",
+            .onboardingFeaturesBullet1: "Visita campos reales y regístralos automáticamente al estar cerca.",
+            .onboardingFeaturesBullet2: "Completa logros, mantén rachas y sube de nivel.",
+            .onboardingFeaturesBullet3: "Escribe reseñas y comparte tu experiencia.",
+            .onboardingFeaturesBullet4: "Explora el mapa y descubre campos cerca de ti.",
+            .onboardingPermissionsTitle: "Permisos necesarios",
+            .onboardingPermissionsMessage: "Para registrar tus visitas automáticamente necesitamos acceso a tu ubicación y notificaciones.",
+            .onboardingAccountTitle: "Crea tu cuenta",
+            .onboardingAccountMessage: "Con una cuenta podrás acceder a todas las funcionalidades:",
+            .onboardingAccountBullet1: "Guardar tus visitas y progreso.",
+            .onboardingAccountBullet2: "Desbloquear logros y ganar XP.",
+            .onboardingAccountBullet3: "Escribir reseñas y participar en la comunidad.",
 
             // Auth
             .loginTitle: "Campos de Galicia",
@@ -1029,6 +1059,21 @@ class LocalizationManager: ObservableObject {
             .onboardingPermissionsUnknown: "Estado descoñecido",
             .onboardingLocationServicesDisabled: "Servizos de localización desactivados",
             .onboardingOpenSettings: "Abrir Axustes",
+            .onboardingSettingsTitle: "Personaliza a túa experiencia",
+            .onboardingSettingsLanguage: "Idioma",
+            .onboardingSettingsTheme: "Aparencia",
+            .onboardingFeaturesTitle: "Como funciona",
+            .onboardingFeaturesBullet1: "Visita campos reais e rexístraos automaticamente ao estar preto.",
+            .onboardingFeaturesBullet2: "Completa logros, mantén rachas e sube de nivel.",
+            .onboardingFeaturesBullet3: "Escribe recensións e comparte a túa experiencia.",
+            .onboardingFeaturesBullet4: "Explora o mapa e descobre campos preto de ti.",
+            .onboardingPermissionsTitle: "Permisos necesarios",
+            .onboardingPermissionsMessage: "Para rexistrar as túas visitas automaticamente necesitamos acceso á túa ubicación e notificacións.",
+            .onboardingAccountTitle: "Crea a túa conta",
+            .onboardingAccountMessage: "Cunha conta poderás acceder a todas as funcionalidades:",
+            .onboardingAccountBullet1: "Gardar as túas visitas e progreso.",
+            .onboardingAccountBullet2: "Desbloquear logros e gañar XP.",
+            .onboardingAccountBullet3: "Escribir recensións e participar na comunidade.",
 
             // Auth
             .loginTitle: "Campos de Galicia",

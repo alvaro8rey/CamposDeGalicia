@@ -506,6 +506,13 @@ struct CampoListView: View {
         .onAppear {
             loadVisitedCampos()
         }
+        .onChange(of: authViewModel.isAuthenticated) { _, isAuthenticated in
+            if !isAuthenticated {
+                visitedCampoIds = []
+            } else {
+                loadVisitedCampos()
+            }
+        }
     }
 
     private func loadVisitedCampos() {

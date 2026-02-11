@@ -114,6 +114,13 @@ struct CamposCercanosView: View {
                 if userLocation == nil { requestLocation() }
                 loadVisitedCampos()
             }
+            .onChange(of: authViewModel.isAuthenticated) { _, isAuthenticated in
+                if !isAuthenticated {
+                    visitedCampoIds = []
+                } else {
+                    loadVisitedCampos()
+                }
+            }
             .onChange(of: userLocation) { oldLocation, newLocation in updateNearbyCampos() }
             .onChange(of: camposViewModel.campos) { oldCampos, newCampos in updateNearbyCampos() }
             .onChange(of: selectedDistance) { oldDistance, newDistance in updateNearbyCampos() }

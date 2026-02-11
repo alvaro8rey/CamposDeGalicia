@@ -357,6 +357,14 @@ struct MapaView: View {
         .onAppear {
             loadVisitedCampos()
         }
+        .onChange(of: authViewModel.isAuthenticated) { _, isAuthenticated in
+            if !isAuthenticated {
+                visitedCampoIds = []
+                applyFiltros()
+            } else {
+                loadVisitedCampos()
+            }
+        }
         .onChange(of: externalIsNavigating) { wasNavigating, navigating in
             if !navigating {
                 resetMapToInitialState()

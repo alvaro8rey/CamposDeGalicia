@@ -356,6 +356,7 @@ struct MapaView: View {
         }
         .onAppear {
             loadVisitedCampos()
+            applyFiltros()
         }
         .onChange(of: authViewModel.isAuthenticated) { _, isAuthenticated in
             if !isAuthenticated {

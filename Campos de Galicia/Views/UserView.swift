@@ -19,13 +19,11 @@ struct UserView: View {
         Group {
             if authViewModel.isAuthenticated, let _ = authViewModel.user {
                 // Authenticated View - Show Profile
-                NavigationView {
-                    ProfileView(shouldShowLogros: $shouldShowLogros)
-                        .environmentObject(authViewModel)
-                        .environmentObject(geofenceManager)
-                        .environmentObject(locationManager)
-                        .environmentObject(camposViewModel)
-                }
+                ProfileView(shouldShowLogros: $shouldShowLogros)
+                    .environmentObject(authViewModel)
+                    .environmentObject(geofenceManager)
+                    .environmentObject(locationManager)
+                    .environmentObject(camposViewModel)
             } else {
                 // Not Authenticated - Show Login
                 LoginView(onLoginSuccess: {

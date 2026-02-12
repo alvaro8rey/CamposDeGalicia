@@ -126,6 +126,11 @@ final class GeofenceManager: NSObject, ObservableObject, CLLocationManagerDelega
 
     // MARK: - API pública
 
+    /// Solicita permiso de ubicación "Siempre" al usuario.
+    func requestAlwaysAuthorization() {
+        locationManager.requestAlwaysAuthorization()
+    }
+
     /// Activa/desactiva el auto check-in y prepara geovallas.
     func setAutoCheckin(_ enabled: Bool, campos: [CampoModel]) {
         autoCheckinEnabled = enabled

@@ -273,17 +273,27 @@ struct SettingsView: View {
                             .foregroundColor(.orange)
                             .padding(.top, 4)
 
-                        Button {
-                            if let bundleId = Bundle.main.bundleIdentifier,
-                               let url = URL(string: "\(UIApplication.openSettingsURLString)\(bundleId)") {
-                                UIApplication.shared.open(url)
+                        if locationManager.authorizationStatus == .authorizedWhenInUse {
+                            Button {
+                                geofenceManager.requestAlwaysAuthorization()
+                            } label: {
+                                Text(L(.profileAutoCheckinInfoReqAlways))
+                                    .font(.caption)
+                                    .fontWeight(.medium)
                             }
-                        } label: {
-                            Text(L(.onboardingOpenSettings))
-                                .font(.caption)
-                                .fontWeight(.medium)
+                            .padding(.top, 2)
+                        } else {
+                            Button {
+                                if let url = URL(string: UIApplication.openSettingsURLString) {
+                                    UIApplication.shared.open(url)
+                                }
+                            } label: {
+                                Text(L(.onboardingOpenSettings))
+                                    .font(.caption)
+                                    .fontWeight(.medium)
+                            }
+                            .padding(.top, 2)
                         }
-                        .padding(.top, 2)
                     }
                 }
 

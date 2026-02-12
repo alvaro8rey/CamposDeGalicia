@@ -288,6 +288,7 @@ struct AppMain: App {
             .sheet(isPresented: $showPasswordReset, onDismiss: {
                 // Limpiar recovery al cerrar (cancelar o tras éxito)
                 recoveryURL = nil
+                UserDefaults.standard.removeObject(forKey: "recovery_url")
                 if authViewModel.isRecoveryInProgress {
                     authViewModel.isRecoveryInProgress = false
                     Task {
@@ -334,6 +335,8 @@ struct AppMain: App {
         // Si hay un recovery pendiente (flag persistido), CUALQUIER deep link es recovery
         if authViewModel.isRecoveryInProgress {
             print("🔑 [DeepLink] Recovery pendiente detectado, mostrando formulario")
+            // Guardar URL en UserDefaults para que la vista pueda accederla
+            UserDefaults.standard.set(url.absoluteString, forKey: "recovery_url")
             recoveryURL = url
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                 self.showPasswordReset = true

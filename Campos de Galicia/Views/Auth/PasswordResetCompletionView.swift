@@ -192,8 +192,13 @@ struct PasswordResetCompletionView: View {
 
         do {
             try await AuthViewModel.shared.changePassword(newPassword: newPassword)
-            // Actualizar estado de autenticación tras cambiar la contraseña
-            AuthViewModel.shared.checkCurrentSession()
+
+            // Cerrar sesión de recovery y limpiar estado
+            try? await supabase.auth.signOut()
+            AuthViewModel.shared.isRecoveryInProgress = false
+            AuthViewModel.shared.isAuthenticated = false
+            AuthViewModel.shared.user = nil
+
             withAnimation {
                 isSuccess = true
             }

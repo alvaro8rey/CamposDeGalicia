@@ -13,6 +13,9 @@ class AuthViewModel: ObservableObject {
     @Published var apellidos: String = ""
     @Published var avatarURL: String? = nil
 
+    /// Flag para bloquear auto-login durante recuperación de contraseña
+    var isRecoveryInProgress: Bool = false
+
     // MARK: - Singleton
     static let shared = AuthViewModel()
 
@@ -25,6 +28,10 @@ class AuthViewModel: ObservableObject {
 
     /// Verifica si hay una sesión activa
     func checkCurrentSession() {
+        guard !isRecoveryInProgress else {
+            Logger.debug("⏳ Recovery en progreso, no auto-login")
+            return
+        }
         if let currentUser = supabase.auth.currentUser {
             self.user = currentUser
             self.isAuthenticated = true

@@ -261,7 +261,18 @@ struct AppMain: App {
                     dismissButton: .default(Text(L(.navAccept)))
                 )
             }
-            .sheet(isPresented: $showPasswordReset) {
+            .sheet(isPresented: $showPasswordReset, onDismiss: {
+                // Limpiar recovery al cerrar (cancelar o tras éxito)
+                if authViewModel.isRecoveryInProgress {
+                    authViewModel.isRecoveryInProgress = false
+                    // Si no cambió la contraseña, cerrar sesión de recovery
+                    Task {
+                        try? await supabase.auth.signOut()
+                        authViewModel.isAuthenticated = false
+                        authViewModel.user = nil
+                    }
+                }
+            }) {
                 PasswordResetCompletionView()
                     .environmentObject(LocalizationManager.shared)
             }
@@ -296,9 +307,18 @@ struct AppMain: App {
     func handleDeepLink(url: URL) {
         Logger.debug("🔗 Deep link recibido: \(url)")
 
-        // Comprobar si es recuperación de contraseña antes de procesar
+        // Detectar recovery por el path reset-callback (nuestro redirectTo)
+        // o por type=recovery en el URL
         let urlString = url.absoluteString
-        let isRecovery = urlString.contains("type=recovery") || urlString.contains("type%3Drecovery")
+        let isRecovery = url.host == "reset-callback"
+            || urlString.contains("reset-callback")
+            || urlString.contains("type=recovery")
+            || urlString.contains("type%3Drecovery")
+
+        if isRecovery {
+            // Bloquear auto-login ANTES de procesar la sesión
+            authViewModel.isRecoveryInProgress = true
+        }
 
         Task {
             do {
@@ -306,18 +326,18 @@ struct AppMain: App {
                 Logger.success("✅ Sesión recuperada desde deep link: \(session.user.email ?? "unknown")")
 
                 if isRecovery {
-                    // Recovery: NO iniciar sesión en la UI, solo mostrar el formulario
-                    // La sesión de Supabase ya está activa para poder cambiar la contraseña
                     Logger.debug("🔑 Deep link de recuperación de contraseña detectado")
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                         self.showPasswordReset = true
                     }
                 } else {
-                    // Otro tipo de deep link: actualizar estado de autenticación
                     authViewModel.user = session.user
                     authViewModel.isAuthenticated = true
                 }
             } catch {
+                if isRecovery {
+                    authViewModel.isRecoveryInProgress = false
+                }
                 Logger.error("❌ Error procesando deep link: \(error.localizedDescription)")
             }
         }

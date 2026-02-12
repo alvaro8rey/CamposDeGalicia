@@ -272,6 +272,17 @@ struct SettingsView: View {
                             .font(.caption)
                             .foregroundColor(.orange)
                             .padding(.top, 4)
+
+                        Button {
+                            if let url = URL(string: UIApplication.openSettingsURLString) {
+                                UIApplication.shared.open(url)
+                            }
+                        } label: {
+                            Text(L(.onboardingOpenSettings))
+                                .font(.caption)
+                                .fontWeight(.medium)
+                        }
+                        .padding(.top, 2)
                     }
                 }
 

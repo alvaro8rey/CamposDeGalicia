@@ -296,23 +296,26 @@ struct AppMain: App {
     func handleDeepLink(url: URL) {
         Logger.debug("🔗 Deep link recibido: \(url)")
 
+        // Comprobar si es recuperación de contraseña antes de procesar
+        let urlString = url.absoluteString
+        let isRecovery = urlString.contains("type=recovery") || urlString.contains("type%3Drecovery")
+
         Task {
             do {
                 let session = try await supabase.auth.session(from: url)
                 Logger.success("✅ Sesión recuperada desde deep link: \(session.user.email ?? "unknown")")
 
-                // Actualizar estado de autenticación
-                authViewModel.user = session.user
-                authViewModel.isAuthenticated = true
-
-                // Comprobar si es recuperación de contraseña
-                // Supabase incluye type=recovery en el fragment del URL
-                let urlString = url.absoluteString
-                if urlString.contains("type=recovery") || urlString.contains("type%3Drecovery") {
+                if isRecovery {
+                    // Recovery: NO iniciar sesión en la UI, solo mostrar el formulario
+                    // La sesión de Supabase ya está activa para poder cambiar la contraseña
                     Logger.debug("🔑 Deep link de recuperación de contraseña detectado")
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                         self.showPasswordReset = true
                     }
+                } else {
+                    // Otro tipo de deep link: actualizar estado de autenticación
+                    authViewModel.user = session.user
+                    authViewModel.isAuthenticated = true
                 }
             } catch {
                 Logger.error("❌ Error procesando deep link: \(error.localizedDescription)")

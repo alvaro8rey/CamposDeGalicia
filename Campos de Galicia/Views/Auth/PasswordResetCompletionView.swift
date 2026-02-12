@@ -192,6 +192,8 @@ struct PasswordResetCompletionView: View {
 
         do {
             try await AuthViewModel.shared.changePassword(newPassword: newPassword)
+            // Actualizar estado de autenticación tras cambiar la contraseña
+            AuthViewModel.shared.checkCurrentSession()
             withAnimation {
                 isSuccess = true
             }

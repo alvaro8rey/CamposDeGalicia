@@ -116,7 +116,10 @@ class AuthViewModel: ObservableObject {
         // Validar email antes de enviar
         try InputValidator.validateEmail(email)
 
-        try await supabase.auth.resetPasswordForEmail(email)
+        try await supabase.auth.resetPasswordForEmail(
+            email,
+            redirectTo: URL(string: "camposdegalicia://reset-callback")
+        )
         Logger.success("✅ Email de reset enviado")
     }
 

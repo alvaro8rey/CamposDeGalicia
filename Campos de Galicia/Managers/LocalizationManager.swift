@@ -372,6 +372,12 @@ enum LocalizedKey: String {
     case passwordResetResendIn = "password.reset.resend.in"
     case passwordResetInvalidEmail = "password.reset.invalid.email"
     case passwordResetError = "password.reset.error"
+    case passwordResetNewTitle = "password.reset.new.title"
+    case passwordResetNewDesc = "password.reset.new.desc"
+    case passwordResetNewButton = "password.reset.new.button"
+    case passwordResetNewSuccess = "password.reset.new.success"
+    case passwordResetNewError = "password.reset.new.error"
+    case passwordResetNewMismatch = "password.reset.new.mismatch"
 
     // MARK: - Navigation Tabs
     case tabHome = "tab.home"
@@ -892,6 +898,12 @@ class LocalizationManager: ObservableObject {
             .passwordResetResendIn: "Reenviar en %ds",
             .passwordResetInvalidEmail: "Introduce un correo electrónico válido.",
             .passwordResetError: "Error al enviar el correo: %@",
+            .passwordResetNewTitle: "Nueva contraseña",
+            .passwordResetNewDesc: "Introduce tu nueva contraseña.",
+            .passwordResetNewButton: "Cambiar contraseña",
+            .passwordResetNewSuccess: "Contraseña actualizada correctamente.",
+            .passwordResetNewError: "Error al cambiar la contraseña: %@",
+            .passwordResetNewMismatch: "Las contraseñas no coinciden.",
 
             // Navigation Tabs
             .tabHome: "Inicio",
@@ -1380,6 +1392,12 @@ class LocalizationManager: ObservableObject {
             .passwordResetResendIn: "Reenviar en %ds",
             .passwordResetInvalidEmail: "Introduce un correo electrónico válido.",
             .passwordResetError: "Erro ao enviar o correo: %@",
+            .passwordResetNewTitle: "Novo contrasinal",
+            .passwordResetNewDesc: "Introduce o teu novo contrasinal.",
+            .passwordResetNewButton: "Cambiar contrasinal",
+            .passwordResetNewSuccess: "Contrasinal actualizado correctamente.",
+            .passwordResetNewError: "Erro ao cambiar o contrasinal: %@",
+            .passwordResetNewMismatch: "Os contrasinais non coinciden.",
 
             // Navigation Tabs
             .tabHome: "Inicio",

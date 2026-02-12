@@ -38,6 +38,9 @@ struct AppMain: App {
     // Bandera para activar auto check-in solo una vez al inicio
     @State private var hasInitializedAutoCheckin: Bool = false
 
+    // Password reset deep link
+    @State private var showPasswordReset: Bool = false
+
     // Computed property para el binding del TabView
     private var tabSelection: Binding<Int> {
         Binding(
@@ -258,6 +261,10 @@ struct AppMain: App {
                     dismissButton: .default(Text(L(.navAccept)))
                 )
             }
+            .sheet(isPresented: $showPasswordReset) {
+                PasswordResetCompletionView()
+                    .environmentObject(LocalizationManager.shared)
+            }
             .overlay(
                 Group {
                     if isProcessingDeepLink {
@@ -287,7 +294,30 @@ struct AppMain: App {
     }
 
     func handleDeepLink(url: URL) {
-        guard url.scheme == "camposdegalicia" else { return }
+        Logger.debug("🔗 Deep link recibido: \(url)")
+
+        Task {
+            do {
+                let session = try await supabase.auth.session(from: url)
+                Logger.success("✅ Sesión recuperada desde deep link: \(session.user.email ?? "unknown")")
+
+                // Actualizar estado de autenticación
+                authViewModel.user = session.user
+                authViewModel.isAuthenticated = true
+
+                // Comprobar si es recuperación de contraseña
+                // Supabase incluye type=recovery en el fragment del URL
+                let urlString = url.absoluteString
+                if urlString.contains("type=recovery") || urlString.contains("type%3Drecovery") {
+                    Logger.debug("🔑 Deep link de recuperación de contraseña detectado")
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                        self.showPasswordReset = true
+                    }
+                }
+            } catch {
+                Logger.error("❌ Error procesando deep link: \(error.localizedDescription)")
+            }
+        }
     }
 
     func handleNotificationNavigation(notification: Notification) {

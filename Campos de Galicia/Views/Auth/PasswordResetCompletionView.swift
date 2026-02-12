@@ -186,20 +186,41 @@ struct PasswordResetCompletionView: View {
         !newPassword.isEmpty && !confirmPassword.isEmpty && sessionReady
     }
 
-    /// Establece la sesión de Supabase a partir de la URL de recovery
+    /// Establece la sesión de Supabase a partir de la URL de recovery o sesión existente
     private func establishSession() async {
-        guard let url = recoveryURL else {
-            Logger.error("❌ No hay URL de recovery")
-            return
-        }
-
-        do {
-            let session = try await supabase.auth.session(from: url)
-            sessionReady = true
-            Logger.success("✅ Sesión de recovery establecida: \(session.user.email ?? "unknown")")
-        } catch {
-            Logger.error("❌ Error estableciendo sesión de recovery: \(error.localizedDescription)")
-            errorMessage = L(.passwordResetNewError, error.localizedDescription)
+        if let url = recoveryURL {
+            // Ruta principal: procesar la URL de recovery
+            do {
+                let session = try await supabase.auth.session(from: url)
+                sessionReady = true
+                print("✅ [Recovery] Sesión establecida desde URL: \(session.user.email ?? "unknown")")
+            } catch {
+                print("❌ [Recovery] Error procesando URL: \(error.localizedDescription)")
+                // Fallback: el SDK pudo haber procesado la URL automáticamente
+                if supabase.auth.currentUser != nil {
+                    print("✅ [Recovery] Sesión existente encontrada (SDK auto-procesó)")
+                    sessionReady = true
+                } else {
+                    errorMessage = L(.passwordResetNewError, error.localizedDescription)
+                }
+            }
+        } else {
+            // Sin URL: verificar si el SDK ya tiene una sesión de recovery
+            print("🔑 [Recovery] Sin URL, verificando sesión existente...")
+            if supabase.auth.currentUser != nil {
+                print("✅ [Recovery] Sesión existente encontrada")
+                sessionReady = true
+            } else {
+                // Esperar un momento por si el SDK está procesando
+                try? await Task.sleep(nanoseconds: 2_000_000_000)
+                if supabase.auth.currentUser != nil {
+                    print("✅ [Recovery] Sesión encontrada tras espera")
+                    sessionReady = true
+                } else {
+                    print("❌ [Recovery] No se encontró sesión de recovery")
+                    errorMessage = L(.passwordResetNewError, "No se pudo establecer la sesión de recuperación")
+                }
+            }
         }
     }
 

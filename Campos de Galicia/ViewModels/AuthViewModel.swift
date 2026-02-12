@@ -14,7 +14,10 @@ class AuthViewModel: ObservableObject {
     @Published var avatarURL: String? = nil
 
     /// Flag para bloquear auto-login durante recuperación de contraseña
-    var isRecoveryInProgress: Bool = false
+    var isRecoveryInProgress: Bool {
+        get { UserDefaults.standard.bool(forKey: "password_recovery_pending") }
+        set { UserDefaults.standard.set(newValue, forKey: "password_recovery_pending") }
+    }
 
     // MARK: - Singleton
     static let shared = AuthViewModel()
@@ -29,13 +32,13 @@ class AuthViewModel: ObservableObject {
     /// Verifica si hay una sesión activa
     func checkCurrentSession() {
         guard !isRecoveryInProgress else {
-            Logger.debug("⏳ Recovery en progreso, no auto-login")
+            print("⏳ [Auth] Recovery en progreso, bloqueando auto-login")
             return
         }
         if let currentUser = supabase.auth.currentUser {
             self.user = currentUser
             self.isAuthenticated = true
-            Logger.info("✅ Sesión activa encontrada para: \(currentUser.email ?? "unknown")")
+            print("✅ [Auth] Sesión activa encontrada para: \(currentUser.email ?? "unknown")")
             AnalyticsManager.shared.setUserProperties([
                 "user_id": currentUser.id.uuidString,
                 "email": currentUser.email ?? ""
@@ -56,6 +59,7 @@ class AuthViewModel: ObservableObject {
         let session = try await supabase.auth.signIn(email: email, password: password)
         self.user = session.user
         self.isAuthenticated = true
+        self.isRecoveryInProgress = false // Limpiar flag de recovery si existía
 
         Logger.success("✅ Login exitoso para: \(email)")
         AnalyticsManager.shared.trackLogin()
@@ -122,6 +126,9 @@ class AuthViewModel: ObservableObject {
 
         // Validar email antes de enviar
         try InputValidator.validateEmail(email)
+
+        // Marcar que hay un recovery pendiente ANTES de enviar el email
+        isRecoveryInProgress = true
 
         try await supabase.auth.resetPasswordForEmail(
             email,

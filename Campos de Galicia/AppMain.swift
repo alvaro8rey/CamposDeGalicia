@@ -230,6 +230,17 @@ struct AppMain: App {
                         await camposViewModel.cleanExpiredExtras()
                     }
                 }
+
+                // Recovery fallback: si el flag está activo y el SDK procesó la URL, mostrar formulario
+                if authViewModel.isRecoveryInProgress {
+                    print("🔑 [Recovery] Flag pendiente detectado en onAppear")
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                        if !self.showPasswordReset && authViewModel.isRecoveryInProgress && supabase.auth.currentUser != nil {
+                            print("🔑 [Recovery] Sesión detectada, mostrando formulario (fallback onAppear)")
+                            self.showPasswordReset = true
+                        }
+                    }
+                }
             }
             .onChange(of: camposViewModel.campos) { oldValue, newValue in
                 if !hasInitializedAutoCheckin && !newValue.isEmpty && geofenceManager.autoCheckinEnabled {
@@ -248,6 +259,18 @@ struct AppMain: App {
             }
             .onReceive(NotificationCenter.default.publisher(for: .didTapNotification)) { notification in
                 handleNotificationNavigation(notification: notification)
+            }
+            .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in
+                // Recovery fallback: cuando la app vuelve de background con el flag activo
+                if authViewModel.isRecoveryInProgress && !showPasswordReset {
+                    print("🔑 [Recovery] App activa con flag de recovery pendiente")
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                        if !self.showPasswordReset && authViewModel.isRecoveryInProgress && supabase.auth.currentUser != nil {
+                            print("🔑 [Recovery] Sesión detectada en didBecomeActive, mostrando formulario")
+                            self.showPasswordReset = true
+                        }
+                    }
+                }
             }
             .alert(L(.navRouteInProgress), isPresented: $showExitRouteAlert, actions: {
                 continueRouteButton
@@ -306,20 +329,12 @@ struct AppMain: App {
     }
 
     func handleDeepLink(url: URL) {
-        Logger.debug("🔗 Deep link recibido: \(url.absoluteString)")
+        print("🔗 [DeepLink] URL recibida: \(url.absoluteString)")
 
-        // Detectar recovery por el path reset-callback (nuestro redirectTo)
-        let urlString = url.absoluteString
-        let isRecovery = url.host == "reset-callback"
-            || urlString.contains("reset-callback")
-            || urlString.contains("type=recovery")
-            || urlString.contains("type%3Drecovery")
-
-        if isRecovery {
-            Logger.debug("🔑 Deep link de recuperación de contraseña detectado")
-            authViewModel.isRecoveryInProgress = true
+        // Si hay un recovery pendiente (flag persistido), CUALQUIER deep link es recovery
+        if authViewModel.isRecoveryInProgress {
+            print("🔑 [DeepLink] Recovery pendiente detectado, mostrando formulario")
             recoveryURL = url
-            // Mostrar formulario inmediatamente, sin depender de session(from:)
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                 self.showPasswordReset = true
             }
@@ -330,11 +345,11 @@ struct AppMain: App {
         Task {
             do {
                 let session = try await supabase.auth.session(from: url)
-                Logger.success("✅ Sesión recuperada desde deep link: \(session.user.email ?? "unknown")")
+                print("✅ [DeepLink] Sesión establecida: \(session.user.email ?? "unknown")")
                 authViewModel.user = session.user
                 authViewModel.isAuthenticated = true
             } catch {
-                Logger.error("❌ Error procesando deep link: \(error.localizedDescription)")
+                print("❌ [DeepLink] Error: \(error.localizedDescription)")
             }
         }
     }

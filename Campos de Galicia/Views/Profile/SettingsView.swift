@@ -274,7 +274,8 @@ struct SettingsView: View {
                             .padding(.top, 4)
 
                         Button {
-                            if let url = URL(string: UIApplication.openSettingsURLString) {
+                            if let bundleId = Bundle.main.bundleIdentifier,
+                               let url = URL(string: "\(UIApplication.openSettingsURLString)\(bundleId)") {
                                 UIApplication.shared.open(url)
                             }
                         } label: {

@@ -3,6 +3,8 @@ import SwiftUI
 /// Vista para establecer nueva contraseña tras usar el enlace de recuperación
 struct PasswordResetCompletionView: View {
 
+    let recoveryURL: URL?
+
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
     @EnvironmentObject var localization: LocalizationManager
@@ -12,6 +14,7 @@ struct PasswordResetCompletionView: View {
     @State private var isLoading: Bool = false
     @State private var errorMessage: String? = nil
     @State private var isSuccess: Bool = false
+    @State private var sessionReady: Bool = false
 
     var body: some View {
         NavigationView {
@@ -173,11 +176,31 @@ struct PasswordResetCompletionView: View {
                 }
             }
             .interactiveDismissDisabled(isLoading)
+            .task {
+                await establishSession()
+            }
         }
     }
 
     private var isFormValid: Bool {
-        !newPassword.isEmpty && !confirmPassword.isEmpty
+        !newPassword.isEmpty && !confirmPassword.isEmpty && sessionReady
+    }
+
+    /// Establece la sesión de Supabase a partir de la URL de recovery
+    private func establishSession() async {
+        guard let url = recoveryURL else {
+            Logger.error("❌ No hay URL de recovery")
+            return
+        }
+
+        do {
+            let session = try await supabase.auth.session(from: url)
+            sessionReady = true
+            Logger.success("✅ Sesión de recovery establecida: \(session.user.email ?? "unknown")")
+        } catch {
+            Logger.error("❌ Error estableciendo sesión de recovery: \(error.localizedDescription)")
+            errorMessage = L(.passwordResetNewError, error.localizedDescription)
+        }
     }
 
     private func changePassword() async {

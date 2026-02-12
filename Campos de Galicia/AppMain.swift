@@ -40,6 +40,7 @@ struct AppMain: App {
 
     // Password reset deep link
     @State private var showPasswordReset: Bool = false
+    @State private var recoveryURL: URL? = nil
 
     // Computed property para el binding del TabView
     private var tabSelection: Binding<Int> {
@@ -263,9 +264,9 @@ struct AppMain: App {
             }
             .sheet(isPresented: $showPasswordReset, onDismiss: {
                 // Limpiar recovery al cerrar (cancelar o tras éxito)
+                recoveryURL = nil
                 if authViewModel.isRecoveryInProgress {
                     authViewModel.isRecoveryInProgress = false
-                    // Si no cambió la contraseña, cerrar sesión de recovery
                     Task {
                         try? await supabase.auth.signOut()
                         authViewModel.isAuthenticated = false
@@ -273,7 +274,7 @@ struct AppMain: App {
                     }
                 }
             }) {
-                PasswordResetCompletionView()
+                PasswordResetCompletionView(recoveryURL: recoveryURL)
                     .environmentObject(LocalizationManager.shared)
             }
             .overlay(
@@ -305,10 +306,9 @@ struct AppMain: App {
     }
 
     func handleDeepLink(url: URL) {
-        Logger.debug("🔗 Deep link recibido: \(url)")
+        Logger.debug("🔗 Deep link recibido: \(url.absoluteString)")
 
         // Detectar recovery por el path reset-callback (nuestro redirectTo)
-        // o por type=recovery en el URL
         let urlString = url.absoluteString
         let isRecovery = url.host == "reset-callback"
             || urlString.contains("reset-callback")
@@ -316,28 +316,24 @@ struct AppMain: App {
             || urlString.contains("type%3Drecovery")
 
         if isRecovery {
-            // Bloquear auto-login ANTES de procesar la sesión
+            Logger.debug("🔑 Deep link de recuperación de contraseña detectado")
             authViewModel.isRecoveryInProgress = true
+            recoveryURL = url
+            // Mostrar formulario inmediatamente, sin depender de session(from:)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                self.showPasswordReset = true
+            }
+            return
         }
 
+        // Otros deep links
         Task {
             do {
                 let session = try await supabase.auth.session(from: url)
                 Logger.success("✅ Sesión recuperada desde deep link: \(session.user.email ?? "unknown")")
-
-                if isRecovery {
-                    Logger.debug("🔑 Deep link de recuperación de contraseña detectado")
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                        self.showPasswordReset = true
-                    }
-                } else {
-                    authViewModel.user = session.user
-                    authViewModel.isAuthenticated = true
-                }
+                authViewModel.user = session.user
+                authViewModel.isAuthenticated = true
             } catch {
-                if isRecovery {
-                    authViewModel.isRecoveryInProgress = false
-                }
                 Logger.error("❌ Error procesando deep link: \(error.localizedDescription)")
             }
         }

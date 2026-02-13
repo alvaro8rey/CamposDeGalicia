@@ -372,12 +372,22 @@ enum LocalizedKey: String {
     case passwordResetResendIn = "password.reset.resend.in"
     case passwordResetInvalidEmail = "password.reset.invalid.email"
     case passwordResetError = "password.reset.error"
+    case passwordResetErrorRateLimit = "password.reset.error.rate.limit"
+    case passwordResetErrorNetwork = "password.reset.error.network"
+    case passwordResetErrorGeneric = "password.reset.error.generic"
     case passwordResetNewTitle = "password.reset.new.title"
     case passwordResetNewDesc = "password.reset.new.desc"
     case passwordResetNewButton = "password.reset.new.button"
     case passwordResetNewSuccess = "password.reset.new.success"
     case passwordResetNewError = "password.reset.new.error"
     case passwordResetNewMismatch = "password.reset.new.mismatch"
+    case passwordResetNewErrorSamePassword = "password.reset.new.error.same"
+    case passwordResetNewErrorShort = "password.reset.new.error.short"
+    case passwordResetNewErrorWeak = "password.reset.new.error.weak"
+    case passwordResetNewErrorExpired = "password.reset.new.error.expired"
+    case passwordResetNewErrorSession = "password.reset.new.error.session"
+    case passwordResetNewErrorNetwork = "password.reset.new.error.network"
+    case passwordResetNewErrorGeneric = "password.reset.new.error.generic"
 
     // MARK: - Navigation Tabs
     case tabHome = "tab.home"
@@ -543,6 +553,48 @@ class LocalizationManager: ObservableObject {
             return format
         }
         return String(format: format, arguments: args)
+    }
+
+    /// Mapea un error de actualización de contraseña (Supabase) a una key localizada
+    nonisolated func mapPasswordUpdateError(_ error: Error) -> String {
+        let msg = error.localizedDescription.lowercased()
+        let key: LocalizedKey
+        if msg.contains("password") && (msg.contains("short") || msg.contains("length") || msg.contains("characters")) {
+            key = .passwordResetNewErrorShort
+        } else if msg.contains("same password")
+            || msg.contains("different from the old password")
+            || msg.contains("should be different")
+            || (msg.contains("new password") && msg.contains("different"))
+            || (msg.contains("password") && msg.contains("same")) {
+            key = .passwordResetNewErrorSamePassword
+        } else if msg.contains("weak password") || msg.contains("password strength") {
+            key = .passwordResetNewErrorWeak
+        } else if msg.contains("expired") || msg.contains("invalid token") {
+            key = .passwordResetNewErrorExpired
+        } else if msg.contains("not authenticated") || msg.contains("unauthorized") || msg.contains("session") {
+            key = .passwordResetNewErrorSession
+        } else if msg.contains("network") || msg.contains("connection") || msg.contains("offline") {
+            key = .passwordResetNewErrorNetwork
+        } else {
+            key = .passwordResetNewErrorGeneric
+        }
+        return localized(key)
+    }
+
+    /// Mapea un error de envío de correo de recuperación (Supabase) a una key localizada
+    nonisolated func mapPasswordResetEmailError(_ error: Error) -> String {
+        let msg = error.localizedDescription.lowercased()
+        let key: LocalizedKey
+        if msg.contains("invalid email") || (msg.contains("email") && msg.contains("invalid")) {
+            key = .passwordResetInvalidEmail
+        } else if msg.contains("rate limit") || msg.contains("too many requests") || msg.contains("email rate limit") {
+            key = .passwordResetErrorRateLimit
+        } else if msg.contains("network") || msg.contains("connection") || msg.contains("offline") {
+            key = .passwordResetErrorNetwork
+        } else {
+            key = .passwordResetErrorGeneric
+        }
+        return localized(key)
     }
 
     /// Diccionario de traducciones
@@ -898,12 +950,22 @@ class LocalizationManager: ObservableObject {
             .passwordResetResendIn: "Reenviar en %ds",
             .passwordResetInvalidEmail: "Introduce un correo electrónico válido.",
             .passwordResetError: "Error al enviar el correo: %@",
+            .passwordResetErrorRateLimit: "Has enviado demasiadas solicitudes. Espera unos minutos e inténtalo de nuevo.",
+            .passwordResetErrorNetwork: "Sin conexión a internet. Comprueba tu conexión e inténtalo de nuevo.",
+            .passwordResetErrorGeneric: "No hemos podido enviar el correo en este momento. Inténtalo de nuevo más tarde.",
             .passwordResetNewTitle: "Nueva contraseña",
             .passwordResetNewDesc: "Introduce tu nueva contraseña.",
             .passwordResetNewButton: "Cambiar contraseña",
             .passwordResetNewSuccess: "Contraseña actualizada correctamente.",
             .passwordResetNewError: "Error al cambiar la contraseña: %@",
             .passwordResetNewMismatch: "Las contraseñas no coinciden.",
+            .passwordResetNewErrorSamePassword: "La nueva contraseña debe ser diferente a la actual.",
+            .passwordResetNewErrorShort: "La contraseña es demasiado corta (mínimo 6 caracteres).",
+            .passwordResetNewErrorWeak: "La contraseña no es suficientemente segura. Usa letras, números y símbolos.",
+            .passwordResetNewErrorExpired: "El enlace de recuperación ha caducado. Solicita un nuevo correo de restablecimiento.",
+            .passwordResetNewErrorSession: "Tu sesión ha caducado. Solicita un nuevo correo de restablecimiento.",
+            .passwordResetNewErrorNetwork: "Sin conexión a internet. Comprueba tu conexión e inténtalo de nuevo.",
+            .passwordResetNewErrorGeneric: "No hemos podido actualizar la contraseña. Inténtalo de nuevo más tarde.",
 
             // Navigation Tabs
             .tabHome: "Inicio",
@@ -1392,12 +1454,22 @@ class LocalizationManager: ObservableObject {
             .passwordResetResendIn: "Reenviar en %ds",
             .passwordResetInvalidEmail: "Introduce un correo electrónico válido.",
             .passwordResetError: "Erro ao enviar o correo: %@",
+            .passwordResetErrorRateLimit: "Enviaches demasiadas solicitudes. Agarda uns minutos e téntao de novo.",
+            .passwordResetErrorNetwork: "Non hai conexión a internet. Comproba a túa conexión e téntao de novo.",
+            .passwordResetErrorGeneric: "Non puidemos enviar o correo neste momento. Téntao de novo máis tarde.",
             .passwordResetNewTitle: "Novo contrasinal",
             .passwordResetNewDesc: "Introduce o teu novo contrasinal.",
             .passwordResetNewButton: "Cambiar contrasinal",
             .passwordResetNewSuccess: "Contrasinal actualizado correctamente.",
             .passwordResetNewError: "Erro ao cambiar o contrasinal: %@",
             .passwordResetNewMismatch: "Os contrasinais non coinciden.",
+            .passwordResetNewErrorSamePassword: "O novo contrasinal debe ser diferente do actual.",
+            .passwordResetNewErrorShort: "O contrasinal é demasiado curto (mínimo 6 caracteres).",
+            .passwordResetNewErrorWeak: "O contrasinal non é suficientemente seguro. Usa letras, números e símbolos.",
+            .passwordResetNewErrorExpired: "A ligazón de recuperación caducou. Solicita un novo correo de restablecemento.",
+            .passwordResetNewErrorSession: "A túa sesión caducou. Solicita un novo correo de restablecemento.",
+            .passwordResetNewErrorNetwork: "Non hai conexión a internet. Comproba a túa conexión e téntao de novo.",
+            .passwordResetNewErrorGeneric: "Non puidemos actualizar o contrasinal. Téntao de novo máis tarde.",
 
             // Navigation Tabs
             .tabHome: "Inicio",

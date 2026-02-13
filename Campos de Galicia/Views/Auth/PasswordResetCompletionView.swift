@@ -276,7 +276,7 @@ struct PasswordResetCompletionView: View {
         if supabase.auth.currentUser == nil {
             let sessionOk = await ensureSession()
             if !sessionOk {
-                errorMessage = L(.passwordResetNewError, "No se pudo establecer la sesión de recuperación. Solicita un nuevo enlace.")
+                errorMessage = L(.passwordResetNewErrorSession)
                 isLoading = false
                 HapticFeedback.error()
                 return
@@ -298,7 +298,7 @@ struct PasswordResetCompletionView: View {
             }
             HapticFeedback.success()
         } catch {
-            errorMessage = L(.passwordResetNewError, error.localizedDescription)
+            errorMessage = localization.mapPasswordUpdateError(error)
             HapticFeedback.error()
         }
 

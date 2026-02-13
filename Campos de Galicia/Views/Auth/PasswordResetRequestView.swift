@@ -129,7 +129,7 @@ struct PasswordResetRequestView: View {
             Logger.success("✅ Password reset email sent to: \(email)")
 
         } catch {
-            message = L(.passwordResetError, error.localizedDescription)
+            message = localizationManager.mapPasswordResetEmailError(error)
             isSuccess = false
 
             Logger.error("Password reset error: \(error.localizedDescription)")

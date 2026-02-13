@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="es" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <title>Verifica tu cuenta – Campos de Galicia</title>
+  <style>
+    /* Reset */
+    body, table, td, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+    table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
+    img { -ms-interpolation-mode: bicubic; border: 0; outline: none; text-decoration: none; }
+
+    body {
+      margin: 0 !important;
+      padding: 0 !important;
+      background-color: #f0f4f0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+    }
+
+    /* Mobile */
+    @media screen and (max-width: 600px) {
+      .email-wrapper { width: 100% !important; }
+      .email-container { width: 100% !important; border-radius: 0 !important; }
+      .header-cell { padding: 32px 20px 28px !important; }
+      .content-cell { padding: 28px 20px 24px !important; }
+      .footer-cell { padding: 20px !important; }
+      .logo-text { font-size: 22px !important; }
+      .headline { font-size: 20px !important; }
+      .body-text { font-size: 15px !important; }
+      .cta-button { padding: 16px 32px !important; font-size: 16px !important; }
+      .pitch-strip { height: 8px !important; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Preheader (hidden preview text) -->
+<span style="display:none; max-height:0; overflow:hidden; mso-hide:all;">
+  Confirma tu cuenta para empezar a explorar los campos de Galicia ⚽
+</span>
+
+<!-- Outer wrapper -->
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+       style="background-color:#f0f4f0; min-width:100%;">
+  <tr>
+    <td align="center" style="padding: 32px 16px;">
+
+      <!-- Email card -->
+      <table role="presentation" class="email-container" width="580" cellpadding="0" cellspacing="0" border="0"
+             style="max-width:580px; width:100%; background-color:#ffffff; border-radius:16px;
+                    box-shadow:0 4px 24px rgba(0,0,0,0.08); overflow:hidden;">
+
+        <!-- ===== HEADER ===== -->
+        <tr>
+          <td class="header-cell" align="center"
+              style="background: linear-gradient(145deg, #1a5c30 0%, #2d7d46 60%, #3a9455 100%);
+                     padding: 40px 24px 36px; text-align:center;">
+
+            <!-- Grass lines decoration (pure CSS) -->
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+              <tr>
+                <td align="center" style="padding-bottom:16px;">
+                  <!-- Ball icon -->
+                  <div style="display:inline-block; width:64px; height:64px; background-color:rgba(255,255,255,0.15);
+                              border-radius:50%; line-height:64px; font-size:34px; text-align:center;">
+                    ⚽
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td align="center">
+                  <p class="logo-text"
+                     style="margin:0; color:#ffffff; font-size:24px; font-weight:700;
+                            letter-spacing:-0.3px; line-height:1.2;">
+                    Campos de Galicia
+                  </p>
+                  <p style="margin:6px 0 0; color:rgba(255,255,255,0.75); font-size:13px;
+                             letter-spacing:0.5px; text-transform:uppercase; font-weight:500;">
+                    A túa guía de campos de fútbol
+                  </p>
+                </td>
+              </tr>
+            </table>
+
+          </td>
+        </tr>
+
+        <!-- Pitch stripe decoration -->
+        <tr>
+          <td class="pitch-strip"
+              style="height:6px;
+                     background: repeating-linear-gradient(
+                       90deg,
+                       #2d7d46 0px, #2d7d46 20px,
+                       #3a9455 20px, #3a9455 40px
+                     );">
+          </td>
+        </tr>
+
+        <!-- ===== CONTENT ===== -->
+        <tr>
+          <td class="content-cell" style="padding: 36px 36px 32px; text-align:center;">
+
+            <p class="headline"
+               style="margin:0 0 8px; color:#1a5c30; font-size:22px; font-weight:700;
+                      letter-spacing:-0.3px;">
+              ¡Benvido/a! 👋
+            </p>
+
+            <p class="body-text"
+               style="margin:0 0 24px; color:#444444; font-size:16px; line-height:1.6;">
+              Grazas por rexistrarte en <strong style="color:#1a5c30;">Campos de Galicia</strong>.<br>
+              Só che queda un paso para empezar a explorar todos os campos de fútbol de Galicia.
+            </p>
+
+            <!-- Divider -->
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+              <tr>
+                <td style="padding:0 0 28px;">
+                  <div style="height:1px; background: linear-gradient(90deg, transparent, #e0e8e0, transparent);"></div>
+                </td>
+              </tr>
+            </table>
+
+            <p style="margin:0 0 20px; color:#555555; font-size:15px; line-height:1.5;">
+              Preme no botón para verificar o teu correo e activar a túa conta:
+            </p>
+
+            <!-- CTA Button -->
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 auto;">
+              <tr>
+                <td align="center" style="border-radius:10px;
+                            background: linear-gradient(135deg, #2d7d46, #1a5c30);
+                            box-shadow: 0 4px 12px rgba(45,125,70,0.35);">
+                  <a href="{{ .ConfirmationURL }}" class="cta-button"
+                     style="display:inline-block; padding:16px 40px; color:#ffffff !important;
+                            font-size:17px; font-weight:700; text-decoration:none;
+                            letter-spacing:0.2px; border-radius:10px; mso-padding-alt:0;
+                            font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;">
+                    ✅&nbsp; Verificar a miña conta
+                  </a>
+                </td>
+              </tr>
+            </table>
+
+            <!-- Link fallback -->
+            <p style="margin:24px 0 0; color:#888888; font-size:12px; line-height:1.5;">
+              Se o botón non funciona, copia e pega este enlace no teu navegador:<br>
+              <a href="{{ .ConfirmationURL }}"
+                 style="color:#2d7d46; word-break:break-all; font-size:11px;">
+                {{ .ConfirmationURL }}
+              </a>
+            </p>
+
+            <!-- Divider -->
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+              <tr>
+                <td style="padding:28px 0 0;">
+                  <div style="height:1px; background: linear-gradient(90deg, transparent, #e0e8e0, transparent);"></div>
+                </td>
+              </tr>
+            </table>
+
+            <!-- Security note -->
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+                   style="margin-top:20px;">
+              <tr>
+                <td style="background-color:#f8fdf9; border-radius:8px; border-left:3px solid #2d7d46;
+                            padding:14px 16px; text-align:left;">
+                  <p style="margin:0; color:#666666; font-size:13px; line-height:1.5;">
+                    🔒 <strong>Non solicitaches este rexistro?</strong><br>
+                    Podes ignorar este correo con total seguridade. A ligazón expira en 24&nbsp;horas.
+                  </p>
+                </td>
+              </tr>
+            </table>
+
+          </td>
+        </tr>
+
+        <!-- ===== FOOTER ===== -->
+        <tr>
+          <td class="footer-cell"
+              style="background-color:#f8fdf9; padding:24px 36px; text-align:center;
+                     border-top:1px solid #e8f0e8;">
+            <p style="margin:0 0 6px; color:#888888; font-size:12px; line-height:1.5;">
+              <strong style="color:#2d7d46;">Campos de Galicia</strong> · A túa app de campos de fútbol
+            </p>
+            <p style="margin:0; color:#aaaaaa; font-size:11px; line-height:1.5;">
+              Se tes algunha dúbida, escríbenos a
+              <a href="mailto:support@camposdegalicia.com"
+                 style="color:#2d7d46; text-decoration:none;">
+                support@camposdegalicia.com
+              </a>
+            </p>
+          </td>
+        </tr>
+
+      </table>
+      <!-- /Email card -->
+
+    </td>
+  </tr>
+</table>
+
+</body>
+</html>

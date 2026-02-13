@@ -1281,7 +1281,7 @@ extension UserView {
             confirmPassword = ""
             errorMessageProfile = "Contraseña actualizada con éxito."
         } catch {
-            errorMessageProfile = "Error al cambiar contraseña: \(error.localizedDescription)"
+            errorMessageProfile = mapPasswordUpdateError(error)
         }
     }
 
@@ -1305,7 +1305,7 @@ extension UserView {
                 errorMessageProfile = "Contraseña actualizada con éxito."
             }
         } catch {
-            resetPasswordError = "Error al actualizar contraseña: \(error.localizedDescription)"
+            resetPasswordError = mapPasswordUpdateError(error)
         }
     }
 
@@ -1367,7 +1367,7 @@ extension UserView {
             try await supabase.auth.resetPasswordForEmail(resetEmail)
             resetMessage = "Te hemos enviado un correo con el enlace para restablecer tu contraseña."
         } catch {
-            resetMessage = "Error al enviar el correo: \(error.localizedDescription)"
+            resetMessage = mapPasswordResetEmailError(error)
         }
     }
 
@@ -1442,6 +1442,82 @@ extension UserView {
             return "Ya existía un perfil asociado a este usuario. Inicia sesión con tu correo."
         }
         return "No hemos podido guardar tu perfil. Inténtalo más tarde."
+    }
+
+    private var isGalician: Bool {
+        Locale.preferredLanguages.first?.hasPrefix("gl") == true
+    }
+
+    private func mapPasswordResetEmailError(_ error: Error) -> String {
+        let msg = error.localizedDescription.lowercased()
+        if isGalician {
+            if msg.contains("invalid email") || (msg.contains("email") && msg.contains("invalid")) {
+                return "O correo electrónico non ten un formato válido."
+            }
+            if msg.contains("rate limit") || msg.contains("too many requests") || msg.contains("email rate limit") {
+                return "Enviaches demasiadas solicitudes. Agarda uns minutos e téntao de novo."
+            }
+            if msg.contains("network") || msg.contains("connection") || msg.contains("offline") {
+                return "Non hai conexión a internet. Comproba a túa conexión e téntao de novo."
+            }
+            return "Non puidemos enviar o correo neste momento. Téntao de novo máis tarde."
+        } else {
+            if msg.contains("invalid email") || (msg.contains("email") && msg.contains("invalid")) {
+                return "El correo electrónico no tiene un formato válido."
+            }
+            if msg.contains("rate limit") || msg.contains("too many requests") || msg.contains("email rate limit") {
+                return "Has enviado demasiadas solicitudes. Espera unos minutos e inténtalo de nuevo."
+            }
+            if msg.contains("network") || msg.contains("connection") || msg.contains("offline") {
+                return "Sin conexión a internet. Comprueba tu conexión e inténtalo de nuevo."
+            }
+            return "No hemos podido enviar el correo en este momento. Inténtalo de nuevo más tarde."
+        }
+    }
+
+    private func mapPasswordUpdateError(_ error: Error) -> String {
+        let msg = error.localizedDescription.lowercased()
+        if isGalician {
+            if msg.contains("password") && (msg.contains("short") || msg.contains("length") || msg.contains("characters")) {
+                return "O contrasinal é demasiado curto (mínimo 6 caracteres)."
+            }
+            if msg.contains("same password") || msg.contains("different from the old password") || msg.contains("should be different") {
+                return "O novo contrasinal debe ser diferente do actual."
+            }
+            if msg.contains("weak password") || msg.contains("password strength") {
+                return "O contrasinal non é suficientemente seguro. Usa letras, números e símbolos."
+            }
+            if msg.contains("expired") || msg.contains("invalid token") || msg.contains("token") {
+                return "A ligazón de recuperación caducou. Solicita un novo correo de restablecemento."
+            }
+            if msg.contains("not authenticated") || msg.contains("unauthorized") || msg.contains("session") {
+                return "A túa sesión caducou. Solicita un novo correo de restablecemento."
+            }
+            if msg.contains("network") || msg.contains("connection") || msg.contains("offline") {
+                return "Non hai conexión a internet. Comproba a túa conexión e téntao de novo."
+            }
+            return "Non puidemos actualizar o contrasinal. Téntao de novo máis tarde."
+        } else {
+            if msg.contains("password") && (msg.contains("short") || msg.contains("length") || msg.contains("characters")) {
+                return "La contraseña es demasiado corta (mínimo 6 caracteres)."
+            }
+            if msg.contains("same password") || msg.contains("different from the old password") || msg.contains("should be different") {
+                return "La nueva contraseña debe ser diferente a la actual."
+            }
+            if msg.contains("weak password") || msg.contains("password strength") {
+                return "La contraseña no es suficientemente segura. Usa letras, números y símbolos."
+            }
+            if msg.contains("expired") || msg.contains("invalid token") || msg.contains("token") {
+                return "El enlace de recuperación ha caducado. Solicita un nuevo correo de restablecimiento."
+            }
+            if msg.contains("not authenticated") || msg.contains("unauthorized") || msg.contains("session") {
+                return "Tu sesión ha caducado. Solicita un nuevo correo de restablecimiento."
+            }
+            if msg.contains("network") || msg.contains("connection") || msg.contains("offline") {
+                return "Sin conexión a internet. Comprueba tu conexión e inténtalo de nuevo."
+            }
+            return "No hemos podido actualizar la contraseña. Inténtalo de nuevo más tarde."
+        }
     }
 }
 

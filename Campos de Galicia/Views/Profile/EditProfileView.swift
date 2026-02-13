@@ -494,9 +494,9 @@ struct EditProfileView: View {
             try await supabase.auth.update(user: UserAttributes(password: newPassword))
             Logger.success("✅ Contraseña actualizada")
         } catch {
-            // Convertir errores de Supabase a mensajes personalizados
-            let customError = parsePasswordError(error)
-            throw customError
+            let message = localizationManager.mapPasswordUpdateError(error)
+            throw NSError(domain: "CamposDeGalicia", code: 1001,
+                          userInfo: [NSLocalizedDescriptionKey: message])
         }
     }
 

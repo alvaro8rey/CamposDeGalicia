@@ -94,6 +94,11 @@ enum LocalizedKey: String {
     case loginNoAccount = "auth.login.noaccount"
     case loginCreateAccount = "auth.login.create"
     case loginError = "auth.login.error"
+    case loginErrorInvalidCredentials = "auth.login.error.credentials"
+    case loginErrorEmailNotConfirmed = "auth.login.error.unconfirmed"
+    case loginErrorRateLimit = "auth.login.error.ratelimit"
+    case loginErrorNetwork = "auth.login.error.network"
+    case loginErrorGeneric = "auth.login.error.generic"
 
     case registerTitle = "auth.register.title"
     case registerSubtitle = "auth.register.subtitle"
@@ -555,6 +560,52 @@ class LocalizationManager: ObservableObject {
         return String(format: format, arguments: args)
     }
 
+    /// Mapea un error de inicio de sesión (Supabase) a un mensaje localizado
+    nonisolated func mapLoginError(_ error: Error) -> String {
+        let msg = error.localizedDescription.lowercased()
+        let key: LocalizedKey
+        if msg.contains("invalid login credentials") || msg.contains("invalid email or password")
+            || msg.contains("wrong password") || msg.contains("invalid credentials")
+            || msg.contains("email not found") || msg.contains("user not found") {
+            key = .loginErrorInvalidCredentials
+        } else if msg.contains("email not confirmed") || msg.contains("confirm your email")
+            || msg.contains("not verified") {
+            key = .loginErrorEmailNotConfirmed
+        } else if msg.contains("rate limit") || msg.contains("too many requests") {
+            key = .loginErrorRateLimit
+        } else if msg.contains("network") || msg.contains("connection") || msg.contains("offline") {
+            key = .loginErrorNetwork
+        } else {
+            key = .loginErrorGeneric
+        }
+        return localized(key)
+    }
+
+    /// Mapea un error de registro (Supabase) a un mensaje localizado
+    nonisolated func mapRegisterError(_ error: Error) -> String {
+        let msg = error.localizedDescription.lowercased()
+        let key: LocalizedKey
+        if msg.contains("user already registered") || msg.contains("already registered")
+            || (msg.contains("email") && msg.contains("exists")) {
+            key = .registerErrorAlreadyExists
+        } else if msg.contains("invalid email") || (msg.contains("email") && msg.contains("invalid")) {
+            key = .registerErrorInvalidEmailFormat
+        } else if msg.contains("password") && (msg.contains("short") || msg.contains("length")) {
+            key = .registerErrorPasswordShort
+        } else if msg.contains("rate limit") || msg.contains("too many requests") {
+            key = .registerErrorRateLimit
+        } else if msg.contains("foreign key") || msg.contains("perfiles_id_fkey") {
+            key = .registerErrorProfile
+        } else if msg.contains("duplicate key") || msg.contains("conflict") {
+            key = .registerErrorDuplicate
+        } else if msg.contains("network") || msg.contains("connection") || msg.contains("offline") {
+            key = .loginErrorNetwork
+        } else {
+            key = .registerErrorGeneral
+        }
+        return localized(key)
+    }
+
     /// Mapea un error de actualización de contraseña (Supabase) a una key localizada
     nonisolated func mapPasswordUpdateError(_ error: Error) -> String {
         let msg = error.localizedDescription.lowercased()
@@ -672,6 +723,11 @@ class LocalizationManager: ObservableObject {
             .loginNoAccount: "¿No tienes cuenta?",
             .loginCreateAccount: "Crear cuenta",
             .loginError: "Error al iniciar sesión: %@",
+            .loginErrorInvalidCredentials: "Email o contraseña incorrectos.",
+            .loginErrorEmailNotConfirmed: "Debes verificar tu correo electrónico antes de iniciar sesión.",
+            .loginErrorRateLimit: "Demasiados intentos. Espera unos minutos e inténtalo de nuevo.",
+            .loginErrorNetwork: "Sin conexión a internet. Comprueba tu conexión e inténtalo de nuevo.",
+            .loginErrorGeneric: "No hemos podido iniciar sesión. Inténtalo de nuevo más tarde.",
 
             .registerTitle: "Crear Cuenta",
             .registerSubtitle: "Únete a la comunidad de Campos de Galicia",
@@ -1176,6 +1232,11 @@ class LocalizationManager: ObservableObject {
             .loginNoAccount: "Non tes conta?",
             .loginCreateAccount: "Crear conta",
             .loginError: "Erro ao iniciar sesión: %@",
+            .loginErrorInvalidCredentials: "Email ou contrasinal incorrectos.",
+            .loginErrorEmailNotConfirmed: "Debes verificar o teu correo electrónico antes de iniciar sesión.",
+            .loginErrorRateLimit: "Demasiados intentos. Agarda uns minutos e téntao de novo.",
+            .loginErrorNetwork: "Non hai conexión a internet. Comproba a túa conexión e téntao de novo.",
+            .loginErrorGeneric: "Non puidemos iniciar sesión. Téntao de novo máis tarde.",
 
             .registerTitle: "Crear Conta",
             .registerSubtitle: "Únete á comunidade de Campos de Galicia",

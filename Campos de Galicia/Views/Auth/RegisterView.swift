@@ -317,7 +317,7 @@ struct RegisterView: View {
             if let validationError = error as? ValidationError {
                 errorMessage = validationError.errorDescription
             } else {
-                errorMessage = error.localizedDescription
+                errorMessage = localizationManager.mapRegisterError(error)
             }
             return
         }
@@ -350,10 +350,8 @@ struct RegisterView: View {
             Logger.success("✅ Registro exitoso: \(userId)")
 
         } catch {
-            // Usar ErrorHandler para manejo consistente de errores
-            let appError = convertToAppError(error)
-            errorMessage = appError.errorDescription
-            ErrorHandler.shared.handle(appError, showToUser: false, context: "register")
+            errorMessage = localizationManager.mapRegisterError(error)
+            ErrorHandler.shared.handle(error, showToUser: false, context: "register")
         }
 
         isLoading = false

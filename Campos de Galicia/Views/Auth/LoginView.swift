@@ -208,7 +208,7 @@ struct LoginView: View {
             AnalyticsManager.shared.trackScreen("Main")
 
         } catch {
-            errorMessage = L(.loginError, error.localizedDescription)
+            errorMessage = localizationManager.mapLoginError(error)
             Logger.error("Login error: \(error.localizedDescription)")
             AnalyticsManager.shared.trackError(type: "login", message: error.localizedDescription)
         }

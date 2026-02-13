@@ -1270,7 +1270,9 @@ extension UserView {
 
     private func updatePassword() async {
         guard supabase.auth.currentUser != nil else {
-            errorMessageProfile = "Debes iniciar sesión para cambiar la contraseña."
+            errorMessageProfile = isGalician
+                ? "Debes iniciar sesión para cambiar o contrasinal."
+                : "Debes iniciar sesión para cambiar la contraseña."
             return
         }
         do {
@@ -1279,7 +1281,9 @@ extension UserView {
             showingChangePassword = false
             newPassword = ""
             confirmPassword = ""
-            errorMessageProfile = "Contraseña actualizada con éxito."
+            errorMessageProfile = isGalician
+                ? "Contrasinal actualizado con éxito."
+                : "Contraseña actualizada con éxito."
         } catch {
             errorMessageProfile = mapPasswordUpdateError(error)
         }
@@ -1287,11 +1291,15 @@ extension UserView {
 
     private func finalizePasswordReset() async {
         guard !newPasswordFromLink.isEmpty, !confirmPasswordFromLink.isEmpty else {
-            resetPasswordError = "Rellena ambos campos."
+            resetPasswordError = isGalician
+                ? "Enche os dous campos."
+                : "Rellena ambos campos."
             return
         }
         guard newPasswordFromLink == confirmPasswordFromLink else {
-            resetPasswordError = "Las contraseñas no coinciden."
+            resetPasswordError = isGalician
+                ? "Os contrasinais non coinciden."
+                : "Las contraseñas no coinciden."
             return
         }
         do {
@@ -1302,7 +1310,9 @@ extension UserView {
                 newPasswordFromLink = ""
                 confirmPasswordFromLink = ""
                 resetPasswordError = nil
-                errorMessageProfile = "Contraseña actualizada con éxito."
+                errorMessageProfile = isGalician
+                    ? "Contrasinal actualizado con éxito."
+                    : "Contraseña actualizada con éxito."
             }
         } catch {
             resetPasswordError = mapPasswordUpdateError(error)
@@ -1477,11 +1487,16 @@ extension UserView {
 
     private func mapPasswordUpdateError(_ error: Error) -> String {
         let msg = error.localizedDescription.lowercased()
+        let isSamePassword = msg.contains("same password")
+            || msg.contains("different from the old password")
+            || msg.contains("should be different")
+            || (msg.contains("new password") && msg.contains("different"))
+            || (msg.contains("password") && msg.contains("same"))
         if isGalician {
             if msg.contains("password") && (msg.contains("short") || msg.contains("length") || msg.contains("characters")) {
                 return "O contrasinal é demasiado curto (mínimo 6 caracteres)."
             }
-            if msg.contains("same password") || msg.contains("different from the old password") || msg.contains("should be different") {
+            if isSamePassword {
                 return "O novo contrasinal debe ser diferente do actual."
             }
             if msg.contains("weak password") || msg.contains("password strength") {
@@ -1501,7 +1516,7 @@ extension UserView {
             if msg.contains("password") && (msg.contains("short") || msg.contains("length") || msg.contains("characters")) {
                 return "La contraseña es demasiado corta (mínimo 6 caracteres)."
             }
-            if msg.contains("same password") || msg.contains("different from the old password") || msg.contains("should be different") {
+            if isSamePassword {
                 return "La nueva contraseña debe ser diferente a la actual."
             }
             if msg.contains("weak password") || msg.contains("password strength") {

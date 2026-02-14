@@ -286,7 +286,8 @@ struct AppMain: App {
                 )
             }
             .sheet(isPresented: $showPasswordReset, onDismiss: {
-                // Limpiar recovery al cerrar (cancelar o tras éxito)
+                // Limpiar URL y flags de recovery al cerrar (cancelar o tras éxito)
+                UserDefaults.standard.removeObject(forKey: "recovery_url")
                 if authViewModel.isRecoveryInProgress {
                     authViewModel.isRecoveryInProgress = false
                     Task {
@@ -330,20 +331,13 @@ struct AppMain: App {
     func handleDeepLink(url: URL) {
         print("🔗 [DeepLink] URL recibida: \(url.absoluteString)")
 
-        // Si hay un recovery pendiente, establecer la sesión aquí (una sola vez)
-        // para que PasswordResetCompletionView la encuentre lista al abrirse.
+        // Recovery pendiente: mostrar el formulario inmediatamente sin iniciar sesión.
+        // La vista establecerá la sesión en segundo plano mientras el usuario escribe.
         if authViewModel.isRecoveryInProgress {
-            print("🔑 [DeepLink] Recovery pendiente, estableciendo sesión...")
-            Task {
-                do {
-                    let session = try await supabase.auth.session(from: url)
-                    print("✅ [DeepLink/Recovery] Sesión lista: \(session.user.email ?? "unknown")")
-                    authViewModel.user = session.user
-                } catch {
-                    // El formulario mostrará el error cuando el usuario intente cambiar
-                    print("⚠️ [DeepLink/Recovery] session(from:) falló: \(error.localizedDescription)")
-                }
-                await MainActor.run { showPasswordReset = true }
+            print("🔑 [DeepLink] Recovery pendiente, mostrando formulario...")
+            UserDefaults.standard.set(url.absoluteString, forKey: "recovery_url")
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                self.showPasswordReset = true
             }
             return
         }

@@ -3,6 +3,11 @@ import SwiftUI
 /// Vista para establecer nueva contraseña tras usar el enlace de recuperación
 struct PasswordResetCompletionView: View {
 
+    // URL de recovery leída de UserDefaults (guardada en handleDeepLink)
+    private var recoveryURL: URL? {
+        UserDefaults.standard.string(forKey: "recovery_url").flatMap { URL(string: $0) }
+    }
+
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
     @EnvironmentObject var localization: LocalizationManager
@@ -195,34 +200,39 @@ struct PasswordResetCompletionView: View {
         !newPassword.isEmpty && !confirmPassword.isEmpty
     }
 
-    /// Espera a que la sesión de recovery esté lista (la establece handleDeepLink antes de abrir la vista)
+    /// Establece la sesión de recovery en segundo plano mientras el usuario rellena el formulario.
+    /// El token PKCE de la URL solo puede usarse una vez: lo consumimos aquí.
     private func tryEstablishSession() async {
-        // handleDeepLink ya llamó a session(from:) antes de mostrarnos.
-        // Esperamos hasta 3s por si el SDK aún no ha propagado el usuario.
+        // Si ya hay sesión (caso raro: app en primer plano con sesión activa)
         if supabase.auth.currentUser != nil {
-            print("✅ [Recovery] Sesión lista al abrir")
+            print("✅ [Recovery] Sesión ya activa")
             sessionReady = true
             return
         }
-        for attempt in 1...6 {
-            try? await Task.sleep(nanoseconds: 500_000_000) // 0.5s × 6 = máx 3s
-            if supabase.auth.currentUser != nil {
-                print("✅ [Recovery] Sesión detectada tras \(attempt × 500)ms")
+
+        // Intercambiar el token de la URL por una sesión de recovery
+        if let url = recoveryURL {
+            do {
+                _ = try await supabase.auth.session(from: url)
+                print("✅ [Recovery] Sesión de recovery establecida")
+                sessionReady = true
+                return
+            } catch {
+                print("⚠️ [Recovery] session(from:) falló: \(error.localizedDescription)")
+                // Mostrar error pero desbloquear formulario (changePassword dará el error final)
+                errorMessage = localization.mapPasswordUpdateError(error)
                 sessionReady = true
                 return
             }
         }
-        // Si tras 3s no hay sesión, desbloquear de todas formas.
-        // changePassword() mostrará el error apropiado al intentar enviar.
-        print("⚠️ [Recovery] Sin sesión tras 3s, desbloqueando formulario")
+
+        // Sin URL disponible: desbloquear igualmente (changePassword mostrará el error)
+        print("⚠️ [Recovery] No hay URL de recovery disponible")
         sessionReady = true
     }
 
-    /// Comprueba que hay sesión activa antes de cambiar la contraseña
+    /// Comprueba que la sesión sigue activa justo antes de cambiar la contraseña
     private func ensureSession() async -> Bool {
-        if supabase.auth.currentUser != nil { return true }
-        // Última espera corta (el SDK puede tardar un ciclo extra)
-        try? await Task.sleep(nanoseconds: 500_000_000)
         return supabase.auth.currentUser != nil
     }
 

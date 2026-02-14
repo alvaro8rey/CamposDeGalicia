@@ -75,22 +75,20 @@ class AuthViewModel: ObservableObject {
 
         // Validar inputs antes de enviar a Supabase
         try InputValidator.validateEmail(email)
-        try InputValidator.validatePasswordStrength(password) // Validación más estricta para registro
+        try InputValidator.validatePasswordStrength(password)
         try InputValidator.validateName(nombre)
         try InputValidator.validateName(apellidos)
 
-        let authResp = try await supabase.auth.signUp(email: email, password: password)
+        let authResp = try await supabase.auth.signUp(
+            email: email,
+            password: password,
+            redirectTo: URL(string: "camposdegalicia://verify-callback")
+        )
         let userId = authResp.user.id.uuidString
 
         // Crear perfil
         let perfil = Perfil(id: userId, nombre: nombre, apellidos: apellidos, isAdmin: false)
         try await supabase.from("perfiles").insert(perfil).execute()
-
-        // Auto-login: establecer estado autenticado
-        self.user = authResp.user
-        self.isAuthenticated = true
-        self.nombre = nombre
-        self.apellidos = apellidos
 
         Logger.success("✅ Registro exitoso para: \(email)")
         AnalyticsManager.shared.track(.register)
@@ -99,8 +97,15 @@ class AuthViewModel: ObservableObject {
             "email": email
         ])
 
-        // Cargar datos iniciales de progreso
-        await ProgressStore.shared.loadInitialData(for: userId)
+        // Auto-login solo si Supabase no requiere confirmación de email.
+        // Si session == nil, el usuario debe verificar su correo primero.
+        if authResp.session != nil {
+            self.user = authResp.user
+            self.isAuthenticated = true
+            self.nombre = nombre
+            self.apellidos = apellidos
+            await ProgressStore.shared.loadInitialData(for: userId)
+        }
 
         return userId
     }
@@ -127,13 +132,12 @@ class AuthViewModel: ObservableObject {
         // Validar email antes de enviar
         try InputValidator.validateEmail(email)
 
-        // Marcar que hay un recovery pendiente ANTES de enviar el email
-        isRecoveryInProgress = true
-
         try await supabase.auth.resetPasswordForEmail(
             email,
             redirectTo: URL(string: "camposdegalicia://reset-callback")
         )
+        // Marcar recovery pendiente solo tras envío exitoso
+        isRecoveryInProgress = true
         Logger.success("✅ Email de reset enviado")
     }
 

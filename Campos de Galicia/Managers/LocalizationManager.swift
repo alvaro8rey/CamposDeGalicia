@@ -406,6 +406,8 @@ enum LocalizedKey: String {
     case navStopAndExit = "nav.stop.and.exit"
     case navCancelMessage = "nav.cancel.message"
     case navVerification = "nav.verification"
+    case navVerificationSuccess = "nav.verification.success"
+    case navVerificationError = "nav.verification.error"
     case navAccept = "nav.accept"
 
     // MARK: - Campo Sections
@@ -1035,6 +1037,8 @@ class LocalizationManager: ObservableObject {
             .navStopAndExit: "Detener y Salir",
             .navCancelMessage: "¿Deseas cancelar la navegación actual? El mapa volverá a su estado inicial.",
             .navVerification: "Verificación",
+            .navVerificationSuccess: "¡Correo verificado! Ya puedes iniciar sesión.",
+            .navVerificationError: "El enlace de verificación ha expirado o ya fue usado.",
             .navAccept: "Aceptar",
 
             // Campo Sections
@@ -1544,6 +1548,8 @@ class LocalizationManager: ObservableObject {
             .navStopAndExit: "Deter e Saír",
             .navCancelMessage: "Desexas cancelar a navegación actual? O mapa volverá ao seu estado inicial.",
             .navVerification: "Verificación",
+            .navVerificationSuccess: "Correo verificado! Xa podes iniciar sesión.",
+            .navVerificationError: "A ligazón de verificación expirou ou xa foi usada.",
             .navAccept: "Aceptar",
 
             // Campo Sections

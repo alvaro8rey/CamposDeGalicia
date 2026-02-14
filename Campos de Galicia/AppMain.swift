@@ -330,11 +330,13 @@ struct AppMain: App {
 
     func handleDeepLink(url: URL) {
         print("🔗 [DeepLink] URL recibida: \(url.absoluteString)")
+        let host = url.host ?? ""
 
-        // Recovery pendiente: mostrar el formulario inmediatamente sin iniciar sesión.
-        // La vista establecerá la sesión en segundo plano mientras el usuario escribe.
-        if authViewModel.isRecoveryInProgress {
-            print("🔑 [DeepLink] Recovery pendiente, mostrando formulario...")
+        // --- Flujo de restablecimiento de contraseña ---
+        // Detectado por host explícito; no depende del flag isRecoveryInProgress.
+        if host == "reset-callback" {
+            print("🔑 [DeepLink] Enlace de reset recibido")
+            authViewModel.isRecoveryInProgress = true // por si acaso no estaba activo
             UserDefaults.standard.set(url.absoluteString, forKey: "recovery_url")
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
                 self.showPasswordReset = true
@@ -342,7 +344,29 @@ struct AppMain: App {
             return
         }
 
-        // Otros deep links (verificación de email, etc.)
+        // --- Flujo de verificación de email ---
+        if host == "verify-callback" {
+            print("✉️ [DeepLink] Enlace de verificación recibido")
+            Task {
+                do {
+                    let session = try await supabase.auth.session(from: url)
+                    print("✅ [DeepLink/Verify] Email verificado: \(session.user.email ?? "unknown")")
+                    authViewModel.user = session.user
+                    authViewModel.isAuthenticated = true
+                    authViewModel.nombre = session.user.userMetadata["nombre"] as? String ?? ""
+                    authViewModel.apellidos = session.user.userMetadata["apellidos"] as? String ?? ""
+                    try? await authViewModel.loadProfileData()
+                    await ProgressStore.shared.loadInitialData(for: session.user.id.uuidString)
+                    ToastManager.shared.success(L(.navVerificationSuccess))
+                } catch {
+                    print("❌ [DeepLink/Verify] Error: \(error.localizedDescription)")
+                    ToastManager.shared.error(L(.navVerificationError))
+                }
+            }
+            return
+        }
+
+        // --- Otros deep links (legacy / fallback) ---
         Task {
             do {
                 let session = try await supabase.auth.session(from: url)

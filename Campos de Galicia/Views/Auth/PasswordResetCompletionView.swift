@@ -3,8 +3,6 @@ import SwiftUI
 /// Vista para establecer nueva contraseña tras usar el enlace de recuperación
 struct PasswordResetCompletionView: View {
 
-    let recoveryURL: URL?
-
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
     @EnvironmentObject var localization: LocalizationManager
@@ -197,69 +195,35 @@ struct PasswordResetCompletionView: View {
         !newPassword.isEmpty && !confirmPassword.isEmpty
     }
 
-    /// Intenta obtener la URL de recovery de cualquier fuente disponible
-    private func getRecoveryURL() -> URL? {
-        if let url = recoveryURL { return url }
-        if let urlString = UserDefaults.standard.string(forKey: "recovery_url"),
-           let url = URL(string: urlString) {
-            return url
-        }
-        return nil
-    }
-
-    /// Intenta establecer la sesión en segundo plano (best-effort, sin errores visibles)
+    /// Espera a que la sesión de recovery esté lista (la establece handleDeepLink antes de abrir la vista)
     private func tryEstablishSession() async {
-        print("🔑 [Recovery] Intentando establecer sesión...")
-        print("🔑 [Recovery] recoveryURL param: \(recoveryURL?.absoluteString ?? "nil")")
-        print("🔑 [Recovery] UserDefaults URL: \(UserDefaults.standard.string(forKey: "recovery_url") ?? "nil")")
-        print("🔑 [Recovery] currentUser: \(supabase.auth.currentUser?.email ?? "nil")")
-
-        // Si ya hay sesión, listo
+        // handleDeepLink ya llamó a session(from:) antes de mostrarnos.
+        // Esperamos hasta 3s por si el SDK aún no ha propagado el usuario.
         if supabase.auth.currentUser != nil {
-            print("✅ [Recovery] Sesión ya existente")
+            print("✅ [Recovery] Sesión lista al abrir")
             sessionReady = true
             return
         }
-
-        // Intentar con la URL disponible
-        if let url = getRecoveryURL() {
-            do {
-                let session = try await supabase.auth.session(from: url)
-                print("✅ [Recovery] Sesión establecida desde URL: \(session.user.email ?? "unknown")")
-                sessionReady = true
-                return
-            } catch {
-                print("⚠️ [Recovery] Error con URL: \(error.localizedDescription)")
-            }
-        }
-
-        // Esperar un momento por si el SDK está procesando la URL internamente
-        for attempt in 1...5 {
-            try? await Task.sleep(nanoseconds: 1_000_000_000) // 1 segundo
+        for attempt in 1...6 {
+            try? await Task.sleep(nanoseconds: 500_000_000) // 0.5s × 6 = máx 3s
             if supabase.auth.currentUser != nil {
-                print("✅ [Recovery] Sesión encontrada tras \(attempt)s de espera")
+                print("✅ [Recovery] Sesión detectada tras \(attempt × 500)ms")
                 sessionReady = true
                 return
             }
         }
-
-        print("⚠️ [Recovery] No se pudo establecer sesión automáticamente, el usuario puede intentar manualmente")
+        // Si tras 3s no hay sesión, desbloquear de todas formas.
+        // changePassword() mostrará el error apropiado al intentar enviar.
+        print("⚠️ [Recovery] Sin sesión tras 3s, desbloqueando formulario")
+        sessionReady = true
     }
 
-    /// Asegura que hay una sesión activa antes de cambiar la contraseña
+    /// Comprueba que hay sesión activa antes de cambiar la contraseña
     private func ensureSession() async -> Bool {
         if supabase.auth.currentUser != nil { return true }
-
-        if let url = getRecoveryURL() {
-            do {
-                _ = try await supabase.auth.session(from: url)
-                return true
-            } catch {
-                print("❌ [Recovery] Error estableciendo sesión al enviar: \(error.localizedDescription)")
-            }
-        }
-
-        return false
+        // Última espera corta (el SDK puede tardar un ciclo extra)
+        try? await Task.sleep(nanoseconds: 500_000_000)
+        return supabase.auth.currentUser != nil
     }
 
     private func changePassword() async {
@@ -287,7 +251,6 @@ struct PasswordResetCompletionView: View {
             try await AuthViewModel.shared.changePassword(newPassword: newPassword)
 
             // Limpiar estado de recovery
-            UserDefaults.standard.removeObject(forKey: "recovery_url")
             try? await supabase.auth.signOut()
             AuthViewModel.shared.isRecoveryInProgress = false
             AuthViewModel.shared.isAuthenticated = false

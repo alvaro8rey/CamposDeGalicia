@@ -40,7 +40,7 @@ struct AppMain: App {
 
     // Password reset deep link
     @State private var showPasswordReset: Bool = false
-    @State private var recoveryURL: URL? = nil
+
 
     // Computed property para el binding del TabView
     private var tabSelection: Binding<Int> {
@@ -287,8 +287,6 @@ struct AppMain: App {
             }
             .sheet(isPresented: $showPasswordReset, onDismiss: {
                 // Limpiar recovery al cerrar (cancelar o tras éxito)
-                recoveryURL = nil
-                UserDefaults.standard.removeObject(forKey: "recovery_url")
                 if authViewModel.isRecoveryInProgress {
                     authViewModel.isRecoveryInProgress = false
                     Task {
@@ -298,7 +296,7 @@ struct AppMain: App {
                     }
                 }
             }) {
-                PasswordResetCompletionView(recoveryURL: recoveryURL)
+                PasswordResetCompletionView()
                     .environmentObject(LocalizationManager.shared)
             }
             .overlay(
@@ -332,19 +330,25 @@ struct AppMain: App {
     func handleDeepLink(url: URL) {
         print("🔗 [DeepLink] URL recibida: \(url.absoluteString)")
 
-        // Si hay un recovery pendiente (flag persistido), CUALQUIER deep link es recovery
+        // Si hay un recovery pendiente, establecer la sesión aquí (una sola vez)
+        // para que PasswordResetCompletionView la encuentre lista al abrirse.
         if authViewModel.isRecoveryInProgress {
-            print("🔑 [DeepLink] Recovery pendiente detectado, mostrando formulario")
-            // Guardar URL en UserDefaults para que la vista pueda accederla
-            UserDefaults.standard.set(url.absoluteString, forKey: "recovery_url")
-            recoveryURL = url
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                self.showPasswordReset = true
+            print("🔑 [DeepLink] Recovery pendiente, estableciendo sesión...")
+            Task {
+                do {
+                    let session = try await supabase.auth.session(from: url)
+                    print("✅ [DeepLink/Recovery] Sesión lista: \(session.user.email ?? "unknown")")
+                    authViewModel.user = session.user
+                } catch {
+                    // El formulario mostrará el error cuando el usuario intente cambiar
+                    print("⚠️ [DeepLink/Recovery] session(from:) falló: \(error.localizedDescription)")
+                }
+                await MainActor.run { showPasswordReset = true }
             }
             return
         }
 
-        // Otros deep links
+        // Otros deep links (verificación de email, etc.)
         Task {
             do {
                 let session = try await supabase.auth.session(from: url)

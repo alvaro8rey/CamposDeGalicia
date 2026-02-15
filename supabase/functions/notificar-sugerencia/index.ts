@@ -1,11 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 
-// IONOS: puerto 587 con STARTTLS
-const SMTP_HOST = Deno.env.get("SMTP_HOST") ?? "smtp.ionos.es";
-const SMTP_PORT = Number(Deno.env.get("SMTP_PORT") ?? "587");
-const SMTP_USER = Deno.env.get("SMTP_USER") ?? "";
-const SMTP_PASS = Deno.env.get("SMTP_PASS") ?? "";
+const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") ?? "";
+const FROM_EMAIL = Deno.env.get("FROM_EMAIL") ?? "noreply@camposdegalicia.es";
 const NOTIFY_TO = Deno.env.get("NOTIFY_TO") ?? "info@camposdegalicia.es";
 
 serve(async (req) => {
@@ -30,9 +26,9 @@ serve(async (req) => {
 
   console.log("[notificar-sugerencia] Recibido:", JSON.stringify(body));
 
-  if (!SMTP_USER || !SMTP_PASS) {
-    console.error("[notificar-sugerencia] ERROR: SMTP_USER o SMTP_PASS no configurados");
-    return new Response(JSON.stringify({ ok: false, error: "SMTP credentials not set" }), {
+  if (!RESEND_API_KEY) {
+    console.error("[notificar-sugerencia] ERROR: RESEND_API_KEY no configurado");
+    return new Response(JSON.stringify({ ok: false, error: "RESEND_API_KEY not set" }), {
       status: 500,
       headers: { "Content-Type": "application/json" },
     });
@@ -73,39 +69,38 @@ serve(async (req) => {
 </body>
 </html>`;
 
-  const client = new SMTPClient({
-    connection: {
-      hostname: SMTP_HOST,
-      port: SMTP_PORT,
-      tls: false,       // false = usa STARTTLS en puerto 587
-      auth: {
-        username: SMTP_USER,
-        password: SMTP_PASS,
-      },
-    },
-  });
-
   try {
-    console.log(`[notificar-sugerencia] Enviando via ${SMTP_HOST}:${SMTP_PORT}...`);
-
-    await client.send({
-      from: SMTP_USER,
-      to: NOTIFY_TO,
-      subject: `[Sugerencia] ${nombre}${provincia ? " - " + provincia : ""}`,
-      html,
+    const res = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${RESEND_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from: FROM_EMAIL,
+        to: [NOTIFY_TO],
+        subject: `[Sugerencia] ${nombre}${provincia ? " - " + provincia : ""}`,
+        html,
+      }),
     });
 
-    await client.close();
-    console.log("[notificar-sugerencia] Email enviado a", NOTIFY_TO);
+    const data = await res.json();
 
-    return new Response(JSON.stringify({ ok: true }), {
+    if (!res.ok) {
+      console.error("[notificar-sugerencia] Resend error:", JSON.stringify(data));
+      return new Response(JSON.stringify({ ok: false, error: data }), {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    console.log("[notificar-sugerencia] Email enviado. ID:", data.id);
+    return new Response(JSON.stringify({ ok: true, id: data.id }), {
       status: 200,
       headers: { "Content-Type": "application/json" },
     });
   } catch (err) {
-    console.error("[notificar-sugerencia] Error:", err);
-    await client.close().catch(() => {});
-
+    console.error("[notificar-sugerencia] Fetch error:", err);
     return new Response(JSON.stringify({ ok: false, error: String(err) }), {
       status: 500,
       headers: { "Content-Type": "application/json" },

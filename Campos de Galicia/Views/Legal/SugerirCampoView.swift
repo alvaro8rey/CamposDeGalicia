@@ -1,5 +1,6 @@
 import SwiftUI
 import PhotosUI
+import MapKit
 
 /// Vista para que los usuarios sugieran campos que faltan en la app
 struct SugerirCampoView: View {
@@ -16,6 +17,8 @@ struct SugerirCampoView: View {
     @State private var notas: String = ""
     @State private var selectedPhotos: [PhotosPickerItem] = []
     @State private var photoPreviews: [Image] = []
+    @State private var coordenadas: CLLocationCoordinate2D? = nil
+    @State private var showMapPicker: Bool = false
     @State private var isLoading: Bool = false
     @State private var showSuccess: Bool = false
     @State private var errorMessage: String? = nil
@@ -45,6 +48,16 @@ struct SugerirCampoView: View {
         }
         .navigationTitle(L(.settingsSuggest))
         .navigationBarTitleDisplayMode(.inline)
+        // Cerrar teclado al tocar fuera de cualquier campo de texto
+        .onTapGesture {
+            UIApplication.shared.sendAction(
+                #selector(UIResponder.resignFirstResponder),
+                to: nil, from: nil, for: nil
+            )
+        }
+        .sheet(isPresented: $showMapPicker) {
+            MapCoordinatePickerView(selectedCoordinate: $coordenadas)
+        }
     }
 
     // MARK: - Form View
@@ -104,6 +117,57 @@ struct SugerirCampoView: View {
                         }
 
                         Spacer()
+                    }
+                    .padding()
+
+                    Divider().padding(.leading, 56)
+
+                    // Coordenadas (selector de mapa)
+                    HStack(spacing: 12) {
+                        Image(systemName: "mappin.and.ellipse")
+                            .foregroundColor(.red)
+                            .frame(width: 24)
+
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Ubicación en el mapa")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+
+                            if let coord = coordenadas {
+                                Text(String(format: "%.5f, %.5f", coord.latitude, coord.longitude))
+                                    .font(.body.monospacedDigit())
+                                    .foregroundColor(.primary)
+                            } else {
+                                Text("Opcional")
+                                    .font(.body)
+                                    .foregroundColor(Color(UIColor.placeholderText))
+                            }
+                        }
+
+                        Spacer()
+
+                        Button(action: { showMapPicker = true }) {
+                            HStack(spacing: 4) {
+                                Image(systemName: coordenadas == nil ? "map" : "map.fill")
+                                Text(coordenadas == nil ? "Seleccionar" : "Cambiar")
+                                    .font(.caption)
+                                    .fontWeight(.medium)
+                            }
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
+                            .background(Color.red.opacity(0.12))
+                            .foregroundColor(.red)
+                            .cornerRadius(8)
+                        }
+                        .buttonStyle(.plain)
+
+                        if coordenadas != nil {
+                            Button(action: { coordenadas = nil }) {
+                                Image(systemName: "xmark.circle.fill")
+                                    .foregroundColor(.secondary)
+                            }
+                            .buttonStyle(.plain)
+                        }
                     }
                     .padding()
 
@@ -249,6 +313,7 @@ struct SugerirCampoView: View {
             }
             .padding(.top)
         }
+        .scrollDismissesKeyboard(.interactively)
     }
 
     // MARK: - Success View
@@ -386,7 +451,9 @@ struct SugerirCampoView: View {
                 municipio: municipio.trimmingCharacters(in: .whitespaces).isEmpty ? nil : municipio.trimmingCharacters(in: .whitespaces),
                 provincia: provincia,
                 notas: notas.trimmingCharacters(in: .whitespaces).isEmpty ? nil : notas.trimmingCharacters(in: .whitespaces),
-                imagenes: imageUrls.isEmpty ? nil : imageUrls
+                imagenes: imageUrls.isEmpty ? nil : imageUrls,
+                latitud: coordenadas?.latitude,
+                longitud: coordenadas?.longitude
             )
 
             try await supabase
@@ -402,6 +469,8 @@ struct SugerirCampoView: View {
                 let notas: String
                 let imagenes: [String]
                 let userEmail: String
+                let latitud: Double?
+                let longitud: Double?
             }
             try? await supabase.functions
                 .invoke(
@@ -412,7 +481,9 @@ struct SugerirCampoView: View {
                         provincia: provincia,
                         notas: notas.trimmingCharacters(in: .whitespaces),
                         imagenes: imageUrls,
-                        userEmail: authViewModel.user?.email ?? ""
+                        userEmail: authViewModel.user?.email ?? "",
+                        latitud: coordenadas?.latitude,
+                        longitud: coordenadas?.longitude
                     ))
                 )
 
@@ -432,6 +503,7 @@ struct SugerirCampoView: View {
         notas = ""
         selectedPhotos = []
         photoPreviews = []
+        coordenadas = nil
         errorMessage = nil
         withAnimation { showSuccess = false }
     }
@@ -445,6 +517,8 @@ private struct SugerenciaCampo: Encodable {
     let provincia: String
     let notas: String?
     let imagenes: [String]?
+    let latitud: Double?
+    let longitud: Double?
 
     enum CodingKeys: String, CodingKey {
         case userId = "user_id"
@@ -453,6 +527,8 @@ private struct SugerenciaCampo: Encodable {
         case provincia
         case notas
         case imagenes
+        case latitud
+        case longitud
     }
 }
 

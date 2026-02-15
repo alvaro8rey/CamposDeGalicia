@@ -16,6 +16,8 @@ serve(async (req) => {
     notas?: string;
     imagenes?: string[];
     userEmail?: string;
+    latitud?: number;
+    longitud?: number;
   };
 
   try {
@@ -34,13 +36,25 @@ serve(async (req) => {
     });
   }
 
-  const { nombre, municipio, provincia, notas, imagenes, userEmail } = body;
+  const { nombre, municipio, provincia, notas, imagenes, userEmail, latitud, longitud } = body;
 
   const imagenesHtml = imagenes && imagenes.length > 0
     ? `<p><strong>Fotos adjuntas:</strong></p>
        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;">
          ${imagenes.map((url) => `<img src="${url}" style="width:200px;height:150px;object-fit:cover;border-radius:8px;" />`).join("")}
        </div>`
+    : "";
+
+  const mapsUrl = latitud != null && longitud != null
+    ? `https://www.google.com/maps?q=${latitud},${longitud}`
+    : null;
+
+  const coordenadasHtml = mapsUrl
+    ? `<div class="label">Coordenadas</div>
+       <div class="value" style="font-family:monospace">${latitud!.toFixed(5)}, ${longitud!.toFixed(5)}</div>
+       <a href="${mapsUrl}" style="display:inline-block;margin-bottom:16px;padding:8px 14px;background:#4285F4;color:white;border-radius:8px;text-decoration:none;font-size:14px;">
+         📍 Ver en Google Maps
+       </a>`
     : "";
 
   const html = `<!DOCTYPE html>
@@ -61,6 +75,7 @@ serve(async (req) => {
   <div class="label">Nombre del campo</div><div class="value">${nombre}</div>
   ${municipio ? `<div class="label">Municipio</div><div class="value">${municipio}</div>` : ""}
   ${provincia ? `<div class="label">Provincia</div><div class="value">${provincia}</div>` : ""}
+  ${coordenadasHtml}
   ${notas ? `<div class="label">Notas</div><div class="value">${notas}</div>` : ""}
   ${userEmail ? `<div class="label">Enviado por</div><div class="value">${userEmail}</div>` : ""}
   ${imagenesHtml}

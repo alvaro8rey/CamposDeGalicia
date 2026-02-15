@@ -34,7 +34,7 @@ struct SugerirCampoView: View {
 
             if showSuccess {
                 successView
-            } else if authViewModel.currentUser == nil {
+            } else if !authViewModel.isAuthenticated {
                 notLoggedInView
             } else {
                 formView
@@ -266,7 +266,7 @@ struct SugerirCampoView: View {
             return
         }
 
-        guard let userId = authViewModel.currentUser?.id.uuidString else {
+        guard let userId = authViewModel.user?.id.uuidString else {
             errorMessage = L(.suggestLoginRequired)
             return
         }

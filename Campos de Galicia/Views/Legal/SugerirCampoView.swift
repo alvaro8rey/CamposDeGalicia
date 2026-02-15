@@ -37,6 +37,13 @@ struct SugerirCampoView: View {
                 startPoint: .top, endPoint: .bottom
             )
             .ignoresSafeArea()
+            // Toca el fondo para cerrar el teclado
+            .onTapGesture {
+                UIApplication.shared.sendAction(
+                    #selector(UIResponder.resignFirstResponder),
+                    to: nil, from: nil, for: nil
+                )
+            }
 
             if showSuccess {
                 successView
@@ -48,13 +55,6 @@ struct SugerirCampoView: View {
         }
         .navigationTitle(L(.settingsSuggest))
         .navigationBarTitleDisplayMode(.inline)
-        // Cerrar teclado al tocar fuera de cualquier campo de texto
-        .onTapGesture {
-            UIApplication.shared.sendAction(
-                #selector(UIResponder.resignFirstResponder),
-                to: nil, from: nil, for: nil
-            )
-        }
         .sheet(isPresented: $showMapPicker) {
             MapCoordinatePickerView(selectedCoordinate: $coordenadas)
         }
@@ -313,7 +313,7 @@ struct SugerirCampoView: View {
             }
             .padding(.top)
         }
-        .scrollDismissesKeyboard(.interactively)
+        .scrollDismissesKeyboard(.immediately)
     }
 
     // MARK: - Success View

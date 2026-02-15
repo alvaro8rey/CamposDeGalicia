@@ -1,5 +1,6 @@
 import SwiftUI
 import MapKit
+import CoreLocation
 
 /// Sheet que permite al usuario desplazar el mapa para colocar la chincheta
 /// exactamente donde está el campo. Las coordenadas son siempre el centro del mapa.
@@ -7,6 +8,8 @@ struct MapCoordinatePickerView: View {
 
     @Binding var selectedCoordinate: CLLocationCoordinate2D?
     @Environment(\.dismiss) private var dismiss
+
+    @StateObject private var locationManager = SingleLocationManager()
 
     // Centro inicial en Galicia
     @State private var region = MKCoordinateRegion(
@@ -28,7 +31,7 @@ struct MapCoordinatePickerView: View {
     var body: some View {
         NavigationView {
             ZStack {
-                Map(coordinateRegion: $region)
+                Map(coordinateRegion: $region, showsUserLocation: true)
                     .ignoresSafeArea(edges: .bottom)
 
                 // Chincheta fija en el centro de la pantalla
@@ -37,34 +40,52 @@ struct MapCoordinatePickerView: View {
                         .font(.system(size: 40))
                         .foregroundColor(.red)
                         .shadow(radius: 3)
-                    // Palo de la chincheta
                     Rectangle()
                         .frame(width: 2, height: 12)
                         .foregroundColor(.red)
-                    // Sombra en el suelo
                     Ellipse()
                         .frame(width: 12, height: 4)
                         .foregroundColor(.black.opacity(0.25))
                 }
                 .offset(y: -28)
 
-                // Coordenadas en tiempo real
+                // Botón "ir a mi ubicación" + coordenadas
                 VStack {
                     Spacer()
-                    HStack(spacing: 6) {
-                        Image(systemName: "location.fill")
-                            .font(.caption2)
-                            .foregroundColor(.secondary)
-                        Text(String(format: "%.5f, %.5f",
-                                    region.center.latitude,
-                                    region.center.longitude))
-                            .font(.caption.monospacedDigit())
-                            .foregroundColor(.primary)
+
+                    HStack(alignment: .bottom) {
+                        // Botón mi ubicación
+                        Button(action: centerOnUser) {
+                            Image(systemName: locationManager.authorizationDenied
+                                  ? "location.slash.fill"
+                                  : "location.fill")
+                                .font(.system(size: 18, weight: .medium))
+                                .foregroundColor(locationManager.authorizationDenied ? .secondary : .blue)
+                                .frame(width: 44, height: 44)
+                                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
+                                .shadow(radius: 2)
+                        }
+                        .disabled(locationManager.authorizationDenied)
+
+                        Spacer()
+
+                        // Coordenadas en tiempo real
+                        HStack(spacing: 6) {
+                            Image(systemName: "location.fill")
+                                .font(.caption2)
+                                .foregroundColor(.secondary)
+                            Text(String(format: "%.5f, %.5f",
+                                        region.center.latitude,
+                                        region.center.longitude))
+                                .font(.caption.monospacedDigit())
+                                .foregroundColor(.primary)
+                        }
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 10))
                     }
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
-                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 10))
-                    .padding(.bottom, 12)
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 16)
                 }
             }
             .navigationTitle("Seleccionar ubicación")
@@ -81,6 +102,80 @@ struct MapCoordinatePickerView: View {
                     .fontWeight(.semibold)
                 }
             }
+            .onAppear {
+                locationManager.requestLocation()
+            }
+            .onChange(of: locationManager.location) { _, location in
+                guard let location else { return }
+                withAnimation {
+                    region = MKCoordinateRegion(
+                        center: location.coordinate,
+                        span: MKCoordinateSpan(latitudeDelta: 0.005, longitudeDelta: 0.005)
+                    )
+                }
+            }
         }
+    }
+
+    private func centerOnUser() {
+        if let location = locationManager.location {
+            withAnimation {
+                region = MKCoordinateRegion(
+                    center: location.coordinate,
+                    span: MKCoordinateSpan(latitudeDelta: 0.005, longitudeDelta: 0.005)
+                )
+            }
+        } else {
+            locationManager.requestLocation()
+        }
+    }
+}
+
+// MARK: - Location Manager (uso único para este picker)
+
+private final class SingleLocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
+
+    @Published var location: CLLocation? = nil
+    @Published var authorizationDenied: Bool = false
+
+    private let manager = CLLocationManager()
+
+    override init() {
+        super.init()
+        manager.delegate = self
+        manager.desiredAccuracy = kCLLocationAccuracyHundredMeters
+    }
+
+    func requestLocation() {
+        switch manager.authorizationStatus {
+        case .notDetermined:
+            manager.requestWhenInUseAuthorization()
+        case .authorizedWhenInUse, .authorizedAlways:
+            manager.requestLocation()
+        case .denied, .restricted:
+            authorizationDenied = true
+        @unknown default:
+            break
+        }
+    }
+
+    func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
+        switch manager.authorizationStatus {
+        case .authorizedWhenInUse, .authorizedAlways:
+            authorizationDenied = false
+            manager.requestLocation()
+        case .denied, .restricted:
+            authorizationDenied = true
+        default:
+            break
+        }
+    }
+
+    func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
+        location = locations.last
+    }
+
+    func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
+        // Silencioso — el usuario simplemente no verá el punto azul
     }
 }

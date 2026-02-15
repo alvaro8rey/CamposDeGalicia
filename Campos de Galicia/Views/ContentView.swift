@@ -81,6 +81,18 @@ struct ContentView: View {
                             }
                             .transition(.scale.combined(with: .opacity))
                         }
+
+                        Divider()
+                            .frame(height: 18)
+
+                        Button {
+                            HapticFeedback.light()
+                            showSugerirCampo = true
+                        } label: {
+                            Image(systemName: "plus")
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundColor(.blue)
+                        }
                     }
                     .padding(.horizontal, 14)
                     .padding(.vertical, 12)
@@ -129,25 +141,15 @@ struct ContentView: View {
                     .foregroundColor(.primary)
             }
             ToolbarItem(placement: .topBarTrailing) {
-                HStack(spacing: 4) {
-                    Button {
-                        HapticFeedback.light()
-                        showSugerirCampo = true
-                    } label: {
-                        Image(systemName: "plus.circle.fill")
-                            .font(.body)
-                            .foregroundColor(.green)
+                Button {
+                    HapticFeedback.light()
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                        isGridView.toggle()
                     }
-                    Button {
-                        HapticFeedback.light()
-                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                            isGridView.toggle()
-                        }
-                    } label: {
-                        Image(systemName: isGridView ? "list.bullet" : "square.grid.2x2")
-                            .font(.body)
-                            .foregroundColor(.blue)
-                    }
+                } label: {
+                    Image(systemName: isGridView ? "list.bullet" : "square.grid.2x2")
+                        .font(.body)
+                        .foregroundColor(.blue)
                 }
             }
         }

@@ -1,40 +1,78 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const RESEND_API_KEY    = Deno.env.get("RESEND_API_KEY") ?? "";
-const FROM_EMAIL        = Deno.env.get("FROM_EMAIL") ?? "noreply@camposdegalicia.es";
-const SUPABASE_URL      = Deno.env.get("SUPABASE_URL") ?? "";
-const SUPABASE_SERVICE  = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+const RESEND_API_KEY   = Deno.env.get("RESEND_API_KEY") ?? "";
+const FROM_EMAIL       = Deno.env.get("FROM_EMAIL") ?? "noreply@camposdegalicia.es";
+const SUPABASE_URL     = Deno.env.get("SUPABASE_URL") ?? "";
+const SUPABASE_SERVICE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 
-const XP_POR_SUGERENCIA = 500;
+const XP = 500;
+
+// El webhook de Supabase envía { type, table, record, old_record, schema }
+// También se puede llamar directamente con { userId, nombreCampo }
+interface WebhookPayload {
+  type: "UPDATE";
+  table: string;
+  record: { user_id: string; nombre: string; aprobada: boolean };
+  old_record: { aprobada: boolean };
+}
+
+interface DirectPayload {
+  userId: string;
+  nombreCampo: string;
+  xp?: number;
+}
 
 serve(async (req) => {
   if (req.method !== "POST") {
     return new Response("Method Not Allowed", { status: 405 });
   }
 
-  let body: { userId: string; nombreCampo: string; xp?: number };
+  let raw: WebhookPayload | DirectPayload;
   try {
-    body = await req.json();
+    raw = await req.json();
   } catch {
     return new Response("Invalid JSON", { status: 400 });
   }
 
-  const { userId, nombreCampo, xp = XP_POR_SUGERENCIA } = body;
+  // Normalizar: admite payload de webhook Y llamada directa
+  let userId: string;
+  let nombreCampo: string;
+
+  if ("record" in raw) {
+    // Payload de Database Webhook
+    const { record, old_record } = raw as WebhookPayload;
+
+    // Solo actuar si aprobada pasó de false → true
+    if (!record.aprobada || old_record?.aprobada === true) {
+      return new Response(JSON.stringify({ ok: true, skipped: true }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    userId      = record.user_id;
+    nombreCampo = record.nombre;
+  } else {
+    // Llamada directa (trigger pg_net o manual)
+    const direct = raw as DirectPayload;
+    userId      = direct.userId;
+    nombreCampo = direct.nombreCampo;
+  }
 
   if (!userId || !nombreCampo) {
-    return new Response(JSON.stringify({ ok: false, error: "userId y nombreCampo son obligatorios" }), {
+    return new Response(JSON.stringify({ ok: false, error: "Faltan userId o nombreCampo" }), {
       status: 400,
       headers: { "Content-Type": "application/json" },
     });
   }
 
-  // Obtener el email del usuario via Admin API
+  // Obtener email del usuario via Admin API
   const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE);
   const { data: userData, error: userError } = await admin.auth.admin.getUserById(userId);
 
   if (userError || !userData?.user?.email) {
-    console.error("[notificar-aprobacion] No se pudo obtener el email del usuario:", userError);
+    console.error("[notificar-aprobacion] Usuario no encontrado:", userError);
     return new Response(JSON.stringify({ ok: false, error: "Usuario no encontrado" }), {
       status: 404,
       headers: { "Content-Type": "application/json" },
@@ -42,8 +80,7 @@ serve(async (req) => {
   }
 
   const userEmail = userData.user.email;
-
-  console.log(`[notificar-aprobacion] Enviando email a ${userEmail} por campo aprobado: ${nombreCampo}`);
+  console.log(`[notificar-aprobacion] Enviando email a ${userEmail} - Campo: ${nombreCampo}`);
 
   const html = `<!DOCTYPE html>
 <html lang="es">
@@ -81,7 +118,7 @@ serve(async (req) => {
   <div class="xp-box">
     <div class="xp-icon">⭐</div>
     <div class="xp-text">
-      <div class="xp-amount">+${xp} XP</div>
+      <div class="xp-amount">+${XP} XP</div>
       <div class="xp-label">¡Experiencia añadida a tu perfil!</div>
     </div>
   </div>
@@ -106,7 +143,7 @@ serve(async (req) => {
       body: JSON.stringify({
         from: FROM_EMAIL,
         to: [userEmail],
-        subject: `¡Tu sugerencia "${nombreCampo}" ha sido aprobada! +${xp} XP`,
+        subject: `¡Tu sugerencia "${nombreCampo}" ha sido aprobada! +${XP} XP`,
         html,
       }),
     });
@@ -121,14 +158,13 @@ serve(async (req) => {
       });
     }
 
-    console.log("[notificar-aprobacion] Email enviado a", userEmail, "- ID:", data.id);
-    return new Response(JSON.stringify({ ok: true, id: data.id }), {
+    console.log("[notificar-aprobacion] Email enviado a", userEmail, "ID:", data.id);
+    return new Response(JSON.stringify({ ok: true, emailId: data.id }), {
       status: 200,
       headers: { "Content-Type": "application/json" },
     });
-
   } catch (err) {
-    console.error("[notificar-aprobacion] Fetch error:", err);
+    console.error("[notificar-aprobacion] Error:", err);
     return new Response(JSON.stringify({ ok: false, error: String(err) }), {
       status: 500,
       headers: { "Content-Type": "application/json" },

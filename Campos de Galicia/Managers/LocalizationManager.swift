@@ -579,6 +579,9 @@ enum LocalizedKey: String {
     case suggestLoginRequired = "suggest.login.required"
     case suggestLoginRequiredMessage = "suggest.login.required.message"
     case suggestAnotherOne = "suggest.another.one"
+    case suggestPhotos = "suggest.photos"
+    case suggestPhotosOptional = "suggest.photos.optional"
+    case suggestPhotosMax = "suggest.photos.max"
 }
 
 /// Manager de localización centralizado
@@ -1259,6 +1262,9 @@ class LocalizationManager: ObservableObject {
             .suggestLoginRequired: "Inicia sesión",
             .suggestLoginRequiredMessage: "Necesitas una cuenta para enviar sugerencias.",
             .suggestAnotherOne: "Sugerir otro campo",
+            .suggestPhotos: "Fotos del campo",
+            .suggestPhotosOptional: "opcional",
+            .suggestPhotosMax: "Máximo %d fotos",
         ],
 
         // MARK: - Galego
@@ -1819,6 +1825,9 @@ class LocalizationManager: ObservableObject {
             .suggestLoginRequired: "Inicia sesión",
             .suggestLoginRequiredMessage: "Necesitas unha conta para enviar suxestións.",
             .suggestAnotherOne: "Suxerir outro campo",
+            .suggestPhotos: "Fotos do campo",
+            .suggestPhotosOptional: "opcional",
+            .suggestPhotosMax: "Máximo %d fotos",
         ]
     ]
 }

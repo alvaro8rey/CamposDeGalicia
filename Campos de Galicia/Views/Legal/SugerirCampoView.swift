@@ -1,4 +1,5 @@
 import SwiftUI
+import PhotosUI
 
 /// Vista para que los usuarios sugieran campos que faltan en la app
 struct SugerirCampoView: View {
@@ -13,16 +14,18 @@ struct SugerirCampoView: View {
     @State private var municipio: String = ""
     @State private var provincia: String = "A Coruña"
     @State private var notas: String = ""
+    @State private var selectedPhotos: [PhotosPickerItem] = []
+    @State private var photoPreviews: [Image] = []
     @State private var isLoading: Bool = false
     @State private var showSuccess: Bool = false
     @State private var errorMessage: String? = nil
 
     private let provincias = ["A Coruña", "Lugo", "Ourense", "Pontevedra"]
+    private let maxPhotos = 3
 
     // MARK: - Body
     var body: some View {
         ZStack {
-            // Fondo
             LinearGradient(
                 gradient: Gradient(colors: [
                     Color.blue.opacity(colorScheme == .dark ? 0.1 : 0.05),
@@ -65,11 +68,7 @@ struct SugerirCampoView: View {
                 // Campos del formulario
                 VStack(spacing: 0) {
                     // Nombre
-                    formRow(
-                        icon: "sportscourt.fill",
-                        iconColor: .green,
-                        label: L(.suggestFieldName)
-                    ) {
+                    formRow(icon: "sportscourt.fill", iconColor: .green, label: L(.suggestFieldName)) {
                         TextField(L(.suggestFieldNamePlaceholder), text: $nombre)
                             .font(.body)
                     }
@@ -77,11 +76,7 @@ struct SugerirCampoView: View {
                     Divider().padding(.leading, 56)
 
                     // Municipio
-                    formRow(
-                        icon: "building.2.fill",
-                        iconColor: .blue,
-                        label: L(.suggestMunicipality)
-                    ) {
+                    formRow(icon: "building.2.fill", iconColor: .blue, label: L(.suggestMunicipality)) {
                         TextField(L(.suggestMunicipalityPlaceholder), text: $municipio)
                             .font(.body)
                     }
@@ -143,6 +138,77 @@ struct SugerirCampoView: View {
                                     }
                                 }
                             )
+                    }
+                    .padding()
+
+                    Divider().padding(.leading, 56)
+
+                    // Fotos
+                    VStack(alignment: .leading, spacing: 12) {
+                        HStack(spacing: 12) {
+                            Image(systemName: "photo.on.rectangle.angled")
+                                .foregroundColor(.cyan)
+                                .frame(width: 24)
+
+                            VStack(alignment: .leading, spacing: 2) {
+                                HStack(spacing: 6) {
+                                    Text(L(.suggestPhotos))
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                    Text("(\(L(.suggestPhotosOptional)))")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                }
+                                Text(L(.suggestPhotosMax, maxPhotos))
+                                    .font(.caption2)
+                                    .foregroundColor(.secondary)
+                            }
+
+                            Spacer()
+
+                            PhotosPicker(
+                                selection: $selectedPhotos,
+                                maxSelectionCount: maxPhotos,
+                                selectionBehavior: .ordered,
+                                matching: .images
+                            ) {
+                                Text("\(selectedPhotos.count)/\(maxPhotos)")
+                                    .font(.caption)
+                                    .fontWeight(.medium)
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 4)
+                                    .background(Color.cyan.opacity(0.15))
+                                    .foregroundColor(.cyan)
+                                    .cornerRadius(8)
+                            }
+                            .onChange(of: selectedPhotos) { _, newSelection in
+                                Task { await cargarPreviews(from: newSelection) }
+                            }
+                        }
+
+                        if !photoPreviews.isEmpty {
+                            ScrollView(.horizontal, showsIndicators: false) {
+                                HStack(spacing: 8) {
+                                    ForEach(photoPreviews.indices, id: \.self) { index in
+                                        ZStack(alignment: .topTrailing) {
+                                            photoPreviews[index]
+                                                .resizable()
+                                                .scaledToFill()
+                                                .frame(width: 80, height: 80)
+                                                .clipShape(RoundedRectangle(cornerRadius: 8))
+
+                                            Button(action: { eliminarFoto(at: index) }) {
+                                                Image(systemName: "xmark.circle.fill")
+                                                    .foregroundColor(.white)
+                                                    .background(Color.red.opacity(0.8))
+                                                    .clipShape(Circle())
+                                            }
+                                            .offset(x: 6, y: -6)
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                     .padding()
                 }
@@ -258,6 +324,42 @@ struct SugerirCampoView: View {
         .padding()
     }
 
+    // MARK: - Photo Helpers
+    private func cargarPreviews(from items: [PhotosPickerItem]) async {
+        photoPreviews.removeAll()
+        for item in items {
+            if let data = try? await item.loadTransferable(type: Data.self),
+               let uiImage = UIImage(data: data) {
+                photoPreviews.append(Image(uiImage: uiImage))
+            }
+        }
+    }
+
+    private func eliminarFoto(at index: Int) {
+        selectedPhotos.remove(at: index)
+        photoPreviews.remove(at: index)
+    }
+
+    private func subirFotos(userId: String) async throws -> [String] {
+        var urls: [String] = []
+        for (index, photoItem) in selectedPhotos.enumerated() {
+            guard let data = try? await photoItem.loadTransferable(type: Data.self) else { continue }
+            let fileName = "sugerencia-\(userId)-\(UUID().uuidString)-\(index).jpg"
+
+            _ = try await supabase.storage
+                .from("sugerencias-fotos")
+                .upload(fileName, data: data)
+
+            let publicURL = try supabase.storage
+                .from("sugerencias-fotos")
+                .getPublicURL(path: fileName)
+                .absoluteString
+
+            urls.append(publicURL)
+        }
+        return urls
+    }
+
     // MARK: - Actions
     private func enviar() async {
         let nombreTrimmed = nombre.trimmingCharacters(in: .whitespaces)
@@ -265,7 +367,6 @@ struct SugerirCampoView: View {
             errorMessage = L(.suggestErrorEmpty)
             return
         }
-
         guard let userId = authViewModel.user?.id.uuidString else {
             errorMessage = L(.suggestLoginRequired)
             return
@@ -275,12 +376,17 @@ struct SugerirCampoView: View {
         errorMessage = nil
 
         do {
+            // 1. Subir fotos (si las hay)
+            let imageUrls = try await subirFotos(userId: userId)
+
+            // 2. Insertar sugerencia en base de datos
             let suggestion = SugerenciaCampo(
                 userId: userId,
                 nombre: nombreTrimmed,
                 municipio: municipio.trimmingCharacters(in: .whitespaces).isEmpty ? nil : municipio.trimmingCharacters(in: .whitespaces),
                 provincia: provincia,
-                notas: notas.trimmingCharacters(in: .whitespaces).isEmpty ? nil : notas.trimmingCharacters(in: .whitespaces)
+                notas: notas.trimmingCharacters(in: .whitespaces).isEmpty ? nil : notas.trimmingCharacters(in: .whitespaces),
+                imagenes: imageUrls.isEmpty ? nil : imageUrls
             )
 
             try await supabase
@@ -288,9 +394,21 @@ struct SugerirCampoView: View {
                 .insert(suggestion)
                 .execute()
 
-            withAnimation {
-                showSuccess = true
-            }
+            // 3. Notificar por email (best-effort, no bloquea el éxito)
+            try? await supabase.functions
+                .invoke(
+                    "notificar-sugerencia",
+                    options: .init(body: [
+                        "nombre": nombreTrimmed,
+                        "municipio": municipio.trimmingCharacters(in: .whitespaces),
+                        "provincia": provincia,
+                        "notas": notas.trimmingCharacters(in: .whitespaces),
+                        "imagenes": imageUrls,
+                        "userEmail": authViewModel.user?.email ?? ""
+                    ])
+                )
+
+            withAnimation { showSuccess = true }
         } catch {
             errorMessage = L(.suggestErrorGeneral)
             Logger.error("Error enviando sugerencia: \(error.localizedDescription)")
@@ -304,10 +422,10 @@ struct SugerirCampoView: View {
         municipio = ""
         provincia = "A Coruña"
         notas = ""
+        selectedPhotos = []
+        photoPreviews = []
         errorMessage = nil
-        withAnimation {
-            showSuccess = false
-        }
+        withAnimation { showSuccess = false }
     }
 }
 
@@ -318,6 +436,7 @@ private struct SugerenciaCampo: Encodable {
     let municipio: String?
     let provincia: String
     let notas: String?
+    let imagenes: [String]?
 
     enum CodingKeys: String, CodingKey {
         case userId = "user_id"
@@ -325,6 +444,7 @@ private struct SugerenciaCampo: Encodable {
         case municipio
         case provincia
         case notas
+        case imagenes
     }
 }
 

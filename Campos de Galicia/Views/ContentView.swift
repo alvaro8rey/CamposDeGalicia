@@ -32,6 +32,9 @@ struct ContentView: View {
     @AppStorage("hasSeenOnboarding") private var hasSeenOnboarding: Bool = false
     @State private var showOnboarding: Bool = false
 
+    // Sugerir campo
+    @State private var showSugerirCampo: Bool = false
+
     private var hasActiveFilters: Bool {
         !searchText.isEmpty
     }
@@ -126,15 +129,25 @@ struct ContentView: View {
                     .foregroundColor(.primary)
             }
             ToolbarItem(placement: .topBarTrailing) {
-                Button {
-                    HapticFeedback.light()
-                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                        isGridView.toggle()
+                HStack(spacing: 4) {
+                    Button {
+                        HapticFeedback.light()
+                        showSugerirCampo = true
+                    } label: {
+                        Image(systemName: "plus.circle.fill")
+                            .font(.body)
+                            .foregroundColor(.green)
                     }
-                } label: {
-                    Image(systemName: isGridView ? "list.bullet" : "square.grid.2x2")
-                        .font(.body)
-                        .foregroundColor(.blue)
+                    Button {
+                        HapticFeedback.light()
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                            isGridView.toggle()
+                        }
+                    } label: {
+                        Image(systemName: isGridView ? "list.bullet" : "square.grid.2x2")
+                            .font(.body)
+                            .foregroundColor(.blue)
+                    }
                 }
             }
         }
@@ -172,6 +185,13 @@ struct ContentView: View {
         }
         .fullScreenCover(isPresented: $showOnboarding) {
             OnboardingView()
+        }
+        .sheet(isPresented: $showSugerirCampo) {
+            NavigationView {
+                SugerirCampoView()
+                    .environmentObject(localizationManager)
+                    .environmentObject(authViewModel)
+            }
         }
         .background(
             NavigationLink(

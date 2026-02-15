@@ -9,7 +9,6 @@ const SUPABASE_SERVICE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 const XP = 500;
 
 // El webhook de Supabase envía { type, table, record, old_record, schema }
-// También se puede llamar directamente con { userId, nombreCampo }
 interface WebhookPayload {
   type: "UPDATE";
   table: string;
@@ -54,7 +53,7 @@ serve(async (req) => {
     userId      = record.user_id;
     nombreCampo = record.nombre;
   } else {
-    // Llamada directa (trigger pg_net o manual)
+    // Llamada directa
     const direct = raw as DirectPayload;
     userId      = direct.userId;
     nombreCampo = direct.nombreCampo;
@@ -67,8 +66,39 @@ serve(async (req) => {
     });
   }
 
-  // Obtener email del usuario via Admin API
   const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE);
+
+  // 1. Sumar XP en la tabla niveles
+  const { data: nivelData, error: nivelReadError } = await admin
+    .from("niveles")
+    .select("current_xp")
+    .eq("id_usuario", userId)
+    .single();
+
+  if (nivelReadError || !nivelData) {
+    console.error("[notificar-aprobacion] No se encontró fila en niveles:", nivelReadError);
+    return new Response(JSON.stringify({ ok: false, error: "Fila niveles no encontrada" }), {
+      status: 404,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+
+  const { error: xpError } = await admin
+    .from("niveles")
+    .update({ current_xp: nivelData.current_xp + XP })
+    .eq("id_usuario", userId);
+
+  if (xpError) {
+    console.error("[notificar-aprobacion] Error actualizando XP:", xpError);
+    return new Response(JSON.stringify({ ok: false, error: "Error al actualizar XP" }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+
+  console.log(`[notificar-aprobacion] +${XP} XP añadidos a usuario ${userId} (total: ${nivelData.current_xp + XP})`);
+
+  // 2. Obtener email del usuario via Admin API
   const { data: userData, error: userError } = await admin.auth.admin.getUserById(userId);
 
   if (userError || !userData?.user?.email) {
@@ -159,7 +189,7 @@ serve(async (req) => {
     }
 
     console.log("[notificar-aprobacion] Email enviado a", userEmail, "ID:", data.id);
-    return new Response(JSON.stringify({ ok: true, emailId: data.id }), {
+    return new Response(JSON.stringify({ ok: true, emailId: data.id, xpSumado: XP }), {
       status: 200,
       headers: { "Content-Type": "application/json" },
     });

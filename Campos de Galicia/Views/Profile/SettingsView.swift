@@ -72,6 +72,53 @@ struct SettingsView: View {
                             .padding(.horizontal)
                         }
 
+                        // MARK: - Sección Información
+                        VStack(alignment: .leading, spacing: 16) {
+                            Text(L(.settingsInfo))
+                                .font(.title3)
+                                .fontWeight(.bold)
+                                .padding(.horizontal)
+
+                            VStack(spacing: 0) {
+                                // Términos y Condiciones
+                                NavigationLink(destination: TerminosView()) {
+                                    settingsRow(
+                                        icon: "doc.text.fill",
+                                        iconColor: .blue,
+                                        label: L(.settingsTerms)
+                                    )
+                                }
+                                .buttonStyle(.plain)
+
+                                Divider().padding(.leading, 56)
+
+                                // Contacto
+                                NavigationLink(destination: ContactoView()) {
+                                    settingsRow(
+                                        icon: "envelope.fill",
+                                        iconColor: .green,
+                                        label: L(.settingsContact)
+                                    )
+                                }
+                                .buttonStyle(.plain)
+
+                                Divider().padding(.leading, 56)
+
+                                // Sugerir un campo
+                                NavigationLink(destination: SugerirCampoView()) {
+                                    settingsRow(
+                                        icon: "plus.circle.fill",
+                                        iconColor: .orange,
+                                        label: L(.settingsSuggest)
+                                    )
+                                }
+                                .buttonStyle(.plain)
+                            }
+                            .background(Color(UIColor.secondarySystemBackground))
+                            .cornerRadius(12)
+                            .padding(.horizontal)
+                        }
+
                         // MARK: - Sección Cuenta
                         VStack(alignment: .leading, spacing: 16) {
                             Text(L(.settingsAccount))
@@ -315,6 +362,27 @@ struct SettingsView: View {
         .sheet(isPresented: $showInfoSheet) {
             InfoSheetView()
         }
+    }
+
+    // MARK: - Settings Row Helper
+    private func settingsRow(icon: String, iconColor: Color, label: String) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: icon)
+                .foregroundColor(iconColor)
+                .frame(width: 24)
+
+            Text(label)
+                .font(.body)
+                .fontWeight(.medium)
+                .foregroundColor(.primary)
+
+            Spacer()
+
+            Image(systemName: "chevron.right")
+                .font(.caption)
+                .foregroundColor(.secondary)
+        }
+        .padding()
     }
 
     // MARK: - Logout Button

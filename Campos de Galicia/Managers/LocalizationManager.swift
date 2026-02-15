@@ -530,6 +530,55 @@ enum LocalizedKey: String {
     case logrosDetailProgress = "logros.detail.progress"
     case reviewDeleteConfirmTitle = "review.delete.confirm.title"
     case reviewDeleteConfirmMessage = "review.delete.confirm.message"
+
+    // MARK: - Legal / Info section
+    case settingsInfo = "settings.info"
+    case settingsTerms = "settings.terms"
+    case settingsContact = "settings.contact"
+    case settingsSuggest = "settings.suggest"
+
+    // MARK: - Términos y Condiciones
+    case termsTitle = "terms.title"
+    case termsLastUpdated = "terms.last.updated"
+    case termsSection1Title = "terms.section1.title"
+    case termsSection1Body = "terms.section1.body"
+    case termsSection2Title = "terms.section2.title"
+    case termsSection2Body = "terms.section2.body"
+    case termsSection3Title = "terms.section3.title"
+    case termsSection3Body = "terms.section3.body"
+    case termsSection4Title = "terms.section4.title"
+    case termsSection4Body = "terms.section4.body"
+    case termsSection5Title = "terms.section5.title"
+    case termsSection5Body = "terms.section5.body"
+    case termsSection6Title = "terms.section6.title"
+    case termsSection6Body = "terms.section6.body"
+
+    // MARK: - Contacto
+    case contactTitle = "contact.title"
+    case contactSubtitle = "contact.subtitle"
+    case contactEmailLabel = "contact.email.label"
+    case contactEmailAction = "contact.email.action"
+    case contactSuggestHint = "contact.suggest.hint"
+
+    // MARK: - Sugerir Campo
+    case suggestTitle = "suggest.title"
+    case suggestSubtitle = "suggest.subtitle"
+    case suggestFieldName = "suggest.field.name"
+    case suggestFieldNamePlaceholder = "suggest.field.name.placeholder"
+    case suggestMunicipality = "suggest.municipality"
+    case suggestMunicipalityPlaceholder = "suggest.municipality.placeholder"
+    case suggestProvince = "suggest.province"
+    case suggestNotes = "suggest.notes"
+    case suggestNotesPlaceholder = "suggest.notes.placeholder"
+    case suggestSend = "suggest.send"
+    case suggestSending = "suggest.sending"
+    case suggestSuccessTitle = "suggest.success.title"
+    case suggestSuccessMessage = "suggest.success.message"
+    case suggestErrorEmpty = "suggest.error.empty"
+    case suggestErrorGeneral = "suggest.error.general"
+    case suggestLoginRequired = "suggest.login.required"
+    case suggestLoginRequiredMessage = "suggest.login.required.message"
+    case suggestAnotherOne = "suggest.another.one"
 }
 
 /// Manager de localización centralizado
@@ -1161,6 +1210,55 @@ class LocalizationManager: ObservableObject {
             .logrosDetailProgress: "Progreso",
             .reviewDeleteConfirmTitle: "Eliminar reseña",
             .reviewDeleteConfirmMessage: "¿Estás seguro de que quieres eliminar tu reseña? Esta acción no se puede deshacer.",
+
+            // Legal / Info section
+            .settingsInfo: "Información",
+            .settingsTerms: "Términos y Condiciones",
+            .settingsContact: "Contacto",
+            .settingsSuggest: "Sugerir un campo",
+
+            // Términos y Condiciones
+            .termsTitle: "Términos y Condiciones",
+            .termsLastUpdated: "Última actualización: febrero de 2025",
+            .termsSection1Title: "1. Objeto del servicio",
+            .termsSection1Body: "Campos de Galicia es una aplicación móvil que permite a los usuarios descubrir, visitar y valorar campos de fútbol de Galicia (España). La app es de carácter recreativo y social, sin ánimo de lucro directo para el usuario.\n\nEl uso de la aplicación implica la aceptación plena de estos Términos. Si no estás de acuerdo, debes dejar de usar la app.",
+            .termsSection2Title: "2. Registro y cuenta de usuario",
+            .termsSection2Body: "Para acceder a las funcionalidades completas es necesario crear una cuenta con correo electrónico y contraseña. El usuario es responsable de mantener la confidencialidad de sus credenciales. Está prohibido crear cuentas con datos falsos o suplantar la identidad de terceros.",
+            .termsSection3Title: "3. Protección de datos y privacidad (RGPD)",
+            .termsSection3Body: "De conformidad con el Reglamento (UE) 2016/679 (RGPD) y la Ley Orgánica 3/2018 (LOPDGDD):\n\n• Responsable del tratamiento: Campos de Galicia (contacto: info@camposdegalicia.es)\n• Datos recogidos: correo electrónico, nombre, foto de perfil (opcional), historial de visitas y ubicación aproximada para validar visitas.\n• Finalidad: gestión de la cuenta, funcionamiento de la app y mejora del servicio.\n• Base legal: ejecución del contrato (art. 6.1.b RGPD) y consentimiento del usuario.\n• Tus derechos: acceso, rectificación, supresión, portabilidad y oposición. Ejecítalos escribiendo a info@camposdegalicia.es.\n• No cedemos datos a terceros salvo obligación legal.\n• Datos de ubicación: solo se usan para validar la proximidad a un campo y no se almacenan de forma continua.",
+            .termsSection4Title: "4. Contenido generado por el usuario",
+            .termsSection4Body: "Las reseñas, fotos y sugerencias enviadas son responsabilidad del usuario. Queda prohibido publicar contenido ofensivo, difamatorio, ilegal o que vulnere derechos de terceros. Nos reservamos el derecho a eliminar contenido que incumpla estas normas.",
+            .termsSection5Title: "5. Propiedad intelectual",
+            .termsSection5Body: "El diseño, código fuente, logotipos y contenidos originales de Campos de Galicia son propiedad de sus creadores y están protegidos por la legislación de propiedad intelectual. Los datos de campos proceden de fuentes públicas. Queda prohibida su reproducción sin autorización.",
+            .termsSection6Title: "6. Legislación aplicable",
+            .termsSection6Body: "Estos Términos se rigen por la legislación española. Para cualquier controversia, las partes se someten a los juzgados y tribunales del domicilio del usuario, salvo que la ley establezca otro fuero imperativo.\n\nContacto: info@camposdegalicia.es",
+
+            // Contacto
+            .contactTitle: "Contacto",
+            .contactSubtitle: "¿Tienes alguna duda, sugerencia o has encontrado un error? Estamos para ayudarte.",
+            .contactEmailLabel: "Correo de contacto",
+            .contactEmailAction: "Enviar correo",
+            .contactSuggestHint: "También puedes sugerir campos que no estén en la app usando el formulario de sugerencias.",
+
+            // Sugerir Campo
+            .suggestTitle: "Sugerir un Campo",
+            .suggestSubtitle: "¿Conoces un campo que no está en la app? Cuéntanos y lo añadiremos.",
+            .suggestFieldName: "Nombre del campo",
+            .suggestFieldNamePlaceholder: "Ej. Campo Municipal de O Porriño",
+            .suggestMunicipality: "Municipio",
+            .suggestMunicipalityPlaceholder: "Ej. O Porriño",
+            .suggestProvince: "Provincia",
+            .suggestNotes: "Notas adicionales",
+            .suggestNotesPlaceholder: "Dirección, referencias o cualquier detalle que nos ayude a localizarlo...",
+            .suggestSend: "Enviar sugerencia",
+            .suggestSending: "Enviando...",
+            .suggestSuccessTitle: "¡Gracias!",
+            .suggestSuccessMessage: "Tu sugerencia ha sido enviada. La revisaremos y añadiremos el campo si cumple los requisitos.",
+            .suggestErrorEmpty: "El nombre del campo es obligatorio.",
+            .suggestErrorGeneral: "No se pudo enviar la sugerencia. Inténtalo de nuevo.",
+            .suggestLoginRequired: "Inicia sesión",
+            .suggestLoginRequiredMessage: "Necesitas una cuenta para enviar sugerencias.",
+            .suggestAnotherOne: "Sugerir otro campo",
         ],
 
         // MARK: - Galego
@@ -1672,6 +1770,55 @@ class LocalizationManager: ObservableObject {
             .logrosDetailProgress: "Progreso",
             .reviewDeleteConfirmTitle: "Eliminar recensión",
             .reviewDeleteConfirmMessage: "Estás seguro de que queres eliminar a túa recensión? Esta acción non se pode desfacer.",
+
+            // Legal / Info section
+            .settingsInfo: "Información",
+            .settingsTerms: "Termos e Condicións",
+            .settingsContact: "Contacto",
+            .settingsSuggest: "Suxerir un campo",
+
+            // Termos e Condicións
+            .termsTitle: "Termos e Condicións",
+            .termsLastUpdated: "Última actualización: febreiro de 2025",
+            .termsSection1Title: "1. Obxecto do servizo",
+            .termsSection1Body: "Campos de Galicia é unha aplicación móbil que permite aos usuarios descubrir, visitar e valorar campos de fútbol de Galicia (España). A app é de carácter recreativo e social, sen ánimo de lucro directo para o usuario.\n\nO uso da aplicación implica a aceptación plena destes Termos. Se non estás de acordo, debes deixar de usar a app.",
+            .termsSection2Title: "2. Rexistro e conta de usuario",
+            .termsSection2Body: "Para acceder ás funcionalidades completas é necesario crear unha conta con correo electrónico e contrasinal. O usuario é responsable de manter a confidencialidade das súas credenciais. Está prohibido crear contas con datos falsos ou suplantar a identidade de terceiros.",
+            .termsSection3Title: "3. Protección de datos e privacidade (RXPD)",
+            .termsSection3Body: "De conformidade co Regulamento (UE) 2016/679 (RXPD) e a Lei Orgánica 3/2018 (LOPDGDD):\n\n• Responsable do tratamento: Campos de Galicia (contacto: info@camposdegalicia.es)\n• Datos recollidos: correo electrónico, nome, foto de perfil (opcional), historial de visitas e localización aproximada para validar visitas.\n• Finalidade: xestión da conta, funcionamento da app e mellora do servizo.\n• Base legal: execución do contrato (art. 6.1.b RXPD) e consentimento do usuario.\n• Os teus dereitos: acceso, rectificación, supresión, portabilidade e oposición. Exérceos escribindo a info@camposdegalicia.es.\n• Non cedemos datos a terceiros salvo obrigación legal.\n• Datos de localización: só se usan para validar a proximidade a un campo e non se almacenan de forma continua.",
+            .termsSection4Title: "4. Contido xerado polo usuario",
+            .termsSection4Body: "As recensións, fotos e suxestións enviadas son responsabilidade do usuario. Está prohibido publicar contido ofensivo, difamatorio, ilegal ou que vulnere dereitos de terceiros. Reservámonos o dereito a eliminar contido que incumpra estas normas.",
+            .termsSection5Title: "5. Propiedade intelectual",
+            .termsSection5Body: "O deseño, código fonte, logotipos e contidos orixinais de Campos de Galicia son propiedade dos seus creadores e están protexidos pola lexislación de propiedade intelectual. Os datos de campos proceden de fontes públicas. Está prohibida a súa reprodución sen autorización.",
+            .termsSection6Title: "6. Lexislación aplicable",
+            .termsSection6Body: "Estes Termos réxense pola lexislación española. Para calquera controversia, as partes sométense aos xulgados e tribunais do domicilio do usuario, salvo que a lei estableza outro foro imperativo.\n\nContacto: info@camposdegalicia.es",
+
+            // Contacto
+            .contactTitle: "Contacto",
+            .contactSubtitle: "Tes algunha dúbida, suxestión ou atopaches un erro? Estamos para axudarche.",
+            .contactEmailLabel: "Correo de contacto",
+            .contactEmailAction: "Enviar correo",
+            .contactSuggestHint: "Tamén podes suxerir campos que non estean na app usando o formulario de suxestións.",
+
+            // Suxerir Campo
+            .suggestTitle: "Suxerir un Campo",
+            .suggestSubtitle: "Coñeces un campo que non está na app? Cóntanos e engadirémolo.",
+            .suggestFieldName: "Nome do campo",
+            .suggestFieldNamePlaceholder: "Ex. Campo Municipal de O Porriño",
+            .suggestMunicipality: "Concello",
+            .suggestMunicipalityPlaceholder: "Ex. O Porriño",
+            .suggestProvince: "Provincia",
+            .suggestNotes: "Notas adicionais",
+            .suggestNotesPlaceholder: "Dirección, referencias ou calquera detalle que nos axude a localizalo...",
+            .suggestSend: "Enviar suxestión",
+            .suggestSending: "Enviando...",
+            .suggestSuccessTitle: "Grazas!",
+            .suggestSuccessMessage: "A túa suxestión foi enviada. Revisarémosvola e engadiremos o campo se cumpre os requisitos.",
+            .suggestErrorEmpty: "O nome do campo é obrigatorio.",
+            .suggestErrorGeneral: "Non se puido enviar a suxestión. Téntao de novo.",
+            .suggestLoginRequired: "Inicia sesión",
+            .suggestLoginRequiredMessage: "Necesitas unha conta para enviar suxestións.",
+            .suggestAnotherOne: "Suxerir outro campo",
         ]
     ]
 }

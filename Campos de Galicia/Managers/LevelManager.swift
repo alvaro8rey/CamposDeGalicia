@@ -181,6 +181,20 @@ final class LevelManager {
             totalXP += (logro.xp ?? 0)
         }
 
+        // 7b) XP por sugerencias de campos aprobadas (500 XP cada una)
+        let sugerenciasResponse = try await supabase.from("sugerencias_campos")
+            .select("id")
+            .eq("user_id", value: userId)
+            .eq("aprobada", value: true)
+            .execute()
+        if let sugerenciasArray = try? JSONSerialization.jsonObject(with: sugerenciasResponse.data, options: []) as? [[String: Any]] {
+            let sugerenciasAprobadas = sugerenciasArray.count
+            totalXP += sugerenciasAprobadas * 500
+            if sugerenciasAprobadas > 0 {
+                Logger.debug("🏟️ Sugerencias aprobadas: \(sugerenciasAprobadas) → +\(sugerenciasAprobadas * 500) XP")
+            }
+        }
+
         // 8) XP inicial por crear sesión (si quieres contarlo siempre en totalXP)
         totalXP += INITIAL_ACHIEVEMENT_XP
 

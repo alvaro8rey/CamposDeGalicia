@@ -8,6 +8,24 @@ const SUPABASE_SERVICE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 
 const XP = 500;
 
+// Replica exacta de LevelCurve.swift
+// XP para alcanzar el nivel n: 25 * (n-1) * (n+2)
+// Nivel 2 → 100 XP, Nivel 3 → 250 XP, Nivel 4 → 450 XP ...
+function levelAndNextThreshold(totalXP: number): { level: number; nextThresholdXP: number } {
+  const BASE = 100;
+  const GROWTH = 50;
+  let level = 1;
+  let cumulative = 0;
+  while (true) {
+    const xpForThisLevel = BASE + (level - 1) * GROWTH;
+    if (cumulative + xpForThisLevel > totalXP) {
+      return { level, nextThresholdXP: cumulative + xpForThisLevel };
+    }
+    cumulative += xpForThisLevel;
+    level++;
+  }
+}
+
 // El webhook de Supabase envía { type, table, record, old_record, schema }
 interface WebhookPayload {
   type: "UPDATE";
@@ -83,9 +101,12 @@ serve(async (req) => {
     });
   }
 
+  const newXP = nivelData.current_xp + XP;
+  const { level: newLevel, nextThresholdXP } = levelAndNextThreshold(newXP);
+
   const { error: xpError } = await admin
     .from("niveles")
-    .update({ current_xp: nivelData.current_xp + XP })
+    .update({ current_xp: newXP, level: newLevel, xp_to_next_level: nextThresholdXP })
     .eq("id_usuario", userId);
 
   if (xpError) {
@@ -96,7 +117,7 @@ serve(async (req) => {
     });
   }
 
-  console.log(`[notificar-aprobacion] +${XP} XP añadidos a usuario ${userId} (total: ${nivelData.current_xp + XP})`);
+  console.log(`[notificar-aprobacion] +${XP} XP → usuario ${userId} | total: ${newXP} XP | nivel: ${newLevel} | próximo nivel: ${nextThresholdXP} XP`);
 
   // 2. Obtener email del usuario via Admin API
   const { data: userData, error: userError } = await admin.auth.admin.getUserById(userId);

@@ -10,6 +10,7 @@ struct MapCoordinatePickerView: View {
     @Environment(\.dismiss) private var dismiss
 
     @StateObject private var locationManager = SingleLocationManager()
+    @State private var isSatellite: Bool = false
 
     // Centro inicial en Galicia
     @State private var region = MKCoordinateRegion(
@@ -31,7 +32,9 @@ struct MapCoordinatePickerView: View {
     var body: some View {
         NavigationView {
             ZStack {
-                Map(coordinateRegion: $region, showsUserLocation: true)
+                Map(coordinateRegion: $region,
+                    showsUserLocation: true,
+                    mapType: isSatellite ? .satellite : .standard)
                     .ignoresSafeArea(edges: .bottom)
 
                 // Chincheta fija en el centro de la pantalla
@@ -49,23 +52,36 @@ struct MapCoordinatePickerView: View {
                 }
                 .offset(y: -28)
 
-                // Botón "ir a mi ubicación" + coordenadas
+                // Botones flotantes + coordenadas
                 VStack {
                     Spacer()
 
                     HStack(alignment: .bottom) {
-                        // Botón mi ubicación
-                        Button(action: centerOnUser) {
-                            Image(systemName: locationManager.authorizationDenied
-                                  ? "location.slash.fill"
-                                  : "location.fill")
-                                .font(.system(size: 18, weight: .medium))
-                                .foregroundColor(locationManager.authorizationDenied ? .secondary : .blue)
-                                .frame(width: 44, height: 44)
-                                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
-                                .shadow(radius: 2)
+                        // Columna de botones izquierda
+                        VStack(spacing: 10) {
+                            // Botón satélite / estándar
+                            Button(action: { isSatellite.toggle() }) {
+                                Image(systemName: isSatellite ? "map.fill" : "globe.europe.africa.fill")
+                                    .font(.system(size: 18, weight: .medium))
+                                    .foregroundColor(.primary)
+                                    .frame(width: 44, height: 44)
+                                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
+                                    .shadow(radius: 2)
+                            }
+
+                            // Botón mi ubicación
+                            Button(action: centerOnUser) {
+                                Image(systemName: locationManager.authorizationDenied
+                                      ? "location.slash.fill"
+                                      : "location.fill")
+                                    .font(.system(size: 18, weight: .medium))
+                                    .foregroundColor(locationManager.authorizationDenied ? .secondary : .blue)
+                                    .frame(width: 44, height: 44)
+                                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
+                                    .shadow(radius: 2)
+                            }
+                            .disabled(locationManager.authorizationDenied)
                         }
-                        .disabled(locationManager.authorizationDenied)
 
                         Spacer()
 
@@ -85,7 +101,7 @@ struct MapCoordinatePickerView: View {
                         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 10))
                     }
                     .padding(.horizontal, 16)
-                    .padding(.bottom, 16)
+                    .padding(.bottom, 40)
                 }
             }
             .navigationTitle("Seleccionar ubicación")

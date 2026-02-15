@@ -11,31 +11,29 @@ struct MapCoordinatePickerView: View {
 
     @StateObject private var locationManager = SingleLocationManager()
     @State private var isSatellite: Bool = false
+    @State private var position: MapCameraPosition
+    @State private var currentCenter: CLLocationCoordinate2D
 
-    // Centro inicial en Galicia
-    @State private var region = MKCoordinateRegion(
-        center: CLLocationCoordinate2D(latitude: 42.75, longitude: -8.0),
-        span: MKCoordinateSpan(latitudeDelta: 1.8, longitudeDelta: 1.8)
-    )
-
-    // Si ya había coordenadas guardadas, centrar ahí al abrir
     init(selectedCoordinate: Binding<CLLocationCoordinate2D?>) {
         _selectedCoordinate = selectedCoordinate
-        if let existing = selectedCoordinate.wrappedValue {
-            _region = State(initialValue: MKCoordinateRegion(
-                center: existing,
-                span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
-            ))
-        }
+        let initial = selectedCoordinate.wrappedValue
+            ?? CLLocationCoordinate2D(latitude: 42.75, longitude: -8.0)
+        let span = selectedCoordinate.wrappedValue != nil
+            ? MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
+            : MKCoordinateSpan(latitudeDelta: 1.8, longitudeDelta: 1.8)
+        _position = State(initialValue: .region(MKCoordinateRegion(center: initial, span: span)))
+        _currentCenter = State(initialValue: initial)
     }
 
     var body: some View {
         NavigationView {
             ZStack {
-                Map(coordinateRegion: $region,
-                    showsUserLocation: true,
-                    mapType: isSatellite ? .satellite : .standard)
+                Map(position: $position)
+                    .mapStyle(isSatellite ? .imagery : .standard)
                     .ignoresSafeArea(edges: .bottom)
+                    .onMapCameraChange(frequency: .continuous) { context in
+                        currentCenter = context.region.center
+                    }
 
                 // Chincheta fija en el centro de la pantalla
                 VStack(spacing: 0) {
@@ -91,8 +89,8 @@ struct MapCoordinatePickerView: View {
                                 .font(.caption2)
                                 .foregroundColor(.secondary)
                             Text(String(format: "%.5f, %.5f",
-                                        region.center.latitude,
-                                        region.center.longitude))
+                                        currentCenter.latitude,
+                                        currentCenter.longitude))
                                 .font(.caption.monospacedDigit())
                                 .foregroundColor(.primary)
                         }
@@ -112,7 +110,7 @@ struct MapCoordinatePickerView: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Confirmar") {
-                        selectedCoordinate = region.center
+                        selectedCoordinate = currentCenter
                         dismiss()
                     }
                     .fontWeight(.semibold)
@@ -124,10 +122,10 @@ struct MapCoordinatePickerView: View {
             .onChange(of: locationManager.location) { _, location in
                 guard let location else { return }
                 withAnimation {
-                    region = MKCoordinateRegion(
+                    position = .region(MKCoordinateRegion(
                         center: location.coordinate,
                         span: MKCoordinateSpan(latitudeDelta: 0.005, longitudeDelta: 0.005)
-                    )
+                    ))
                 }
             }
         }
@@ -136,10 +134,10 @@ struct MapCoordinatePickerView: View {
     private func centerOnUser() {
         if let location = locationManager.location {
             withAnimation {
-                region = MKCoordinateRegion(
+                position = .region(MKCoordinateRegion(
                     center: location.coordinate,
                     span: MKCoordinateSpan(latitudeDelta: 0.005, longitudeDelta: 0.005)
-                )
+                ))
             }
         } else {
             locationManager.requestLocation()

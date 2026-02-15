@@ -395,17 +395,25 @@ struct SugerirCampoView: View {
                 .execute()
 
             // 3. Notificar por email (best-effort, no bloquea el éxito)
+            struct NotificacionPayload: Encodable {
+                let nombre: String
+                let municipio: String
+                let provincia: String
+                let notas: String
+                let imagenes: [String]
+                let userEmail: String
+            }
             try? await supabase.functions
                 .invoke(
                     "notificar-sugerencia",
-                    options: .init(body: [
-                        "nombre": nombreTrimmed,
-                        "municipio": municipio.trimmingCharacters(in: .whitespaces),
-                        "provincia": provincia,
-                        "notas": notas.trimmingCharacters(in: .whitespaces),
-                        "imagenes": imageUrls,
-                        "userEmail": authViewModel.user?.email ?? ""
-                    ])
+                    options: .init(body: NotificacionPayload(
+                        nombre: nombreTrimmed,
+                        municipio: municipio.trimmingCharacters(in: .whitespaces),
+                        provincia: provincia,
+                        notas: notas.trimmingCharacters(in: .whitespaces),
+                        imagenes: imageUrls,
+                        userEmail: authViewModel.user?.email ?? ""
+                    ))
                 )
 
             withAnimation { showSuccess = true }

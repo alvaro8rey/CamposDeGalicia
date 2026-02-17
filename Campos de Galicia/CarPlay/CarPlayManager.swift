@@ -4,32 +4,29 @@ import Combine
 import Supabase
 
 /// Manager para gestionar toda la lógica de CarPlay.
-/// En CarPlay, toda la interacción es a través de templates.
-/// El CPWindow es solo para mostrar contenido visual (mapa).
+/// Usa CPPointOfInterestTemplate para mostrar campos en un mapa sin necesitar el entitlement de Navigation.
 class CarPlayManager: NSObject {
 
     // MARK: - Properties
 
     private let interfaceController: CPInterfaceController
-    private weak var window: CPWindow?
-    private var mapTemplate: CPMapTemplate?
-    private var locationManager: CLLocationManager
+    private var poiTemplate: CPPointOfInterestTemplate?
     private lazy var supabaseClient: SupabaseClient = supabase
     private var cancellables = Set<AnyCancellable>()
-    private weak var mapView: MKMapView?
+    private var locationManager: CLLocationManager
 
     // Data
     private var allCampos: [CampoModel] = []
     private var camposByProvincia: [(provincia: String, campos: [CampoModel])] = []
     private var currentSearchResults: [CampoModel] = []
     private var visitedCampoIds: Set<UUID> = []
+    private var poisCampos: [CampoModel] = []
 
     // MARK: - Initialization
 
-    init(interfaceController: CPInterfaceController, window: CPWindow?) {
+    init(interfaceController: CPInterfaceController) {
         Logger.debug("🚗 CarPlayManager inicializado")
         self.interfaceController = interfaceController
-        self.window = window
         self.locationManager = CLLocationManager()
         super.init()
 
@@ -37,68 +34,36 @@ class CarPlayManager: NSObject {
         Logger.debug("✅ CarPlayManager inicialización completa")
     }
 
-    // MARK: - Map Setup
-
-    private func createMapView() {
-        guard let window = window else {
-            Logger.debug("⚠️ CPWindow es nil")
-            return
-        }
-
-        let mapView = MKMapView(frame: window.bounds)
-        mapView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
-        self.mapView = mapView
-
-        let mapVC = UIViewController()
-        mapVC.overrideUserInterfaceStyle = .dark
-        mapVC.view = mapView
-        window.rootViewController = mapVC
-
-        Logger.debug("✅ MKMapView creado a pantalla completa")
-    }
-
     // MARK: - Setup
 
     func setupInterface() {
         Logger.debug("🚗 Configurando interfaz de CarPlay")
 
-        createMapView()
+        let poiTemplate = CPPointOfInterestTemplate(title: "Campos de Galicia",
+                                                     pointsOfInterest: [],
+                                                     selectedIndex: NSNotFound)
+        poiTemplate.pointOfInterestDelegate = self
+        poiTemplate.leadingNavigationBarButtons = [
+            CPBarButton(title: "Buscar") { [weak self] _ in
+                self?.showSearchInterface()
+            }
+        ]
+        poiTemplate.trailingNavigationBarButtons = [
+            CPBarButton(title: "Lista") { [weak self] _ in
+                self?.showProvinciasMenu()
+            }
+        ]
+        self.poiTemplate = poiTemplate
 
-        let mapTemplate = CPMapTemplate()
-        mapTemplate.mapDelegate = self
-        mapTemplate.automaticallyHidesNavigationBar = false
-        self.mapTemplate = mapTemplate
-
-        setupMapButtons(for: mapTemplate)
-
-        interfaceController.setRootTemplate(mapTemplate, animated: true) { [weak self] success, error in
+        interfaceController.setRootTemplate(poiTemplate, animated: true) { _, error in
             if let error = error {
                 Logger.debug("❌ Error: \(error.localizedDescription)")
             } else {
-                Logger.debug("✅ Template de CarPlay establecido")
-                self?.configureMapView()
+                Logger.debug("✅ CPPointOfInterestTemplate establecido")
             }
         }
 
         loadAllCampos()
-    }
-
-    private func configureMapView() {
-        guard let mapView = self.mapView else { return }
-
-        mapView.delegate = self
-        mapView.showsUserLocation = true
-        mapView.isRotateEnabled = false
-        mapView.isPitchEnabled = false
-        mapView.overrideUserInterfaceStyle = .dark
-        mapView.pointOfInterestFilter = .excludingAll
-
-        let region = MKCoordinateRegion(
-            center: CLLocationCoordinate2D(latitude: 42.8782, longitude: -8.5448),
-            span: MKCoordinateSpan(latitudeDelta: 2.5, longitudeDelta: 2.5)
-        )
-        mapView.setRegion(region, animated: false)
-        Logger.debug("✅ MKMapView configurado")
     }
 
     private func setupLocationManager() {
@@ -106,37 +71,6 @@ class CarPlayManager: NSObject {
         locationManager.desiredAccuracy = kCLLocationAccuracyBest
         locationManager.requestWhenInUseAuthorization()
         locationManager.startUpdatingLocation()
-    }
-
-    private func setupMapButtons(for mapTemplate: CPMapTemplate) {
-        let zoomInButton = CPMapButton { [weak self] _ in
-            self?.zoomIn()
-        }
-        zoomInButton.image = UIImage(systemName: "plus.circle.fill")
-
-        let zoomOutButton = CPMapButton { [weak self] _ in
-            self?.zoomOut()
-        }
-        zoomOutButton.image = UIImage(systemName: "minus.circle.fill")
-
-        let panButton = CPMapButton { [weak self] _ in
-            guard let template = self?.mapTemplate else { return }
-            if template.isPanningInterfaceVisible {
-                template.dismissPanningInterface(animated: true)
-            } else {
-                template.showPanningInterface(animated: true)
-            }
-        }
-        panButton.image = UIImage(systemName: "move.3d")
-
-        let locationButton = CPMapButton { [weak self] _ in
-            self?.centerOnUserLocation()
-        }
-        locationButton.image = UIImage(systemName: "location.fill")
-
-        mapTemplate.mapButtons = [zoomInButton, zoomOutButton, panButton, locationButton]
-
-        setDefaultNavBar()
     }
 
     // MARK: - Data Loading
@@ -157,7 +91,7 @@ class CarPlayManager: NSObject {
                 await MainActor.run {
                     self.allCampos = response
                     self.buildProvinciaGroups()
-                    self.displayAnnotations(campos: response)
+                    self.updatePOIs()
                 }
 
                 Logger.debug("✅ Cargados \(response.count) campos, \(self.visitedCampoIds.count) visitados")
@@ -198,34 +132,45 @@ class CarPlayManager: NSObject {
             .map { (provincia: $0.key, campos: $0.value.sorted { $0.nombre < $1.nombre }) }
     }
 
-    // MARK: - Map Annotations
+    // MARK: - POI Management
 
-    private func displayAnnotations(campos: [CampoModel]) {
-        guard let mapView = self.mapView else { return }
+    private func updatePOIs() {
+        guard let poiTemplate = self.poiTemplate else { return }
 
-        mapView.removeAnnotations(mapView.annotations)
-
-        var annotations: [CampoAnnotation] = []
-        for campo in campos {
-            guard let lat = campo.latitud,
-                  let lon = campo.longitud,
-                  lat >= -90, lat <= 90,
-                  lon >= -180, lon <= 180 else { continue }
-
-            let item = MapAnnotationItem(
-                coordinate: CLLocationCoordinate2D(latitude: lat, longitude: lon),
-                title: campo.nombre,
-                subtitle: campo.localidad,
-                campo: campo,
-                isFromManualCoordinates: false,
-                isVisited: visitedCampoIds.contains(campo.id)
-            )
-            let annotation = CampoAnnotation(annotationItem: item)
-            annotations.append(annotation)
+        var sorted = allCampos.filter { $0.latitud != nil && $0.longitud != nil }
+        if let userLocation = locationManager.location {
+            sorted.sort {
+                guard let lat1 = $0.latitud, let lon1 = $0.longitud,
+                      let lat2 = $1.latitud, let lon2 = $1.longitud else { return false }
+                let d1 = userLocation.distance(from: CLLocation(latitude: lat1, longitude: lon1))
+                let d2 = userLocation.distance(from: CLLocation(latitude: lat2, longitude: lon2))
+                return d1 < d2
+            }
         }
 
-        mapView.addAnnotations(annotations)
-        Logger.debug("✅ \(annotations.count) anotaciones en el mapa")
+        let nearest = Array(sorted.prefix(12))
+        poisCampos = nearest
+
+        let pois = nearest.compactMap { campo -> CPPointOfInterest? in
+            guard let lat = campo.latitud, let lon = campo.longitud else { return nil }
+            let mapItem = MKMapItem(placemark: MKPlacemark(
+                coordinate: CLLocationCoordinate2D(latitude: lat, longitude: lon)
+            ))
+            mapItem.name = campo.nombre
+            return CPPointOfInterest(
+                location: mapItem,
+                title: campo.nombre,
+                subtitle: campo.localidad,
+                summary: campo.provincia,
+                detailTitle: campo.nombre,
+                detailSubtitle: "\(campo.localidad), \(campo.provincia)",
+                detailSummary: campo.direccion.isEmpty ? nil : campo.direccion,
+                pinImage: nil
+            )
+        }
+
+        poiTemplate.setPointsOfInterest(pois, selectedIndex: NSNotFound)
+        Logger.debug("✅ \(pois.count) POIs actualizados en el mapa")
     }
 
     // MARK: - Lista: Provincia -> Localidad -> Campos (tres niveles)
@@ -284,9 +229,7 @@ class CarPlayManager: NSObject {
 
             item.handler = { [weak self] (_: CPSelectableListItem, completion: @escaping () -> Void) in
                 if group.campos.count == 1 {
-                    let campo = group.campos[0]
-                    self?.centerMapOnCampo(campo)
-                    self?.showCampoDetails(campo)
+                    self?.showCampoDetails(group.campos[0])
                 } else {
                     self?.showCamposForLocalidad(group.localidad, campos: group.campos)
                 }
@@ -338,7 +281,6 @@ class CarPlayManager: NSObject {
             )
 
             item.handler = { [weak self] (_: CPSelectableListItem, completion: @escaping () -> Void) in
-                self?.centerMapOnCampo(campo)
                 self?.showCampoDetails(campo)
                 completion()
             }
@@ -453,106 +395,14 @@ class CarPlayManager: NSObject {
             self?.startNavigation(to: campo)
         }
 
-        let showOnMapButton = CPTextButton(title: "Ver en mapa", textStyle: .normal) { [weak self] _ in
-            self?.centerMapOnCampo(campo)
-            self?.interfaceController.popToRootTemplate(animated: true)
-        }
-
         let infoTemplate = CPInformationTemplate(
             title: campo.nombre,
             layout: .leading,
             items: Array(items.prefix(10)),
-            actions: [navigateButton, showOnMapButton]
+            actions: [navigateButton]
         )
 
         interfaceController.pushTemplate(infoTemplate, animated: true)
-    }
-
-    // MARK: - Zoom
-
-    private func zoomIn() {
-        guard let mapView = self.mapView else { return }
-        var region = mapView.region
-        region.span.latitudeDelta = max(region.span.latitudeDelta / 2, 0.002)
-        region.span.longitudeDelta = max(region.span.longitudeDelta / 2, 0.002)
-        mapView.setRegion(region, animated: true)
-    }
-
-    private func zoomOut() {
-        guard let mapView = self.mapView else { return }
-        var region = mapView.region
-        region.span.latitudeDelta = min(region.span.latitudeDelta * 2, 20)
-        region.span.longitudeDelta = min(region.span.longitudeDelta * 2, 20)
-        mapView.setRegion(region, animated: true)
-    }
-
-    // MARK: - Nav Bar (normal vs panning)
-
-    private func setDefaultNavBar() {
-        guard let mapTemplate = self.mapTemplate else { return }
-        mapTemplate.leadingNavigationBarButtons = [
-            CPBarButton(title: "Buscar") { [weak self] _ in
-                self?.showSearchInterface()
-            }
-        ]
-        mapTemplate.trailingNavigationBarButtons = [
-            CPBarButton(title: "Lista") { [weak self] _ in
-                self?.showProvinciasMenu()
-            }
-        ]
-    }
-
-    private func setPanningNavBar() {
-        guard let mapTemplate = self.mapTemplate else { return }
-        mapTemplate.leadingNavigationBarButtons = [
-            CPBarButton(title: "+") { [weak self] _ in
-                self?.zoomIn()
-            },
-            CPBarButton(title: "−") { [weak self] _ in
-                self?.zoomOut()
-            }
-        ]
-        mapTemplate.trailingNavigationBarButtons = [
-            CPBarButton(title: "Galicia") { [weak self] _ in
-                self?.showAllGalicia()
-            },
-            CPBarButton(title: "Hecho") { [weak self] _ in
-                self?.mapTemplate?.dismissPanningInterface(animated: true)
-            }
-        ]
-    }
-
-    // MARK: - Map Control
-
-    private func centerOnUserLocation() {
-        guard let userLocation = locationManager.location,
-              let mapView = self.mapView else { return }
-
-        let region = MKCoordinateRegion(
-            center: userLocation.coordinate,
-            span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
-        )
-        mapView.setRegion(region, animated: true)
-    }
-
-    private func showAllGalicia() {
-        guard let mapView = self.mapView else { return }
-        let region = MKCoordinateRegion(
-            center: CLLocationCoordinate2D(latitude: 42.8782, longitude: -8.5448),
-            span: MKCoordinateSpan(latitudeDelta: 2.5, longitudeDelta: 2.5)
-        )
-        mapView.setRegion(region, animated: true)
-    }
-
-    private func centerMapOnCampo(_ campo: CampoModel) {
-        guard let lat = campo.latitud, let lon = campo.longitud,
-              let mapView = self.mapView else { return }
-
-        let region = MKCoordinateRegion(
-            center: CLLocationCoordinate2D(latitude: lat, longitude: lon),
-            span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
-        )
-        mapView.setRegion(region, animated: true)
     }
 
     // MARK: - Helpers
@@ -575,40 +425,13 @@ class CarPlayManager: NSObject {
     }
 }
 
-// MARK: - CPMapTemplateDelegate
+// MARK: - CPPointOfInterestTemplateDelegate
 
-extension CarPlayManager: CPMapTemplateDelegate {
-    func mapTemplate(_ mapTemplate: CPMapTemplate,
-                    selectedPreviewFor trip: CPTrip,
-                    using routeChoice: CPRouteChoice) {}
-
-    func mapTemplate(_ mapTemplate: CPMapTemplate, startedTrip trip: CPTrip, using routeChoice: CPRouteChoice) {}
-
-    func mapTemplate(_ mapTemplate: CPMapTemplate, panWith direction: CPMapTemplate.PanDirection) {
-        guard let mapView = self.mapView else { return }
-        let latOffset = mapView.region.span.latitudeDelta * 0.1
-        let lonOffset = mapView.region.span.longitudeDelta * 0.1
-        var center = mapView.region.center
-
-        if direction.contains(.up) { center.latitude += latOffset }
-        if direction.contains(.down) { center.latitude -= latOffset }
-        if direction.contains(.left) { center.longitude -= lonOffset }
-        if direction.contains(.right) { center.longitude += lonOffset }
-
-        mapView.setCenter(center, animated: true)
-    }
-
-    func mapTemplate(_ mapTemplate: CPMapTemplate, panBeganWith direction: CPMapTemplate.PanDirection) {}
-    func mapTemplate(_ mapTemplate: CPMapTemplate, panEndedWith direction: CPMapTemplate.PanDirection) {}
-
-    func mapTemplateDidShowPanningInterface(_ mapTemplate: CPMapTemplate) {
-        Logger.debug("🗺️ Panning activado - mostrando zoom en nav bar")
-        setPanningNavBar()
-    }
-
-    func mapTemplateDidDismissPanningInterface(_ mapTemplate: CPMapTemplate) {
-        Logger.debug("🗺️ Panning desactivado - restaurando nav bar")
-        setDefaultNavBar()
+extension CarPlayManager: CPPointOfInterestTemplateDelegate {
+    func pointOfInterestTemplate(_ template: CPPointOfInterestTemplate,
+                                  didSelectPointOfInterest pointOfInterest: CPPointOfInterest) {
+        guard let campo = poisCampos.first(where: { $0.nombre == pointOfInterest.title }) else { return }
+        showCampoDetails(campo)
     }
 }
 
@@ -641,7 +464,6 @@ extension CarPlayManager: CPSearchTemplateDelegate {
     }
 
     func searchTemplate(_ searchTemplate: CPSearchTemplate, selectedResult item: CPListItem, completionHandler: @escaping () -> Void) {
-        // Buscar el campo correspondiente al resultado seleccionado
         guard let text = item.text,
               let campo = currentSearchResults.first(where: { $0.nombre == text }) else {
             completionHandler()
@@ -650,9 +472,7 @@ extension CarPlayManager: CPSearchTemplateDelegate {
 
         Logger.debug("🔍 Resultado seleccionado: \(campo.nombre)")
 
-        // Cerrar búsqueda, centrar mapa, mostrar detalle
         interfaceController.popTemplate(animated: true) { [weak self] _, _ in
-            self?.centerMapOnCampo(campo)
             self?.showCampoDetails(campo)
         }
 
@@ -663,61 +483,18 @@ extension CarPlayManager: CPSearchTemplateDelegate {
 // MARK: - CLLocationManagerDelegate
 
 extension CarPlayManager: CLLocationManagerDelegate {
-    func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {}
+    func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
+        // Actualizar POIs cuando hay nueva ubicación (solo la primera vez)
+        if !allCampos.isEmpty && !poisCampos.isEmpty {
+            // Ya tenemos POIs, no hace falta actualizar continuamente
+        } else if !allCampos.isEmpty {
+            updatePOIs()
+        }
+    }
 
     func locationManager(_ manager: CLLocationManager, didChangeAuthorization status: CLAuthorizationStatus) {
         if status == .authorizedWhenInUse || status == .authorizedAlways {
             locationManager.startUpdatingLocation()
         }
-    }
-}
-
-// MARK: - MKMapViewDelegate
-
-extension CarPlayManager: MKMapViewDelegate {
-
-    func mapView(_ mapView: MKMapView, viewFor annotation: MKAnnotation) -> MKAnnotationView? {
-        if annotation is MKUserLocation { return nil }
-
-        // Cluster
-        if let cluster = annotation as? MKClusterAnnotation {
-            let id = "CampoCluster"
-            var view = mapView.dequeueReusableAnnotationView(withIdentifier: id) as? MKMarkerAnnotationView
-            if view == nil {
-                view = MKMarkerAnnotationView(annotation: cluster, reuseIdentifier: id)
-            } else {
-                view?.annotation = cluster
-            }
-            view?.markerTintColor = .systemGreen
-            view?.glyphText = "\(cluster.memberAnnotations.count)"
-            view?.titleVisibility = .hidden
-            view?.subtitleVisibility = .hidden
-            return view
-        }
-
-        // Individual
-        let campoAnno = annotation as? CampoAnnotation
-        let isVisited = campoAnno?.annotationItem.isVisited ?? false
-        let id = isVisited ? "CampoPinVisited" : "CampoPin"
-
-        var view = mapView.dequeueReusableAnnotationView(withIdentifier: id) as? MKMarkerAnnotationView
-        if view == nil {
-            view = MKMarkerAnnotationView(annotation: annotation, reuseIdentifier: id)
-        } else {
-            view?.annotation = annotation
-        }
-
-        if isVisited {
-            view?.markerTintColor = .systemOrange
-            view?.glyphImage = UIImage(systemName: "checkmark.circle.fill")
-        } else {
-            view?.markerTintColor = .systemGreen
-            view?.glyphImage = UIImage(systemName: "sportscourt.fill")
-        }
-        view?.displayPriority = .defaultLow
-        view?.clusteringIdentifier = "campo"
-        view?.titleVisibility = .adaptive
-        view?.subtitleVisibility = .hidden
-        return view
     }
 }

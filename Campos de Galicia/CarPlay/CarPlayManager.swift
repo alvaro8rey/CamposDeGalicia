@@ -428,10 +428,15 @@ class CarPlayManager: NSObject {
 // MARK: - CPPointOfInterestTemplateDelegate
 
 extension CarPlayManager: CPPointOfInterestTemplateDelegate {
-    func pointOfInterestTemplate(_ template: CPPointOfInterestTemplate,
+    func pointOfInterestTemplate(_ pointOfInterestTemplate: CPPointOfInterestTemplate,
                                   didSelectPointOfInterest pointOfInterest: CPPointOfInterest) {
         guard let campo = poisCampos.first(where: { $0.nombre == pointOfInterest.title }) else { return }
         showCampoDetails(campo)
+    }
+
+    func pointOfInterestTemplate(_ pointOfInterestTemplate: CPPointOfInterestTemplate,
+                                  didChangeMapRegion region: MKCoordinateRegion) {
+        // No acción necesaria al cambiar la región del mapa
     }
 }
 

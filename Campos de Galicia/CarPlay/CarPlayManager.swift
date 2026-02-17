@@ -312,19 +312,15 @@ class CarPlayManager: NSObject {
         guard let lat = campo.latitud, let lon = campo.longitud else { return }
         Logger.debug("🧭 Navegando a: \(campo.nombre)")
 
-        let mapItem = MKMapItem(placemark: MKPlacemark(
-            coordinate: CLLocationCoordinate2D(latitude: lat, longitude: lon)
-        ))
+        let coordinate = CLLocationCoordinate2D(latitude: lat, longitude: lon)
+        let mapItem = MKMapItem(placemark: MKPlacemark(coordinate: coordinate))
         mapItem.name = campo.nombre
-        mapItem.openInMaps(launchOptions: [
-            MKLaunchOptionsDirectionsModeKey: MKLaunchOptionsDirectionsModeDriving
-        ])
 
-        AnalyticsManager.shared.trackCustom(
-            name: "carplay_navigation_started",
-            category: .navigation,
-            parameters: ["campo_id": campo.id.uuidString, "campo_name": campo.nombre]
-        )
+        DispatchQueue.main.async {
+            MKMapItem.openMaps(with: [mapItem], launchOptions: [
+                MKLaunchOptionsDirectionsModeKey: MKLaunchOptionsDirectionsModeDriving
+            ])
+        }
     }
 
     // MARK: - Helpers

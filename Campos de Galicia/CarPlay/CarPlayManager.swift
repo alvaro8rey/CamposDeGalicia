@@ -42,12 +42,18 @@ class CarPlayManager: NSObject {
         let listTemplate = CPListTemplate(title: "Campos de Galicia", sections: [loadingSection])
         listTemplate.leadingNavigationBarButtons = [
             CPBarButton(title: "Buscar") { [weak self] _ in
-                self?.showAllCamposAlphabetical()
+                guard let self = self else { return }
+                self.interfaceController.popToRootTemplate(animated: false) { [weak self] _, _ in
+                    self?.showAllCamposAlphabetical()
+                }
             }
         ]
         listTemplate.trailingNavigationBarButtons = [
             CPBarButton(title: "Lista") { [weak self] _ in
-                self?.showProvinciasMenu()
+                guard let self = self else { return }
+                self.interfaceController.popToRootTemplate(animated: false) { [weak self] _, _ in
+                    self?.showProvinciasMenu()
+                }
             }
         ]
         self.rootListTemplate = listTemplate

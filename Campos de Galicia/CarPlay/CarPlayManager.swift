@@ -4,8 +4,8 @@ import Combine
 import Supabase
 
 /// Manager para gestionar toda la lógica de CarPlay.
-/// Compatible con el entitlement com.apple.developer.carplay-maps.
-/// Arquitectura: CPListTemplate como root con secciones (Cerca de mí, Provincias) y búsqueda.
+/// Compatible con el entitlement com.apple.developer.carplay-driving-task.
+/// Arquitectura: CPListTemplate como root con sección "Cerca de mí" y botones Buscar/Lista.
 class CarPlayManager: NSObject {
 
     // MARK: - Properties
@@ -20,8 +20,6 @@ class CarPlayManager: NSObject {
     private var camposByProvincia: [(provincia: String, campos: [CampoModel])] = []
     private var visitedCampoIds: Set<UUID> = []
     private var nearestCampos: [CampoModel] = []
-    private var currentSearchResults: [CampoModel] = []
-
     // MARK: - Initialization
 
     init(interfaceController: CPInterfaceController) {
@@ -44,7 +42,7 @@ class CarPlayManager: NSObject {
         let listTemplate = CPListTemplate(title: "Campos de Galicia", sections: [loadingSection])
         listTemplate.leadingNavigationBarButtons = [
             CPBarButton(title: "Buscar") { [weak self] _ in
-                self?.showSearchInterface()
+                self?.showAllCamposAlphabetical()
             }
         ]
         listTemplate.trailingNavigationBarButtons = [
@@ -272,13 +270,33 @@ class CarPlayManager: NSObject {
         interfaceController.pushTemplate(listTemplate, animated: true)
     }
 
-    // MARK: - Búsqueda
+    // MARK: - Buscar (lista alfabética de todos los campos)
 
-    private func showSearchInterface() {
-        currentSearchResults = []
-        let searchTemplate = CPSearchTemplate()
-        searchTemplate.delegate = self
-        interfaceController.pushTemplate(searchTemplate, animated: true)
+    private func showAllCamposAlphabetical() {
+        let sorted = allCampos.sorted { $0.nombre < $1.nombre }
+        let grouped = Dictionary(grouping: sorted) { String($0.nombre.prefix(1)).uppercased() }
+        let letters = grouped.keys.sorted()
+
+        let maxItems = CPListTemplate.maximumItemCount
+        var allItems: [CPListItem] = []
+
+        for letter in letters {
+            guard let campos = grouped[letter] else { continue }
+            for campo in campos {
+                let item = CPListItem(text: campo.nombre, detailText: "\(campo.localidad), \(campo.provincia)")
+                item.handler = { [weak self] (_: CPSelectableListItem, completion: @escaping () -> Void) in
+                    self?.showCampoDetails(campo)
+                    completion()
+                }
+                allItems.append(item)
+                if allItems.count >= maxItems { break }
+            }
+            if allItems.count >= maxItems { break }
+        }
+
+        let section = CPListSection(items: allItems)
+        let listTemplate = CPListTemplate(title: "Todos los campos", sections: [section])
+        interfaceController.pushTemplate(listTemplate, animated: true)
     }
 
     // MARK: - Detalle del Campo
@@ -356,45 +374,6 @@ class CarPlayManager: NSObject {
         return distance < 1000
             ? String(format: "%.0f m", distance)
             : String(format: "%.1f km", distance / 1000)
-    }
-}
-
-// MARK: - CPSearchTemplateDelegate
-
-extension CarPlayManager: CPSearchTemplateDelegate {
-    func searchTemplate(_ searchTemplate: CPSearchTemplate,
-                        updatedSearchText searchText: String,
-                        completionHandler: @escaping ([CPListItem]) -> Void) {
-        guard !searchText.isEmpty else {
-            currentSearchResults = []
-            completionHandler([])
-            return
-        }
-        let filtered = allCampos.filter { campo in
-            campo.nombre.localizedCaseInsensitiveContains(searchText) ||
-            campo.localidad.localizedCaseInsensitiveContains(searchText) ||
-            campo.provincia.localizedCaseInsensitiveContains(searchText)
-        }
-        currentSearchResults = Array(filtered.prefix(12))
-        let items = currentSearchResults.map { campo in
-            CPListItem(text: campo.nombre, detailText: "\(campo.localidad), \(campo.provincia)")
-        }
-        completionHandler(items)
-    }
-
-    func searchTemplate(_ searchTemplate: CPSearchTemplate,
-                        selectedResult item: CPListItem,
-                        completionHandler: @escaping () -> Void) {
-        guard let text = item.text,
-              let campo = currentSearchResults.first(where: { $0.nombre == text }) else {
-            completionHandler()
-            return
-        }
-        Logger.debug("🔍 Resultado seleccionado: \(campo.nombre)")
-        interfaceController.popTemplate(animated: true) { [weak self] _, _ in
-            self?.showCampoDetails(campo)
-        }
-        completionHandler()
     }
 }
 

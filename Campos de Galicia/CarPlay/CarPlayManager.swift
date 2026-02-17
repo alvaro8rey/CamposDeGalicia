@@ -47,6 +47,11 @@ class CarPlayManager: NSObject {
                 self?.showSearchInterface()
             }
         ]
+        listTemplate.trailingNavigationBarButtons = [
+            CPBarButton(title: "Lista") { [weak self] _ in
+                self?.showProvinciasMenu()
+            }
+        ]
         self.rootListTemplate = listTemplate
 
         interfaceController.setRootTemplate(listTemplate, animated: true) { _, error in
@@ -138,13 +143,12 @@ class CarPlayManager: NSObject {
         nearestCampos = Array(sorted.prefix(5))
     }
 
-    // MARK: - Root List (Cerca de mí + Provincias)
+    // MARK: - Root List (Cerca de mí)
 
     private func updateRootList() {
         guard let rootListTemplate = self.rootListTemplate else { return }
         var sections: [CPListSection] = []
 
-        // Sección 1: Cerca de mí (si hay ubicación)
         if !nearestCampos.isEmpty {
             let nearbyItems = nearestCampos.map { campo -> CPListItem in
                 let distancia = distanceString(to: campo)
@@ -161,22 +165,26 @@ class CarPlayManager: NSObject {
             sections.append(CPListSection(items: nearbyItems, header: "Cerca de mí", sectionIndexTitle: nil))
         }
 
-        // Sección 3: Por provincia
-        if !camposByProvincia.isEmpty {
-            let provinciaItems = camposByProvincia.map { group -> CPListItem in
-                let item = CPListItem(text: group.provincia, detailText: "\(group.campos.count) campos")
-                item.accessoryType = .disclosureIndicator
-                item.handler = { [weak self] (_: CPSelectableListItem, completion: @escaping () -> Void) in
-                    self?.showLocalidadesForProvincia(group.provincia, campos: group.campos)
-                    completion()
-                }
-                return item
-            }
-            sections.append(CPListSection(items: provinciaItems, header: "Por provincia", sectionIndexTitle: nil))
-        }
-
         rootListTemplate.updateSections(sections)
         Logger.debug("✅ Root list actualizada")
+    }
+
+    // MARK: - Lista por provincias
+
+    private func showProvinciasMenu() {
+        Logger.debug("📋 Mostrando provincias")
+        guard !camposByProvincia.isEmpty else { return }
+        let items = camposByProvincia.map { group -> CPListItem in
+            let item = CPListItem(text: group.provincia, detailText: "\(group.campos.count) campos")
+            item.accessoryType = .disclosureIndicator
+            item.handler = { [weak self] (_: CPSelectableListItem, completion: @escaping () -> Void) in
+                self?.showLocalidadesForProvincia(group.provincia, campos: group.campos)
+                completion()
+            }
+            return item
+        }
+        let listTemplate = CPListTemplate(title: "Provincias", sections: [CPListSection(items: items)])
+        interfaceController.pushTemplate(listTemplate, animated: true)
     }
 
     // MARK: - Lista: Provincia -> Localidad -> Campos

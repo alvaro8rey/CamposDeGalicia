@@ -4,24 +4,23 @@ import Combine
 import Supabase
 
 /// Manager para gestionar toda la lógica de CarPlay.
-/// Usa CPTabBarTemplate como root con CPPointOfInterestTemplate (mapa) y CPListTemplate (lista).
 /// Compatible con el entitlement com.apple.developer.carplay-driving-task.
+/// Arquitectura: CPListTemplate como root con secciones (Buscar, Cerca, Provincias).
 class CarPlayManager: NSObject {
 
     // MARK: - Properties
 
     private let interfaceController: CPInterfaceController
-    private var poiTemplate: CPPointOfInterestTemplate?
     private var rootListTemplate: CPListTemplate?
     private lazy var supabaseClient: SupabaseClient = supabase
-    private var cancellables = Set<AnyCancellable>()
     private var locationManager: CLLocationManager
 
     // Data
     private var allCampos: [CampoModel] = []
     private var camposByProvincia: [(provincia: String, campos: [CampoModel])] = []
+    private var currentSearchResults: [CampoModel] = []
     private var visitedCampoIds: Set<UUID> = []
-    private var poisCampos: [CampoModel] = []
+    private var nearestCampos: [CampoModel] = []
 
     // MARK: - Initialization
 
@@ -30,7 +29,6 @@ class CarPlayManager: NSObject {
         self.interfaceController = interfaceController
         self.locationManager = CLLocationManager()
         super.init()
-
         setupLocationManager()
         Logger.debug("✅ CarPlayManager inicialización completa")
     }
@@ -40,32 +38,17 @@ class CarPlayManager: NSObject {
     func setupInterface() {
         Logger.debug("🚗 Configurando interfaz de CarPlay")
 
-        // Tab 1: Mapa con POIs cercanos
-        let poiTemplate = CPPointOfInterestTemplate(title: "Cerca de ti",
-                                                     pointsOfInterest: [],
-                                                     selectedIndex: NSNotFound)
-        poiTemplate.pointOfInterestDelegate = self
-        poiTemplate.tabTitle = "Mapa"
-        poiTemplate.tabImage = UIImage(systemName: "map.fill")
-        self.poiTemplate = poiTemplate
-
-        // Tab 2: Lista por provincias (placeholder mientras carga)
+        // Placeholder mientras cargan los datos
         let loadingItem = CPListItem(text: "Cargando campos...", detailText: nil)
         let loadingSection = CPListSection(items: [loadingItem])
         let listTemplate = CPListTemplate(title: "Campos de Galicia", sections: [loadingSection])
-        listTemplate.tabTitle = "Lista"
-        listTemplate.tabImage = UIImage(systemName: "list.bullet")
         self.rootListTemplate = listTemplate
 
-        // Root: TabBar con las dos pestañas
-        let tabBar = CPTabBarTemplate(templates: [poiTemplate, listTemplate])
-        tabBar.delegate = self
-
-        interfaceController.setRootTemplate(tabBar, animated: true) { _, error in
+        interfaceController.setRootTemplate(listTemplate, animated: true) { _, error in
             if let error = error {
                 Logger.debug("❌ Error al establecer root template: \(error.localizedDescription)")
             } else {
-                Logger.debug("✅ CPTabBarTemplate establecido correctamente")
+                Logger.debug("✅ CPListTemplate establecido como root")
             }
         }
 
@@ -97,7 +80,7 @@ class CarPlayManager: NSObject {
                 await MainActor.run {
                     self.allCampos = response
                     self.buildProvinciaGroups()
-                    self.updatePOIs()
+                    self.updateNearestCampos()
                     self.updateRootList()
                 }
 
@@ -109,17 +92,12 @@ class CarPlayManager: NSObject {
     }
 
     private func loadVisitedCampoIds() async {
-        guard let userId = supabaseClient.auth.currentUser?.id.uuidString else {
-            Logger.debug("⚠️ No hay usuario autenticado para cargar visitas")
-            return
-        }
-
+        guard let userId = supabaseClient.auth.currentUser?.id.uuidString else { return }
         do {
             let response = try await supabaseClient.from("visitas")
                 .select("id_campo")
                 .eq("id_usuario", value: userId)
                 .execute()
-
             if let jsonData = try? JSONSerialization.jsonObject(with: response.data) as? [[String: Any]] {
                 let ids = jsonData.compactMap { dict -> UUID? in
                     guard let idString = dict["id_campo"] as? String else { return nil }
@@ -139,11 +117,9 @@ class CarPlayManager: NSObject {
             .map { (provincia: $0.key, campos: $0.value.sorted { $0.nombre < $1.nombre }) }
     }
 
-    // MARK: - POI Management (Tab Mapa)
+    // MARK: - Nearest Campos
 
-    private func updatePOIs() {
-        guard let poiTemplate = self.poiTemplate else { return }
-
+    private func updateNearestCampos() {
         var sorted = allCampos.filter { $0.latitud != nil && $0.longitud != nil }
         if let userLocation = locationManager.location {
             sorted.sort {
@@ -154,57 +130,68 @@ class CarPlayManager: NSObject {
                 return d1 < d2
             }
         }
-
-        let nearest = Array(sorted.prefix(12))
-        poisCampos = nearest
-
-        let pois = nearest.compactMap { campo -> CPPointOfInterest? in
-            guard let lat = campo.latitud, let lon = campo.longitud else { return nil }
-            let mapItem = MKMapItem(placemark: MKPlacemark(
-                coordinate: CLLocationCoordinate2D(latitude: lat, longitude: lon)
-            ))
-            mapItem.name = campo.nombre
-            return CPPointOfInterest(
-                location: mapItem,
-                title: campo.nombre,
-                subtitle: campo.localidad,
-                summary: campo.provincia,
-                detailTitle: campo.nombre,
-                detailSubtitle: "\(campo.localidad), \(campo.provincia)",
-                detailSummary: campo.direccion.isEmpty ? nil : campo.direccion,
-                pinImage: nil
-            )
-        }
-
-        poiTemplate.setPointsOfInterest(pois, selectedIndex: NSNotFound)
-        Logger.debug("✅ \(pois.count) POIs actualizados en el mapa")
+        nearestCampos = Array(sorted.prefix(5))
     }
 
-    // MARK: - Lista Root (Tab Lista)
+    // MARK: - Root List (Buscar + Cerca de mí + Provincias)
 
     private func updateRootList() {
-        guard let rootListTemplate = self.rootListTemplate,
-              !camposByProvincia.isEmpty else { return }
+        guard let rootListTemplate = self.rootListTemplate else { return }
+        var sections: [CPListSection] = []
 
-        let items = camposByProvincia.map { group -> CPListItem in
-            let item = CPListItem(
-                text: group.provincia,
-                detailText: "\(group.campos.count) campos"
-            )
-            item.accessoryType = .disclosureIndicator
-            item.handler = { [weak self] (_: CPSelectableListItem, completion: @escaping () -> Void) in
-                self?.showLocalidadesForProvincia(group.provincia, campos: group.campos)
-                completion()
+        // Sección 1: Buscar
+        let searchItem = CPListItem(text: "Buscar campos", detailText: nil)
+        searchItem.handler = { [weak self] (_: CPSelectableListItem, completion: @escaping () -> Void) in
+            self?.showSearchInterface()
+            completion()
+        }
+        sections.append(CPListSection(items: [searchItem], header: nil, sectionIndexTitle: nil))
+
+        // Sección 2: Cerca de mí (si hay ubicación)
+        if !nearestCampos.isEmpty {
+            let nearbyItems = nearestCampos.map { campo -> CPListItem in
+                let distancia = distanceString(to: campo)
+                let detail = distancia == "—"
+                    ? campo.localidad
+                    : "\(distancia) · \(campo.localidad)"
+                let item = CPListItem(text: campo.nombre, detailText: detail)
+                item.handler = { [weak self] (_: CPSelectableListItem, completion: @escaping () -> Void) in
+                    self?.showCampoDetails(campo)
+                    completion()
+                }
+                return item
             }
-            return item
+            sections.append(CPListSection(items: nearbyItems, header: "Cerca de mí", sectionIndexTitle: nil))
         }
 
-        let section = CPListSection(items: items)
-        rootListTemplate.updateSections([section])
-        Logger.debug("✅ Lista raíz actualizada con \(camposByProvincia.count) provincias")
+        // Sección 3: Por provincia
+        if !camposByProvincia.isEmpty {
+            let provinciaItems = camposByProvincia.map { group -> CPListItem in
+                let item = CPListItem(text: group.provincia, detailText: "\(group.campos.count) campos")
+                item.accessoryType = .disclosureIndicator
+                item.handler = { [weak self] (_: CPSelectableListItem, completion: @escaping () -> Void) in
+                    self?.showLocalidadesForProvincia(group.provincia, campos: group.campos)
+                    completion()
+                }
+                return item
+            }
+            sections.append(CPListSection(items: provinciaItems, header: "Por provincia", sectionIndexTitle: nil))
+        }
+
+        rootListTemplate.updateSections(sections)
+        Logger.debug("✅ Root list actualizada")
     }
 
-    // MARK: - Lista: Provincia -> Localidad -> Campos (tres niveles)
+    // MARK: - Búsqueda
+
+    private func showSearchInterface() {
+        currentSearchResults = []
+        let searchTemplate = CPSearchTemplate()
+        searchTemplate.delegate = self
+        interfaceController.pushTemplate(searchTemplate, animated: true)
+    }
+
+    // MARK: - Lista: Provincia -> Localidad -> Campos
 
     private func showLocalidadesForProvincia(_ provincia: String, campos: [CampoModel], page: Int = 0) {
         let grouped = Dictionary(grouping: campos) { $0.localidad }
@@ -219,14 +206,10 @@ class CarPlayManager: NSObject {
         let pageLocalidades = Array(localidades[startIndex..<endIndex])
         let hasMore = endIndex < localidades.count
 
-        Logger.debug("📋 \(provincia) localidades pág \(page + 1): \(startIndex)-\(endIndex) de \(localidades.count)")
-
         var items = pageLocalidades.map { group -> CPListItem in
             let item = CPListItem(
                 text: group.localidad,
-                detailText: group.campos.count == 1
-                    ? group.campos[0].nombre
-                    : "\(group.campos.count) campos"
+                detailText: group.campos.count == 1 ? group.campos[0].nombre : "\(group.campos.count) campos"
             )
             item.accessoryType = .disclosureIndicator
             item.handler = { [weak self] (_: CPSelectableListItem, completion: @escaping () -> Void) in
@@ -254,9 +237,7 @@ class CarPlayManager: NSObject {
 
         let totalPages = Int(ceil(Double(localidades.count) / Double(pageSize)))
         let title = totalPages > 1 ? "\(provincia) (\(page + 1)/\(totalPages))" : provincia
-
-        let section = CPListSection(items: items)
-        let listTemplate = CPListTemplate(title: title, sections: [section])
+        let listTemplate = CPListTemplate(title: title, sections: [CPListSection(items: items)])
         interfaceController.pushTemplate(listTemplate, animated: true)
     }
 
@@ -291,33 +272,8 @@ class CarPlayManager: NSObject {
 
         let totalPages = Int(ceil(Double(campos.count) / Double(pageSize)))
         let title = totalPages > 1 ? "\(localidad) (\(page + 1)/\(totalPages))" : "\(localidad) (\(campos.count))"
-
-        let section = CPListSection(items: items)
-        let listTemplate = CPListTemplate(title: title, sections: [section])
+        let listTemplate = CPListTemplate(title: title, sections: [CPListSection(items: items)])
         interfaceController.pushTemplate(listTemplate, animated: true)
-    }
-
-    // MARK: - Navegación
-
-    private func startNavigation(to campo: CampoModel) {
-        guard let lat = campo.latitud, let lon = campo.longitud else { return }
-
-        Logger.debug("🧭 Navegando a: \(campo.nombre)")
-
-        let coordinate = CLLocationCoordinate2D(latitude: lat, longitude: lon)
-        let placemark = MKPlacemark(coordinate: coordinate)
-        let mapItem = MKMapItem(placemark: placemark)
-        mapItem.name = campo.nombre
-
-        mapItem.openInMaps(launchOptions: [
-            MKLaunchOptionsDirectionsModeKey: MKLaunchOptionsDirectionsModeDriving
-        ])
-
-        AnalyticsManager.shared.trackCustom(
-            name: "carplay_navigation_started",
-            category: .navigation,
-            parameters: ["campo_id": campo.id.uuidString, "campo_name": campo.nombre]
-        )
     }
 
     // MARK: - Detalle del Campo
@@ -331,7 +287,6 @@ class CarPlayManager: NSObject {
             items.append(CPInformationItem(title: "Dirección", detail: campo.direccion))
         }
         items.append(CPInformationItem(title: "Localidad", detail: "\(campo.localidad), \(campo.provincia)"))
-
         if !campo.codigo_postal.isEmpty {
             items.append(CPInformationItem(title: "Código Postal", detail: campo.codigo_postal))
         }
@@ -353,9 +308,7 @@ class CarPlayManager: NSObject {
         if let medidas = campo.medidas_campo, !medidas.isEmpty {
             items.append(CPInformationItem(title: "Medidas", detail: medidas))
         }
-        if items.count < 10 {
-            items.append(CPInformationItem(title: "Distancia", detail: distanceString(to: campo)))
-        }
+        items.append(CPInformationItem(title: "Distancia", detail: distanceString(to: campo)))
 
         let navigateButton = CPTextButton(title: "Navegar", textStyle: .confirm) { [weak self] _ in
             self?.startNavigation(to: campo)
@@ -371,13 +324,33 @@ class CarPlayManager: NSObject {
         interfaceController.pushTemplate(infoTemplate, animated: true)
     }
 
+    // MARK: - Navegación
+
+    private func startNavigation(to campo: CampoModel) {
+        guard let lat = campo.latitud, let lon = campo.longitud else { return }
+        Logger.debug("🧭 Navegando a: \(campo.nombre)")
+
+        let mapItem = MKMapItem(placemark: MKPlacemark(
+            coordinate: CLLocationCoordinate2D(latitude: lat, longitude: lon)
+        ))
+        mapItem.name = campo.nombre
+        mapItem.openInMaps(launchOptions: [
+            MKLaunchOptionsDirectionsModeKey: MKLaunchOptionsDirectionsModeDriving
+        ])
+
+        AnalyticsManager.shared.trackCustom(
+            name: "carplay_navigation_started",
+            category: .navigation,
+            parameters: ["campo_id": campo.id.uuidString, "campo_name": campo.nombre]
+        )
+    }
+
     // MARK: - Helpers
 
     private func distanceString(to campo: CampoModel) -> String {
         guard let userLocation = locationManager.location,
               let lat = campo.latitud,
               let lon = campo.longitud else { return "—" }
-
         let distance = userLocation.distance(from: CLLocation(latitude: lat, longitude: lon))
         return distance < 1000
             ? String(format: "%.0f m", distance)
@@ -385,29 +358,44 @@ class CarPlayManager: NSObject {
     }
 }
 
-// MARK: - CPTabBarTemplateDelegate
+// MARK: - CPSearchTemplateDelegate
 
-extension CarPlayManager: CPTabBarTemplateDelegate {
-    func tabBarTemplate(_ tabBarTemplate: CPTabBarTemplate, didSelect selectedTemplate: CPTemplate) {
-        // Actualizar POIs al volver a la pestaña del mapa
-        if selectedTemplate is CPPointOfInterestTemplate {
-            updatePOIs()
+extension CarPlayManager: CPSearchTemplateDelegate {
+    func searchTemplate(_ searchTemplate: CPSearchTemplate,
+                        updatedSearchText searchText: String,
+                        completionHandler: @escaping ([CPListItem]) -> Void) {
+        guard !searchText.isEmpty else {
+            currentSearchResults = []
+            completionHandler([])
+            return
         }
+
+        let filtered = allCampos.filter { campo in
+            campo.nombre.localizedCaseInsensitiveContains(searchText) ||
+            campo.localidad.localizedCaseInsensitiveContains(searchText) ||
+            campo.provincia.localizedCaseInsensitiveContains(searchText)
+        }
+        currentSearchResults = Array(filtered.prefix(12))
+
+        let items = currentSearchResults.map { campo in
+            CPListItem(text: campo.nombre, detailText: "\(campo.localidad), \(campo.provincia)")
+        }
+        completionHandler(items)
     }
-}
 
-// MARK: - CPPointOfInterestTemplateDelegate
-
-extension CarPlayManager: CPPointOfInterestTemplateDelegate {
-    func pointOfInterestTemplate(_ pointOfInterestTemplate: CPPointOfInterestTemplate,
-                                  didSelectPointOfInterest pointOfInterest: CPPointOfInterest) {
-        guard let campo = poisCampos.first(where: { $0.nombre == pointOfInterest.title }) else { return }
-        showCampoDetails(campo)
-    }
-
-    func pointOfInterestTemplate(_ pointOfInterestTemplate: CPPointOfInterestTemplate,
-                                  didChangeMapRegion region: MKCoordinateRegion) {
-        // No acción necesaria al cambiar la región del mapa
+    func searchTemplate(_ searchTemplate: CPSearchTemplate,
+                        selectedResult item: CPListItem,
+                        completionHandler: @escaping () -> Void) {
+        guard let text = item.text,
+              let campo = currentSearchResults.first(where: { $0.nombre == text }) else {
+            completionHandler()
+            return
+        }
+        Logger.debug("🔍 Resultado seleccionado: \(campo.nombre)")
+        interfaceController.popTemplate(animated: true) { [weak self] _, _ in
+            self?.showCampoDetails(campo)
+        }
+        completionHandler()
     }
 }
 
@@ -415,8 +403,12 @@ extension CarPlayManager: CPPointOfInterestTemplateDelegate {
 
 extension CarPlayManager: CLLocationManagerDelegate {
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
-        if !allCampos.isEmpty {
-            updatePOIs()
+        guard !allCampos.isEmpty else { return }
+        let previousCount = nearestCampos.count
+        updateNearestCampos()
+        // Solo actualizar la lista si cambia el resultado (evitar refrescos constantes)
+        if nearestCampos.count != previousCount {
+            updateRootList()
         }
     }
 

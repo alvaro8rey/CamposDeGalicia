@@ -545,6 +545,46 @@ final class LevelManager {
         let cycleDay = ProgressUtils.cycleDayFrom(consecutiveDays: accessData.dias_consecutivos)
         return (ProgressUtils.dailyXP(for: cycleDay), hasClaimedToday)
     }
+
+    // MARK: - Pending approval notifications
+
+    /// Comprueba si hay sugerencias aprobadas que el usuario todavía no ha visto in-app.
+    /// Las marca como notificadas y muestra un toast por cada una.
+    func checkPendingApprovalNotifications(for userId: String) async {
+        guard let userIdUUID = UUID(uuidString: userId) else { return }
+
+        struct SugerenciaPendiente: Decodable {
+            let id: UUID
+            let nombre: String
+        }
+
+        guard let pending = try? await supabase
+            .from("sugerencias_campos")
+            .select("id, nombre")
+            .eq("user_id", value: userIdUUID)
+            .eq("aprobada", value: true)
+            .eq("notificado_aprobacion", value: false)
+            .execute()
+            .value as [SugerenciaPendiente],
+              !pending.isEmpty
+        else { return }
+
+        // Marcar primero para evitar mostrar el toast dos veces si el usuario
+        // cierra y abre la app muy rápido antes de que termine el update
+        let ids = pending.map(\.id)
+        try? await supabase
+            .from("sugerencias_campos")
+            .update(["notificado_aprobacion": true])
+            .in("id", values: ids)
+            .execute()
+
+        await MainActor.run {
+            for sugerencia in pending {
+                ToastManager.shared.achievement("🏟️ ¡Campo \"\(sugerencia.nombre)\" aprobado!")
+                ToastManager.shared.xpGained(500, reason: "Sugerencia aprobada")
+            }
+        }
+    }
 }
 
 // MARK: - Errors

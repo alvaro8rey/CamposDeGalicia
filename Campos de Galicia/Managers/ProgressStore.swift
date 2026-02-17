@@ -104,6 +104,9 @@ final class ProgressStore: ObservableObject {
                 hasClaimedToday = !rewardsData.isEmpty
             }
 
+            // 4. Notificaciones pendientes de sugerencias aprobadas
+            await LevelManager.shared.checkPendingApprovalNotifications(for: userId)
+
             Logger.debug("✅ ProgressStore: Datos iniciales cargados - Level \(level), XP \(currentXP)/\(xpToNextLevel), Campos: \(camposVisitados), Provincias: \(provinciasVisitadas), Días: \(diasConsecutivos)")
         } catch {
             Logger.error("❌ ProgressStore: Error cargando datos iniciales - \(error.localizedDescription)")

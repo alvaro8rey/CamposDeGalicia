@@ -18,7 +18,6 @@ class CarPlayManager: NSObject {
     // Data
     private var allCampos: [CampoModel] = []
     private var camposByProvincia: [(provincia: String, campos: [CampoModel])] = []
-    private var currentSearchResults: [CampoModel] = []
     private var visitedCampoIds: Set<UUID> = []
     private var nearestCampos: [CampoModel] = []
 
@@ -133,21 +132,13 @@ class CarPlayManager: NSObject {
         nearestCampos = Array(sorted.prefix(5))
     }
 
-    // MARK: - Root List (Buscar + Cerca de mí + Provincias)
+    // MARK: - Root List (Cerca de mí + Provincias)
 
     private func updateRootList() {
         guard let rootListTemplate = self.rootListTemplate else { return }
         var sections: [CPListSection] = []
 
-        // Sección 1: Buscar
-        let searchItem = CPListItem(text: "Buscar campos", detailText: nil)
-        searchItem.handler = { [weak self] (_: CPSelectableListItem, completion: @escaping () -> Void) in
-            self?.showSearchInterface()
-            completion()
-        }
-        sections.append(CPListSection(items: [searchItem], header: nil, sectionIndexTitle: nil))
-
-        // Sección 2: Cerca de mí (si hay ubicación)
+        // Sección 1: Cerca de mí (si hay ubicación)
         if !nearestCampos.isEmpty {
             let nearbyItems = nearestCampos.map { campo -> CPListItem in
                 let distancia = distanceString(to: campo)
@@ -180,15 +171,6 @@ class CarPlayManager: NSObject {
 
         rootListTemplate.updateSections(sections)
         Logger.debug("✅ Root list actualizada")
-    }
-
-    // MARK: - Búsqueda
-
-    private func showSearchInterface() {
-        currentSearchResults = []
-        let searchTemplate = CPSearchTemplate()
-        searchTemplate.delegate = self
-        interfaceController.pushTemplate(searchTemplate, animated: true)
     }
 
     // MARK: - Lista: Provincia -> Localidad -> Campos
@@ -355,47 +337,6 @@ class CarPlayManager: NSObject {
         return distance < 1000
             ? String(format: "%.0f m", distance)
             : String(format: "%.1f km", distance / 1000)
-    }
-}
-
-// MARK: - CPSearchTemplateDelegate
-
-extension CarPlayManager: CPSearchTemplateDelegate {
-    func searchTemplate(_ searchTemplate: CPSearchTemplate,
-                        updatedSearchText searchText: String,
-                        completionHandler: @escaping ([CPListItem]) -> Void) {
-        guard !searchText.isEmpty else {
-            currentSearchResults = []
-            completionHandler([])
-            return
-        }
-
-        let filtered = allCampos.filter { campo in
-            campo.nombre.localizedCaseInsensitiveContains(searchText) ||
-            campo.localidad.localizedCaseInsensitiveContains(searchText) ||
-            campo.provincia.localizedCaseInsensitiveContains(searchText)
-        }
-        currentSearchResults = Array(filtered.prefix(12))
-
-        let items = currentSearchResults.map { campo in
-            CPListItem(text: campo.nombre, detailText: "\(campo.localidad), \(campo.provincia)")
-        }
-        completionHandler(items)
-    }
-
-    func searchTemplate(_ searchTemplate: CPSearchTemplate,
-                        selectedResult item: CPListItem,
-                        completionHandler: @escaping () -> Void) {
-        guard let text = item.text,
-              let campo = currentSearchResults.first(where: { $0.nombre == text }) else {
-            completionHandler()
-            return
-        }
-        Logger.debug("🔍 Resultado seleccionado: \(campo.nombre)")
-        interfaceController.popTemplate(animated: true) { [weak self] _, _ in
-            self?.showCampoDetails(campo)
-        }
-        completionHandler()
     }
 }
 

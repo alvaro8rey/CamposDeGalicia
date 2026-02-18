@@ -174,6 +174,7 @@ class CarPlayManager: NSObject {
     }
 
     // MARK: - Lista por provincias (máx 4 niveles: Root→Provincias→Campos→Info)
+    // ✅ Optimizado: Sin paginación recursiva para evitar exceder límite de profundidad de CarPlay (5 niveles)
 
     private func showProvinciasMenu() {
         Logger.debug("📋 Mostrando provincias")
@@ -191,19 +192,15 @@ class CarPlayManager: NSObject {
         interfaceController.pushTemplate(listTemplate, animated: true)
     }
 
-    private func showCamposForProvincia(_ provincia: String, campos: [CampoModel], page: Int = 0) {
+    private func showCamposForProvincia(_ provincia: String, campos: [CampoModel]) {
         let sorted = campos.sorted {
             if $0.localidad != $1.localidad { return $0.localidad < $1.localidad }
             return $0.nombre < $1.nombre
         }
         let maxItems = CPListTemplate.maximumItemCount
-        let pageSize = max(maxItems - 1, 1)
-        let startIndex = page * pageSize
-        let endIndex = min(startIndex + pageSize, sorted.count)
-        let pageCampos = Array(sorted[startIndex..<endIndex])
-        let hasMore = endIndex < sorted.count
+        let displayCampos = Array(sorted.prefix(maxItems))
 
-        var items = pageCampos.map { campo -> CPListItem in
+        let items = displayCampos.map { campo -> CPListItem in
             let detail = campo.direccion.isEmpty ? campo.localidad : "\(campo.localidad) · \(campo.direccion)"
             let item = CPListItem(text: campo.nombre, detailText: detail)
             item.handler = { [weak self] (_: CPSelectableListItem, completion: @escaping () -> Void) in
@@ -213,21 +210,7 @@ class CarPlayManager: NSObject {
             return item
         }
 
-        if hasMore {
-            let remaining = sorted.count - endIndex
-            let moreItem = CPListItem(text: "Más campos...", detailText: "\(remaining) restantes")
-            moreItem.handler = { [weak self] (_: CPSelectableListItem, completion: @escaping () -> Void) in
-                self?.interfaceController.popTemplate(animated: false) { [weak self] _, _ in
-                    self?.showCamposForProvincia(provincia, campos: campos, page: page + 1)
-                }
-                completion()
-            }
-            items.append(moreItem)
-        }
-
-        let totalPages = Int(ceil(Double(sorted.count) / Double(pageSize)))
-        let title = totalPages > 1 ? "\(provincia) (\(page + 1)/\(totalPages))" : provincia
-        let listTemplate = CPListTemplate(title: title, sections: [CPListSection(items: items)])
+        let listTemplate = CPListTemplate(title: provincia, sections: [CPListSection(items: items)])
         interfaceController.pushTemplate(listTemplate, animated: true)
     }
 

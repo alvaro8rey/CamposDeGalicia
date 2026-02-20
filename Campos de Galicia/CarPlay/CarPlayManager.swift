@@ -40,32 +40,8 @@ class CarPlayManager: NSObject {
         let loadingItem = CPListItem(text: "Cargando campos...", detailText: nil)
         let loadingSection = CPListSection(items: [loadingItem])
         let listTemplate = CPListTemplate(title: "Campos de Galicia", sections: [loadingSection])
-        listTemplate.leadingNavigationBarButtons = [
-            CPBarButton(title: "Buscar") { [weak self] _ in
-                guard let self = self else { return }
-                // Si hay más de 1 template en el stack, volver a root primero
-                if self.interfaceController.templates.count > 1 {
-                    self.interfaceController.popToRootTemplate(animated: true) { [weak self] _, _ in
-                        self?.showAllCamposAlphabetical()
-                    }
-                } else {
-                    self.showAllCamposAlphabetical()
-                }
-            }
-        ]
-        listTemplate.trailingNavigationBarButtons = [
-            CPBarButton(title: "Lista") { [weak self] _ in
-                guard let self = self else { return }
-                // Si hay más de 1 template en el stack, volver a root primero
-                if self.interfaceController.templates.count > 1 {
-                    self.interfaceController.popToRootTemplate(animated: true) { [weak self] _, _ in
-                        self?.showProvinciasMenu()
-                    }
-                } else {
-                    self.showProvinciasMenu()
-                }
-            }
-        ]
+
+        // ✅ Sin botones de navegación - usamos items de lista para evitar problemas de jerarquía
         self.rootListTemplate = listTemplate
 
         interfaceController.setRootTemplate(listTemplate, animated: true) { _, error in
@@ -163,6 +139,28 @@ class CarPlayManager: NSObject {
         guard let rootListTemplate = self.rootListTemplate else { return }
         var sections: [CPListSection] = []
 
+        // Sección de navegación principal
+        var navigationItems: [CPListItem] = []
+
+        let provinciasItem = CPListItem(text: "Ver por provincias", detailText: "4 provincias")
+        provinciasItem.accessoryType = .disclosureIndicator
+        provinciasItem.handler = { [weak self] (_: CPSelectableListItem, completion: @escaping () -> Void) in
+            self?.showProvinciasMenu()
+            completion()
+        }
+        navigationItems.append(provinciasItem)
+
+        let searchItem = CPListItem(text: "Buscar alfabéticamente", detailText: "\(allCampos.count) campos")
+        searchItem.accessoryType = .disclosureIndicator
+        searchItem.handler = { [weak self] (_: CPSelectableListItem, completion: @escaping () -> Void) in
+            self?.showAllCamposAlphabetical()
+            completion()
+        }
+        navigationItems.append(searchItem)
+
+        sections.append(CPListSection(items: navigationItems))
+
+        // Sección "Cerca de mí"
         if !nearestCampos.isEmpty {
             let nearbyItems = nearestCampos.map { campo -> CPListItem in
                 let distancia = distanceString(to: campo)

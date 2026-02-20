@@ -6,7 +6,7 @@ import Supabase
 /// Manager para gestionar toda la lógica de CarPlay.
 /// Arquitectura simplificada: Root → Provincias → Campos (con paginación) → Detalles
 /// Máx 4 niveles de profundidad (límite de CarPlay es 5)
-class CarPlayManager: NSObject, CPSearchTemplateDelegate {
+class CarPlayManager: NSObject {
 
     // MARK: - Properties
 
@@ -242,62 +242,34 @@ class CarPlayManager: NSObject, CPSearchTemplateDelegate {
         interfaceController.pushTemplate(listTemplate, animated: true)
     }
 
-    // MARK: - Buscar (con campo de texto para filtrar)
+    // MARK: - Buscar (lista alfabética de todos los campos)
 
     private func showAllCamposAlphabetical() {
-        Logger.debug("🔍 Mostrando búsqueda con filtro")
-        let searchTemplate = CPSearchTemplate()
-        searchTemplate.delegate = self
-        interfaceController.pushTemplate(searchTemplate, animated: true)
-    }
+        Logger.debug("🔍 Mostrando búsqueda alfabética")
+        let sorted = allCampos.sorted { $0.nombre < $1.nombre }
+        let grouped = Dictionary(grouping: sorted) { String($0.nombre.prefix(1)).uppercased() }
+        let letters = grouped.keys.sorted()
 
-    // CPSearchTemplateDelegate - filtrar campos en tiempo real
-    func searchTemplate(_ searchTemplate: CPSearchTemplate, updatedSearchText searchText: String, completionHandler: @escaping ([CPListItem]) -> Void) {
-        Logger.debug("🔍 Búsqueda: '\(searchText)'")
+        let maxItems = CPListTemplate.maximumItemCount
+        var allItems: [CPListItem] = []
 
-        let query = searchText.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
-
-        // Si está vacío, mostrar todos los campos (limitados)
-        guard !query.isEmpty else {
-            let sorted = allCampos.sorted { $0.nombre < $1.nombre }
-            let limited = Array(sorted.prefix(CPListTemplate.maximumItemCount))
-            let items = limited.map { campo -> CPListItem in
+        for letter in letters {
+            guard let campos = grouped[letter] else { continue }
+            for campo in campos {
                 let item = CPListItem(text: campo.nombre, detailText: "\(campo.localidad), \(campo.provincia)")
                 item.handler = { [weak self] (_: CPSelectableListItem, completion: @escaping () -> Void) in
                     self?.showCampoDetails(campo)
                     completion()
                 }
-                return item
+                allItems.append(item)
+                if allItems.count >= maxItems { break }
             }
-            completionHandler(items)
-            return
+            if allItems.count >= maxItems { break }
         }
 
-        // Filtrar por nombre, localidad o provincia
-        let filtered = allCampos.filter { campo in
-            campo.nombre.lowercased().contains(query) ||
-            campo.localidad.lowercased().contains(query) ||
-            campo.provincia.lowercased().contains(query)
-        }
-
-        let sorted = filtered.sorted { $0.nombre < $1.nombre }
-        let limited = Array(sorted.prefix(CPListTemplate.maximumItemCount))
-
-        let items = limited.map { campo -> CPListItem in
-            let item = CPListItem(text: campo.nombre, detailText: "\(campo.localidad), \(campo.provincia)")
-            item.handler = { [weak self] (_: CPSelectableListItem, completion: @escaping () -> Void) in
-                self?.showCampoDetails(campo)
-                completion()
-            }
-            return item
-        }
-
-        completionHandler(items)
-    }
-
-    func searchTemplate(_ searchTemplate: CPSearchTemplate, selectedResult item: CPListItem, completionHandler: @escaping () -> Void) {
-        // El handler del item ya maneja la selección
-        completionHandler()
+        let section = CPListSection(items: allItems)
+        let listTemplate = CPListTemplate(title: "Todos los campos", sections: [section])
+        interfaceController.pushTemplate(listTemplate, animated: true)
     }
 
     // MARK: - Detalle del Campo (usando CPListTemplate en lugar de CPInformationTemplate)

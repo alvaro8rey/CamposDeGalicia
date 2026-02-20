@@ -42,6 +42,13 @@ class CarPlayManager: NSObject {
         let loadingSection = CPListSection(items: [loadingItem])
         let listTemplate = CPListTemplate(title: "Campos de Galicia", sections: [loadingSection])
 
+        // ✅ Botón "Buscar" - el más importante según usuario
+        listTemplate.trailingNavigationBarButtons = [
+            CPBarButton(title: "Buscar") { [weak self] _ in
+                self?.showAllCamposAlphabetical()
+            }
+        ]
+
         self.rootListTemplate = listTemplate
 
         interfaceController.setRootTemplate(listTemplate, animated: true) { _, error in
@@ -139,7 +146,7 @@ class CarPlayManager: NSObject {
         guard let rootListTemplate = self.rootListTemplate else { return }
         var sections: [CPListSection] = []
 
-        // Sección de navegación principal
+        // Sección de navegación principal (Buscar ahora está en el botón de la barra)
         var navigationItems: [CPListItem] = []
 
         let provinciasItem = CPListItem(text: "Ver por provincias", detailText: "4 provincias")
@@ -149,14 +156,6 @@ class CarPlayManager: NSObject {
             completion()
         }
         navigationItems.append(provinciasItem)
-
-        let searchItem = CPListItem(text: "Buscar alfabéticamente", detailText: "\(allCampos.count) campos")
-        searchItem.accessoryType = .disclosureIndicator
-        searchItem.handler = { [weak self] (_: CPSelectableListItem, completion: @escaping () -> Void) in
-            self?.showAllCamposAlphabetical()
-            completion()
-        }
-        navigationItems.append(searchItem)
 
         sections.append(CPListSection(items: navigationItems))
 
@@ -228,12 +227,10 @@ class CarPlayManager: NSObject {
             let remaining = sorted.count - endIndex
             let moreItem = CPListItem(text: "Más campos...", detailText: "\(remaining) restantes")
             moreItem.handler = { [weak self] (_: CPSelectableListItem, completion: @escaping () -> Void) in
-                completion()
-                // ✅ PAGINACIÓN SEGURA: Pop del template actual, luego push del siguiente en el completion
+                // ✅ PAGINACIÓN SEGURA: Pop, luego push en completion (sin DispatchQueue.main.async)
                 self?.interfaceController.popTemplate(animated: false) { [weak self] _, _ in
-                    DispatchQueue.main.async {
-                        self?.showCamposForProvincia(provincia, campos: campos, page: page + 1)
-                    }
+                    self?.showCamposForProvincia(provincia, campos: campos, page: page + 1)
+                    completion()
                 }
             }
             items.append(moreItem)

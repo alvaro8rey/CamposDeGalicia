@@ -43,16 +43,26 @@ class CarPlayManager: NSObject {
         listTemplate.leadingNavigationBarButtons = [
             CPBarButton(title: "Buscar") { [weak self] _ in
                 guard let self = self else { return }
-                self.interfaceController.popToRootTemplate(animated: false) { [weak self] _, _ in
-                    DispatchQueue.main.async { self?.showAllCamposAlphabetical() }
+                // Si hay más de 1 template en el stack, volver a root primero
+                if self.interfaceController.templates.count > 1 {
+                    self.interfaceController.popToRootTemplate(animated: true) { [weak self] _, _ in
+                        self?.showAllCamposAlphabetical()
+                    }
+                } else {
+                    self.showAllCamposAlphabetical()
                 }
             }
         ]
         listTemplate.trailingNavigationBarButtons = [
             CPBarButton(title: "Lista") { [weak self] _ in
                 guard let self = self else { return }
-                self.interfaceController.popToRootTemplate(animated: false) { [weak self] _, _ in
-                    DispatchQueue.main.async { self?.showProvinciasMenu() }
+                // Si hay más de 1 template en el stack, volver a root primero
+                if self.interfaceController.templates.count > 1 {
+                    self.interfaceController.popToRootTemplate(animated: true) { [weak self] _, _ in
+                        self?.showProvinciasMenu()
+                    }
+                } else {
+                    self.showProvinciasMenu()
                 }
             }
         ]

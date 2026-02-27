@@ -4,8 +4,7 @@ import Combine
 import Supabase
 
 /// Manager para gestionar toda la lógica de CarPlay.
-/// ✅ ARQUITECTURA 100% ESTABLE - SOLO templates permitidos
-/// Root → Provincias → Campos → Detalles (máx 4 niveles)
+/// ✅ Búsqueda con texto + Paginación en provincias
 class CarPlayManager: NSObject {
 
     // MARK: - Properties
@@ -14,6 +13,7 @@ class CarPlayManager: NSObject {
     private var rootListTemplate: CPListTemplate?
     private lazy var supabaseClient: SupabaseClient = supabase
     private var locationManager: CLLocationManager
+    private var searchTemplate: CPSearchTemplate?
 
     // Data
     private var allCampos: [CampoModel] = []
@@ -42,10 +42,10 @@ class CarPlayManager: NSObject {
         let loadingSection = CPListSection(items: [loadingItem])
         let listTemplate = CPListTemplate(title: "Campos de Galicia", sections: [loadingSection])
 
-        // ✅ Botón "Buscar" - lista alfabética con índice rápido
+        // ✅ Botón "Buscar" - abre buscador con texto
         listTemplate.trailingNavigationBarButtons = [
             CPBarButton(title: "Buscar") { [weak self] _ in
-                self?.showSearchWithSections()
+                self?.showSearchModal()
             }
         ]
 
@@ -146,7 +146,7 @@ class CarPlayManager: NSObject {
         guard let rootListTemplate = self.rootListTemplate else { return }
         var sections: [CPListSection] = []
 
-        // Sección de navegación principal (Buscar está en botón de la barra)
+        // Sección de navegación principal
         var navigationItems: [CPListItem] = []
 
         let provinciasItem = CPListItem(text: "Ver por provincias", detailText: "4 provincias")
@@ -189,7 +189,7 @@ class CarPlayManager: NSObject {
             let item = CPListItem(text: group.provincia, detailText: "\(group.campos.count) campos")
             item.accessoryType = .disclosureIndicator
             item.handler = { [weak self] (_: CPSelectableListItem, completion: @escaping () -> Void) in
-                self?.showCamposForProvincia(group.provincia, campos: group.campos)
+                self?.showCamposForProvincia(group.provincia, campos: group.campos, page: 0)
                 completion()
             }
             return item
@@ -198,70 +198,76 @@ class CarPlayManager: NSObject {
         interfaceController.pushTemplate(listTemplate, animated: true)
     }
 
-    // MARK: - Campos por provincia (con secciones alfabéticas)
+    // MARK: - Campos por provincia (CON PAGINACIÓN)
 
-    private func showCamposForProvincia(_ provincia: String, campos: [CampoModel]) {
-        Logger.debug("📋 Mostrando campos de \(provincia)")
+    private func showCamposForProvincia(_ provincia: String, campos: [CampoModel], page: Int) {
+        Logger.debug("📋 Mostrando campos de \(provincia) - página \(page + 1)")
 
         let sorted = campos.sorted { $0.nombre < $1.nombre }
 
-        // Agrupar por letra inicial
-        let grouped = Dictionary(grouping: sorted) { String($0.nombre.prefix(1)).uppercased() }
-        let letters = grouped.keys.sorted()
+        // ✅ PAGINACIÓN: Máximo 8 items por página (o el máximo permitido - 1)
+        let maxItems = CPListTemplate.maximumItemCount
+        let pageSize = min(8, max(maxItems - 1, 1))
+        let startIndex = page * pageSize
+        let endIndex = min(startIndex + pageSize, sorted.count)
+        let pageCampos = Array(sorted[startIndex..<endIndex])
+        let hasMore = endIndex < sorted.count
 
-        // Crear secciones con índice alfabético
-        var sections: [CPListSection] = []
-        for letter in letters {
-            guard let camposInLetter = grouped[letter] else { continue }
-            let items = camposInLetter.map { campo -> CPListItem in
-                let detail = campo.direccion.isEmpty ? campo.localidad : "\(campo.localidad)"
-                let item = CPListItem(text: campo.nombre, detailText: detail)
-                item.handler = { [weak self] (_: CPSelectableListItem, completion: @escaping () -> Void) in
-                    self?.showCampoDetails(campo)
-                    completion()
-                }
-                return item
+        var items = pageCampos.map { campo -> CPListItem in
+            let detail = campo.direccion.isEmpty ? campo.localidad : "\(campo.localidad)"
+            let item = CPListItem(text: campo.nombre, detailText: detail)
+            item.handler = { [weak self] (_: CPSelectableListItem, completion: @escaping () -> Void) in
+                self?.showCampoDetails(campo)
+                completion()
             }
-            // sectionIndexTitle permite navegación rápida (como en Contactos)
-            let section = CPListSection(items: items, header: letter, sectionIndexTitle: letter)
-            sections.append(section)
+            return item
         }
 
-        let listTemplate = CPListTemplate(title: provincia, sections: sections)
+        // ✅ Botón "Ver más" si hay más páginas
+        if hasMore {
+            let remaining = sorted.count - endIndex
+            let moreItem = CPListItem(text: "Ver más campos...", detailText: "\(remaining) restantes")
+            moreItem.handler = { [weak self] (_: CPSelectableListItem, completion: @escaping () -> Void) in
+                self?.interfaceController.popTemplate(animated: false) { [weak self] _, _ in
+                    self?.showCamposForProvincia(provincia, campos: campos, page: page + 1)
+                    completion()
+                }
+            }
+            items.append(moreItem)
+        }
+
+        let totalPages = Int(ceil(Double(sorted.count) / Double(pageSize)))
+        let title = totalPages > 1 ? "\(provincia) (\(page + 1)/\(totalPages))" : provincia
+        let listTemplate = CPListTemplate(title: title, sections: [CPListSection(items: items)])
         interfaceController.pushTemplate(listTemplate, animated: true)
     }
 
-    // MARK: - Buscar (CPListTemplate con secciones alfabéticas e índice)
+    // MARK: - Buscar (CPSearchTemplate MODAL con texto)
 
-    private func showSearchWithSections() {
-        Logger.debug("🔍 Mostrando búsqueda alfabética con índice")
+    private func showSearchModal() {
+        Logger.debug("🔍 Abriendo buscador modal")
 
-        let sorted = allCampos.sorted { $0.nombre < $1.nombre }
+        let search = CPSearchTemplate()
+        search.delegate = self
+        self.searchTemplate = search
 
-        // Agrupar por letra inicial
-        let grouped = Dictionary(grouping: sorted) { String($0.nombre.prefix(1)).uppercased() }
-        let letters = grouped.keys.sorted()
-
-        // Crear secciones con índice alfabético para navegación rápida
-        var sections: [CPListSection] = []
-        for letter in letters {
-            guard let camposInLetter = grouped[letter] else { continue }
-            let items = camposInLetter.map { campo -> CPListItem in
-                let item = CPListItem(text: campo.nombre, detailText: "\(campo.localidad), \(campo.provincia)")
-                item.handler = { [weak self] (_: CPSelectableListItem, completion: @escaping () -> Void) in
-                    self?.showCampoDetails(campo)
-                    completion()
-                }
-                return item
+        // ✅ presentTemplate es para templates MODALES (no pushTemplate)
+        interfaceController.presentTemplate(search, animated: true) { _, error in
+            if let error = error {
+                Logger.debug("❌ Error al presentar búsqueda: \(error.localizedDescription)")
+            } else {
+                Logger.debug("✅ Buscador modal presentado")
             }
-            // ✅ sectionIndexTitle crea el índice A-Z en el lado derecho
-            let section = CPListSection(items: items, header: letter, sectionIndexTitle: letter)
-            sections.append(section)
         }
+    }
 
-        let listTemplate = CPListTemplate(title: "Todos los campos", sections: sections)
-        interfaceController.pushTemplate(listTemplate, animated: true)
-        Logger.debug("✅ Búsqueda alfabética mostrada con \(sections.count) secciones")
+    private func createCampoItem(_ campo: CampoModel) -> CPListItem {
+        let item = CPListItem(text: campo.nombre, detailText: "\(campo.localidad), \(campo.provincia)")
+        item.handler = { [weak self] (_: CPSelectableListItem, completion: @escaping () -> Void) in
+            self?.showCampoDetails(campo)
+            completion()
+        }
+        return item
     }
 
     // MARK: - Detalle del Campo
@@ -363,6 +369,48 @@ class CarPlayManager: NSObject {
     }
 }
 
+// MARK: - CPSearchTemplateDelegate
+
+extension CarPlayManager: CPSearchTemplateDelegate {
+    func searchTemplate(_ searchTemplate: CPSearchTemplate, updatedSearchText searchText: String, completionHandler: @escaping ([CPListItem]) -> Void) {
+        Logger.debug("🔍 Búsqueda: '\(searchText)'")
+
+        let query = searchText.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
+
+        // Si está vacío, mostrar primeros campos alfabéticamente
+        guard !query.isEmpty else {
+            let sorted = allCampos.sorted { $0.nombre < $1.nombre }
+            let limited = Array(sorted.prefix(CPListTemplate.maximumItemCount))
+            let items = limited.map { createCampoItem($0) }
+            completionHandler(items)
+            return
+        }
+
+        // Filtrar por nombre, localidad o provincia
+        let filtered = allCampos.filter { campo in
+            campo.nombre.lowercased().contains(query) ||
+            campo.localidad.lowercased().contains(query) ||
+            campo.provincia.lowercased().contains(query)
+        }
+
+        let sorted = filtered.sorted { $0.nombre < $1.nombre }
+        let limited = Array(sorted.prefix(CPListTemplate.maximumItemCount))
+        let items = limited.map { createCampoItem($0) }
+
+        Logger.debug("✅ Encontrados \(items.count) resultados")
+        completionHandler(items)
+    }
+
+    func searchTemplate(_ searchTemplate: CPSearchTemplate, selectedResult item: CPListItem, completionHandler: @escaping () -> Void) {
+        Logger.debug("✅ Resultado seleccionado")
+        completionHandler()
+    }
+
+    func searchTemplateSearchButtonPressed(_ searchTemplate: CPSearchTemplate) {
+        Logger.debug("🔍 Botón búsqueda presionado")
+    }
+}
+
 // MARK: - CLLocationManagerDelegate
 
 extension CarPlayManager: CLLocationManagerDelegate {
@@ -370,7 +418,6 @@ extension CarPlayManager: CLLocationManagerDelegate {
         guard !allCampos.isEmpty else { return }
         let previousCount = nearestCampos.count
         updateNearestCampos()
-        // Solo actualizar si cambia el resultado (evitar refrescos constantes)
         if nearestCampos.count != previousCount {
             updateRootList()
         }

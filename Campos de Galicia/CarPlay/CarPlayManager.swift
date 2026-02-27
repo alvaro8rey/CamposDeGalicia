@@ -160,45 +160,16 @@ class CarPlayManager: NSObject {
         Logger.debug("✅ Root list actualizada con \(nearestCampos.count) campos cercanos")
     }
 
-    // MARK: - Todos los campos (letras A-Z → campos)
+    // MARK: - Todos los campos (lista simple con paginación)
 
-    // Nivel 1: Mostrar letras A-Z
     private func showAllCamposWithPagination(offset: Int) {
-        Logger.debug("📋 Mostrando letras A-Z")
+        Logger.debug("📋 Mostrando todos los campos - offset: \(offset)")
 
         let sorted = allCampos.sorted { $0.nombre < $1.nombre }
-
-        // Agrupar por letra inicial
-        let grouped = Dictionary(grouping: sorted) { String($0.nombre.prefix(1)).uppercased() }
-        let letters = grouped.keys.sorted()
-
-        let items = letters.map { letter -> CPListItem in
-            let count = grouped[letter]?.count ?? 0
-            let item = CPListItem(text: "Letra \(letter)", detailText: "\(count) campos")
-            item.handler = { [weak self] (_: CPSelectableListItem, completion: @escaping () -> Void) in
-                self?.showCamposForLetter(letter, offset: 0)
-                completion()
-            }
-            return item
-        }
-
-        let listTemplate = CPListTemplate(title: "Todas las letras", sections: [CPListSection(items: items)])
-        interfaceController.pushTemplate(listTemplate, animated: true)
-        Logger.debug("✅ Mostrando \(letters.count) letras")
-    }
-
-    // Nivel 2: Mostrar campos de una letra (con paginación)
-    private func showCamposForLetter(_ letter: String, offset: Int) {
-        Logger.debug("📋 Mostrando campos de letra \(letter) - offset: \(offset)")
-
-        let camposFiltrados = allCampos
-            .filter { $0.nombre.prefix(1).uppercased() == letter }
-            .sorted { $0.nombre < $1.nombre }
-
         let pageSize = 8
         let start = offset
-        let end = min(offset + pageSize, camposFiltrados.count)
-        let camposPagina = Array(camposFiltrados[start..<end])
+        let end = min(offset + pageSize, sorted.count)
+        let camposPagina = Array(sorted[start..<end])
 
         var items = camposPagina.map { campo -> CPListItem in
             let item = CPListItem(text: campo.nombre, detailText: "\(campo.localidad), \(campo.provincia)")
@@ -210,25 +181,25 @@ class CarPlayManager: NSObject {
         }
 
         // Botón "Ver más" si hay más campos
-        if end < camposFiltrados.count {
-            let remaining = camposFiltrados.count - end
+        if end < sorted.count {
+            let remaining = sorted.count - end
             let moreItem = CPListItem(text: "Ver más campos...", detailText: "\(remaining) restantes")
             moreItem.handler = { [weak self] (_: CPSelectableListItem, completion: @escaping () -> Void) in
-                // ✅ Hacer pop ANTES de pushear nueva página
+                // ✅ Hacer pop ANTES de pushear nueva página (evita acumulación)
                 self?.interfaceController.popTemplate(animated: false) { [weak self] _, _ in
-                    self?.showCamposForLetter(letter, offset: end)
+                    self?.showAllCamposWithPagination(offset: end)
                 }
                 completion()
             }
             items.append(moreItem)
         }
 
-        let totalPages = Int(ceil(Double(camposFiltrados.count) / Double(pageSize)))
+        let totalPages = Int(ceil(Double(sorted.count) / Double(pageSize)))
         let currentPage = (offset / pageSize) + 1
-        let title = totalPages > 1 ? "Letra \(letter) (\(currentPage)/\(totalPages))" : "Letra \(letter)"
+        let title = "Todos los campos (\(currentPage)/\(totalPages))"
         let listTemplate = CPListTemplate(title: title, sections: [CPListSection(items: items)])
         interfaceController.pushTemplate(listTemplate, animated: true)
-        Logger.debug("✅ Mostrando \(items.count) items de letra \(letter)")
+        Logger.debug("✅ Mostrando \(items.count) items (offset: \(offset), total: \(sorted.count))")
     }
 
     // MARK: - Detalle del Campo

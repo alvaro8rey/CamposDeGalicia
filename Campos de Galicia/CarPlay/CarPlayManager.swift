@@ -13,7 +13,6 @@ class CarPlayManager: NSObject {
     private var rootListTemplate: CPListTemplate?
     private lazy var supabaseClient: SupabaseClient = supabase
     private var locationManager: CLLocationManager
-    private var searchTemplate: CPSearchTemplate?
 
     // Data
     private var allCampos: [CampoModel] = []
@@ -42,10 +41,10 @@ class CarPlayManager: NSObject {
         let loadingSection = CPListSection(items: [loadingItem])
         let listTemplate = CPListTemplate(title: "Campos de Galicia", sections: [loadingSection])
 
-        // ✅ Botón "Buscar" - abre buscador con texto
+        // ✅ Botón "Buscar" - lista alfabética con índice A-Z
         listTemplate.trailingNavigationBarButtons = [
             CPBarButton(title: "Buscar") { [weak self] _ in
-                self?.showSearchModal()
+                self?.showSearchWithSections()
             }
         ]
 
@@ -242,32 +241,37 @@ class CarPlayManager: NSObject {
         interfaceController.pushTemplate(listTemplate, animated: true)
     }
 
-    // MARK: - Buscar (CPSearchTemplate MODAL con texto)
+    // MARK: - Buscar (Lista alfabética con índice A-Z)
 
-    private func showSearchModal() {
-        Logger.debug("🔍 Abriendo buscador modal")
+    private func showSearchWithSections() {
+        Logger.debug("🔍 Mostrando búsqueda alfabética con índice A-Z")
 
-        let search = CPSearchTemplate()
-        search.delegate = self
-        self.searchTemplate = search
+        let sorted = allCampos.sorted { $0.nombre < $1.nombre }
 
-        // ✅ presentTemplate es para templates MODALES (no pushTemplate)
-        interfaceController.presentTemplate(search, animated: true) { _, error in
-            if let error = error {
-                Logger.debug("❌ Error al presentar búsqueda: \(error.localizedDescription)")
-            } else {
-                Logger.debug("✅ Buscador modal presentado")
+        // Agrupar por letra inicial
+        let grouped = Dictionary(grouping: sorted) { String($0.nombre.prefix(1)).uppercased() }
+        let letters = grouped.keys.sorted()
+
+        // Crear secciones con índice alfabético
+        var sections: [CPListSection] = []
+        for letter in letters {
+            guard let camposInLetter = grouped[letter] else { continue }
+            let items = camposInLetter.map { campo -> CPListItem in
+                let item = CPListItem(text: campo.nombre, detailText: "\(campo.localidad), \(campo.provincia)")
+                item.handler = { [weak self] (_: CPSelectableListItem, completion: @escaping () -> Void) in
+                    self?.showCampoDetails(campo)
+                    completion()
+                }
+                return item
             }
+            // ✅ sectionIndexTitle crea el índice A-Z en el lado derecho
+            let section = CPListSection(items: items, header: letter, sectionIndexTitle: letter)
+            sections.append(section)
         }
-    }
 
-    private func createCampoItem(_ campo: CampoModel) -> CPListItem {
-        let item = CPListItem(text: campo.nombre, detailText: "\(campo.localidad), \(campo.provincia)")
-        item.handler = { [weak self] (_: CPSelectableListItem, completion: @escaping () -> Void) in
-            self?.showCampoDetails(campo)
-            completion()
-        }
-        return item
+        let listTemplate = CPListTemplate(title: "Todos los campos", sections: sections)
+        interfaceController.pushTemplate(listTemplate, animated: true)
+        Logger.debug("✅ Búsqueda alfabética con \(sections.count) secciones")
     }
 
     // MARK: - Detalle del Campo
@@ -366,48 +370,6 @@ class CarPlayManager: NSObject {
         return distance < 1000
             ? String(format: "%.0f m", distance)
             : String(format: "%.1f km", distance / 1000)
-    }
-}
-
-// MARK: - CPSearchTemplateDelegate
-
-extension CarPlayManager: CPSearchTemplateDelegate {
-    func searchTemplate(_ searchTemplate: CPSearchTemplate, updatedSearchText searchText: String, completionHandler: @escaping ([CPListItem]) -> Void) {
-        Logger.debug("🔍 Búsqueda: '\(searchText)'")
-
-        let query = searchText.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
-
-        // Si está vacío, mostrar primeros campos alfabéticamente
-        guard !query.isEmpty else {
-            let sorted = allCampos.sorted { $0.nombre < $1.nombre }
-            let limited = Array(sorted.prefix(CPListTemplate.maximumItemCount))
-            let items = limited.map { createCampoItem($0) }
-            completionHandler(items)
-            return
-        }
-
-        // Filtrar por nombre, localidad o provincia
-        let filtered = allCampos.filter { campo in
-            campo.nombre.lowercased().contains(query) ||
-            campo.localidad.lowercased().contains(query) ||
-            campo.provincia.lowercased().contains(query)
-        }
-
-        let sorted = filtered.sorted { $0.nombre < $1.nombre }
-        let limited = Array(sorted.prefix(CPListTemplate.maximumItemCount))
-        let items = limited.map { createCampoItem($0) }
-
-        Logger.debug("✅ Encontrados \(items.count) resultados")
-        completionHandler(items)
-    }
-
-    func searchTemplate(_ searchTemplate: CPSearchTemplate, selectedResult item: CPListItem, completionHandler: @escaping () -> Void) {
-        Logger.debug("✅ Resultado seleccionado")
-        completionHandler()
-    }
-
-    func searchTemplateSearchButtonPressed(_ searchTemplate: CPSearchTemplate) {
-        Logger.debug("🔍 Botón búsqueda presionado")
     }
 }
 

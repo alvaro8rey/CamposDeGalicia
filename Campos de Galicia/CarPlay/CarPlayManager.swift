@@ -185,7 +185,10 @@ class CarPlayManager: NSObject {
             let remaining = sorted.count - end
             let moreItem = CPListItem(text: "Ver más campos...", detailText: "\(remaining) restantes")
             moreItem.handler = { [weak self] (_: CPSelectableListItem, completion: @escaping () -> Void) in
-                self?.showAllCamposWithPagination(offset: end)
+                // ✅ Hacer pop ANTES de pushear nueva página (evita acumulación)
+                self?.interfaceController.popTemplate(animated: false) { [weak self] _, _ in
+                    self?.showAllCamposWithPagination(offset: end)
+                }
                 completion()
             }
             items.append(moreItem)

@@ -160,46 +160,36 @@ class CarPlayManager: NSObject {
         Logger.debug("✅ Root list actualizada con \(nearestCampos.count) campos cercanos")
     }
 
-    // MARK: - Todos los campos (con paginación simple)
+    // MARK: - Todos los campos (con índice alfabético A-Z)
 
     private func showAllCamposWithPagination(offset: Int) {
-        Logger.debug("📋 Mostrando todos los campos - offset: \(offset)")
+        Logger.debug("📋 Mostrando todos los campos con índice A-Z")
 
         let sorted = allCampos.sorted { $0.nombre < $1.nombre }
-        let pageSize = 8
-        let start = offset
-        let end = min(offset + pageSize, sorted.count)
-        let camposPagina = Array(sorted[start..<end])
 
-        var items = camposPagina.map { campo -> CPListItem in
-            let item = CPListItem(text: campo.nombre, detailText: "\(campo.localidad), \(campo.provincia)")
-            item.handler = { [weak self] (_: CPSelectableListItem, completion: @escaping () -> Void) in
-                self?.showCampoDetails(campo)
-                completion()
-            }
-            return item
-        }
+        // Agrupar por letra inicial
+        let grouped = Dictionary(grouping: sorted) { String($0.nombre.prefix(1)).uppercased() }
+        let letters = grouped.keys.sorted()
 
-        // Botón "Ver más" si hay más campos
-        if end < sorted.count {
-            let remaining = sorted.count - end
-            let moreItem = CPListItem(text: "Ver más campos...", detailText: "\(remaining) restantes")
-            moreItem.handler = { [weak self] (_: CPSelectableListItem, completion: @escaping () -> Void) in
-                // ✅ Hacer pop ANTES de pushear nueva página (evita acumulación)
-                self?.interfaceController.popTemplate(animated: false) { [weak self] _, _ in
-                    self?.showAllCamposWithPagination(offset: end)
+        var sections: [CPListSection] = []
+        for letter in letters {
+            guard let camposInLetter = grouped[letter] else { continue }
+            let items = camposInLetter.map { campo -> CPListItem in
+                let item = CPListItem(text: campo.nombre, detailText: "\(campo.localidad), \(campo.provincia)")
+                item.handler = { [weak self] (_: CPSelectableListItem, completion: @escaping () -> Void) in
+                    self?.showCampoDetails(campo)
+                    completion()
                 }
-                completion()
+                return item
             }
-            items.append(moreItem)
+            // ✅ sectionIndexTitle crea el índice A-Z en el lado derecho
+            let section = CPListSection(items: items, header: letter, sectionIndexTitle: letter)
+            sections.append(section)
         }
 
-        let totalPages = Int(ceil(Double(sorted.count) / Double(pageSize)))
-        let currentPage = (offset / pageSize) + 1
-        let title = "Todos los campos (\(currentPage)/\(totalPages))"
-        let listTemplate = CPListTemplate(title: title, sections: [CPListSection(items: items)])
+        let listTemplate = CPListTemplate(title: "Todos los campos", sections: sections)
         interfaceController.pushTemplate(listTemplate, animated: true)
-        Logger.debug("✅ Mostrando \(items.count) items (offset: \(offset), total: \(sorted.count))")
+        Logger.debug("✅ Mostrando \(sections.count) secciones alfabéticas con índice A-Z")
     }
 
     // MARK: - Detalle del Campo

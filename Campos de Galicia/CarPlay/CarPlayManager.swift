@@ -41,10 +41,10 @@ class CarPlayManager: NSObject {
         let loadingSection = CPListSection(items: [loadingItem])
         let listTemplate = CPListTemplate(title: "Campos de Galicia", sections: [loadingSection])
 
-        // ✅ Botón "Buscar" - lista alfabética con índice A-Z
+        // ✅ Botón "Buscar" - navegación Provincias → Letras → Campos
         listTemplate.trailingNavigationBarButtons = [
             CPBarButton(title: "Buscar") { [weak self] _ in
-                self?.showSearchWithSections()
+                self?.showProvinciasForSearch()
             }
         ]
 
@@ -241,37 +241,90 @@ class CarPlayManager: NSObject {
         interfaceController.pushTemplate(listTemplate, animated: true)
     }
 
-    // MARK: - Buscar (Lista alfabética con índice A-Z)
+    // MARK: - Buscar (Provincias → Letras → Campos)
 
-    private func showSearchWithSections() {
-        Logger.debug("🔍 Mostrando búsqueda alfabética con índice A-Z")
+    // Nivel 1: Mostrar provincias
+    private func showProvinciasForSearch() {
+        Logger.debug("🔍 Mostrando provincias para búsqueda")
 
-        let sorted = allCampos.sorted { $0.nombre < $1.nombre }
-
-        // Agrupar por letra inicial
-        let grouped = Dictionary(grouping: sorted) { String($0.nombre.prefix(1)).uppercased() }
-        let letters = grouped.keys.sorted()
-
-        // Crear secciones con índice alfabético
-        var sections: [CPListSection] = []
-        for letter in letters {
-            guard let camposInLetter = grouped[letter] else { continue }
-            let items = camposInLetter.map { campo -> CPListItem in
-                let item = CPListItem(text: campo.nombre, detailText: "\(campo.localidad), \(campo.provincia)")
-                item.handler = { [weak self] (_: CPSelectableListItem, completion: @escaping () -> Void) in
-                    self?.showCampoDetails(campo)
-                    completion()
-                }
-                return item
+        let provincias = ["A Coruña", "Lugo", "Ourense", "Pontevedra"]
+        let items = provincias.map { provincia -> CPListItem in
+            let count = allCampos.filter { $0.provincia == provincia }.count
+            let item = CPListItem(text: provincia, detailText: "\(count) campos")
+            item.handler = { [weak self] (_: CPSelectableListItem, completion: @escaping () -> Void) in
+                self?.showLetrasForProvincia(provincia)
+                completion()
             }
-            // ✅ sectionIndexTitle crea el índice A-Z en el lado derecho
-            let section = CPListSection(items: items, header: letter, sectionIndexTitle: letter)
-            sections.append(section)
+            return item
         }
 
-        let listTemplate = CPListTemplate(title: "Todos los campos", sections: sections)
+        let listTemplate = CPListTemplate(title: "Buscar por Provincia", sections: [CPListSection(items: items)])
         interfaceController.pushTemplate(listTemplate, animated: true)
-        Logger.debug("✅ Búsqueda alfabética con \(sections.count) secciones")
+        Logger.debug("✅ Mostrando \(provincias.count) provincias")
+    }
+
+    // Nivel 2: Mostrar letras A-Z de una provincia
+    private func showLetrasForProvincia(_ provincia: String) {
+        Logger.debug("🔍 Mostrando letras para provincia: \(provincia)")
+
+        let camposDeProvincia = allCampos.filter { $0.provincia == provincia }.sorted { $0.nombre < $1.nombre }
+
+        // Agrupar por letra inicial
+        let grouped = Dictionary(grouping: camposDeProvincia) { String($0.nombre.prefix(1)).uppercased() }
+        let letters = grouped.keys.sorted()
+
+        let items = letters.map { letter -> CPListItem in
+            let count = grouped[letter]?.count ?? 0
+            let item = CPListItem(text: "Letra \(letter)", detailText: "\(count) campos")
+            item.handler = { [weak self] (_: CPSelectableListItem, completion: @escaping () -> Void) in
+                self?.showCamposForProvinciaAndLetra(provincia, letra: letter, offset: 0)
+                completion()
+            }
+            return item
+        }
+
+        let listTemplate = CPListTemplate(title: provincia, sections: [CPListSection(items: items)])
+        interfaceController.pushTemplate(listTemplate, animated: true)
+        Logger.debug("✅ Mostrando \(letters.count) letras")
+    }
+
+    // Nivel 3: Mostrar campos de una provincia y letra (con paginación)
+    private func showCamposForProvinciaAndLetra(_ provincia: String, letra: String, offset: Int) {
+        Logger.debug("🔍 Mostrando campos: provincia=\(provincia), letra=\(letra), offset=\(offset)")
+
+        let camposFiltrados = allCampos
+            .filter { $0.provincia == provincia && $0.nombre.prefix(1).uppercased() == letra }
+            .sorted { $0.nombre < $1.nombre }
+
+        let pageSize = 8
+        let start = offset
+        let end = min(offset + pageSize, camposFiltrados.count)
+        let camposPagina = Array(camposFiltrados[start..<end])
+
+        var items = camposPagina.map { campo -> CPListItem in
+            let item = CPListItem(text: campo.nombre, detailText: campo.localidad)
+            item.handler = { [weak self] (_: CPSelectableListItem, completion: @escaping () -> Void) in
+                self?.showCampoDetails(campo)
+                completion()
+            }
+            return item
+        }
+
+        // Botón "Ver más" si hay más campos
+        if end < camposFiltrados.count {
+            let remaining = camposFiltrados.count - end
+            let moreItem = CPListItem(text: "Ver más campos...", detailText: "\(remaining) restantes")
+            moreItem.handler = { [weak self] (_: CPSelectableListItem, completion: @escaping () -> Void) in
+                self?.showCamposForProvinciaAndLetra(provincia, letra: letra, offset: end)
+                completion()
+            }
+            items.append(moreItem)
+        }
+
+        let title = "\(provincia) - Letra \(letra)"
+        let listTemplate = CPListTemplate(title: title, sections: [CPListSection(items: items)])
+        interfaceController.pushTemplate(listTemplate, animated: true)
+        Logger.debug("✅ Mostrando \(items.count) items (offset: \(offset), total: \(camposFiltrados.count))")
     }
 
     // MARK: - Detalle del Campo

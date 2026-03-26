@@ -51,13 +51,7 @@ struct EmptyStateView: View {
                         .foregroundColor(.white)
                         .padding(.horizontal, Spacing.xxl)
                         .padding(.vertical, Spacing.md)
-                        .background(
-                            LinearGradient(
-                                colors: [.blue, .blue.opacity(Opacity.strong)],
-                                startPoint: .leading,
-                                endPoint: .trailing
-                            )
-                        )
+                        .background(Color.blue)
                         .cornerRadius(CornerRadius.md)
                 }
                 .padding(.top, Spacing.xs)

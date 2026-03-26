@@ -80,13 +80,7 @@ struct ErrorStateView: View {
                         .foregroundColor(.white)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, Spacing.md)
-                        .background(
-                            LinearGradient(
-                                colors: [.orange, .orange.opacity(Opacity.strong)],
-                                startPoint: .leading,
-                                endPoint: .trailing
-                            )
-                        )
+                        .background(Color.orange)
                         .cornerRadius(CornerRadius.md)
                     }
                 } else if let onSupport = onSupport {

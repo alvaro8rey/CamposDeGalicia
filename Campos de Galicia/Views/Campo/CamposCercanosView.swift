@@ -245,25 +245,25 @@ private struct DistancePickerCard: View {
 private struct EmptyCard: View {
     let text: String
     var body: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: Spacing.md) {
             Image(systemName: "map")
-                .font(.system(size: 48))
+                .font(.system(size: IconSize.huge))
                 .foregroundColor(.secondary)
-                .opacity(0.5)
+                .opacity(Opacity.semitransparent)
             Text(text)
                 .font(.subheadline)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
         }
-        .padding(24)
+        .padding(Spacing.xxl)
         .frame(maxWidth: .infinity)
         .background(.ultraThinMaterial)
-        .cornerRadius(18)
+        .cornerRadius(CornerRadius.xl)
         .overlay(
-            RoundedRectangle(cornerRadius: 18)
-                .stroke(Color.gray.opacity(0.2), lineWidth: 1)
+            RoundedRectangle(cornerRadius: CornerRadius.xl)
+                .stroke(Color.gray.opacity(Opacity.border), lineWidth: 1)
         )
-        .shadow(color: Color.black.opacity(0.08), radius: 12, x: 0, y: 4)
+        .shadowMedium()
     }
 }
 

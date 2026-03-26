@@ -111,9 +111,9 @@ struct CampoDetalleView: View {
 
                         // Error Message
                         if let errorMessage = errorMessage {
-                            HStack(spacing: 12) {
+                            HStack(spacing: Spacing.md) {
                                 Image(systemName: "exclamationmark.circle.fill")
-                                    .font(.system(size: 20))
+                                    .font(.system(size: IconSize.lg))
                                     .foregroundColor(.red)
 
                                 Text(errorMessage)
@@ -128,19 +128,19 @@ struct CampoDetalleView: View {
                                     }
                                 } label: {
                                     Image(systemName: "xmark.circle.fill")
-                                        .font(.system(size: 18))
+                                        .font(.system(size: IconSize.md))
                                         .foregroundColor(.secondary)
                                 }
                             }
-                            .padding(16)
-                            .background(Color.red.opacity(0.1))
-                            .cornerRadius(12)
+                            .padding(Spacing.lg)
+                            .background(Color.red.opacity(Opacity.light))
+                            .cornerRadius(CornerRadius.md)
                             .overlay(
-                                RoundedRectangle(cornerRadius: 12)
-                                    .stroke(Color.red.opacity(0.3), lineWidth: 1)
+                                RoundedRectangle(cornerRadius: CornerRadius.md)
+                                    .stroke(Color.red.opacity(Opacity.strong), lineWidth: 1)
                             )
-                            .padding(.horizontal)
-                            .padding(.vertical, 8)
+                            .paddingHorizontal()
+                            .padding(.vertical, Spacing.sm)
                             .transition(.opacity.combined(with: .move(edge: .top)))
                         }
 

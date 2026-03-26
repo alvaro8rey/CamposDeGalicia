@@ -24,12 +24,12 @@ struct EmptyStateView: View {
     }
 
     var body: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: Spacing.lg) {
             Image(systemName: icon)
-                .font(.system(size: 56))
+                .font(.system(size: IconSize.huge))
                 .foregroundColor(.secondary)
-                .opacity(0.6)
-                .padding(.bottom, 4)
+                .opacity(Opacity.disabled)
+                .padding(.bottom, Spacing.xs)
 
             Text(title)
                 .font(.headline)
@@ -41,39 +41,39 @@ struct EmptyStateView: View {
                     .font(.subheadline)
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
-                    .padding(.horizontal, 8)
+                    .padding(.horizontal, Spacing.sm)
             }
 
             if let actionTitle = actionTitle, let action = action {
                 Button(action: action) {
                     Text(actionTitle)
-                        .font(.system(size: 15, weight: .semibold))
+                        .font(.system(size: FontSize.sm, weight: .semibold))
                         .foregroundColor(.white)
-                        .padding(.horizontal, 24)
-                        .padding(.vertical, 12)
+                        .padding(.horizontal, Spacing.xxl)
+                        .padding(.vertical, Spacing.md)
                         .background(
                             LinearGradient(
-                                colors: [.blue, .blue.opacity(0.8)],
+                                colors: [.blue, .blue.opacity(Opacity.strong)],
                                 startPoint: .leading,
                                 endPoint: .trailing
                             )
                         )
-                        .cornerRadius(12)
+                        .cornerRadius(CornerRadius.md)
                 }
-                .padding(.top, 4)
+                .padding(.top, Spacing.xs)
             }
         }
-        .padding(.vertical, 32)
-        .padding(.horizontal, 24)
+        .padding(.vertical, Spacing.xxxl)
+        .padding(.horizontal, Spacing.xxl)
         .frame(maxWidth: .infinity)
         .frame(minHeight: 180)
         .background(.ultraThinMaterial)
-        .cornerRadius(16)
+        .cornerRadius(CornerRadius.lg)
         .overlay(
-            RoundedRectangle(cornerRadius: 16)
-                .stroke(Color.gray.opacity(0.2), lineWidth: 1)
+            RoundedRectangle(cornerRadius: CornerRadius.lg)
+                .stroke(Color.gray.opacity(Opacity.border), lineWidth: 1)
         )
-        .shadow(color: Color.black.opacity(0.08), radius: 8, x: 0, y: 4)
+        .shadowMedium()
     }
 }
 

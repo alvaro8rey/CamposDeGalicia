@@ -164,11 +164,11 @@ struct CampoDetalleView: View {
         }
         .onAppear {
             syncCampo()
-            if let extras = camposViewModel.extras(for: campoID) {
-                contribucionesAprobadas = extras.contribuciones
-                Task { await preloadUserNames(for: extras.contribuciones) }
-            }
             Task {
+                if let extras = await camposViewModel.extras(for: campoID) {
+                    contribucionesAprobadas = extras.contribuciones
+                    await preloadUserNames(for: extras.contribuciones)
+                }
                 await checkIfVisited()
                 await fetchContribucionesAprobadas(forceRefresh: false)
             }
@@ -394,7 +394,7 @@ struct CampoDetalleView: View {
                 showingContribucionForm = false
                 ToastManager.shared.success(L(.contribucionSuccess))
             }
-            camposViewModel.invalidateExtras(for: campoID)
+            await camposViewModel.invalidateExtras(for: campoID)
             await fetchContribucionesAprobadas(forceRefresh: true)
         } catch {
             await MainActor.run {

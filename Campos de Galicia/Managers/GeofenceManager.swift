@@ -37,6 +37,7 @@ final class GeofenceManager: NSObject, ObservableObject, CLLocationManagerDelega
     private let refreshInterval: TimeInterval = 6 * 60 * 60 // 6h
     private let lastRefreshKey = "gf_last_refresh_ts"
     private var appActiveObserver: NSObjectProtocol?
+    private var appBackgroundObserver: NSObjectProtocol?  // ✅ FIX: Guardar observer para removerlo
     private var backgroundTask: UIBackgroundTaskIdentifier = .invalid
 
     override init() {
@@ -68,7 +69,7 @@ final class GeofenceManager: NSObject, ObservableObject, CLLocationManagerDelega
         }
 
         // Observar cuando la app va a background
-        NotificationCenter.default.addObserver(
+        appBackgroundObserver = NotificationCenter.default.addObserver(
             forName: UIApplication.didEnterBackgroundNotification,
             object: nil,
             queue: .main
@@ -80,6 +81,9 @@ final class GeofenceManager: NSObject, ObservableObject, CLLocationManagerDelega
 
     deinit {
         if let obs = appActiveObserver {
+            NotificationCenter.default.removeObserver(obs)
+        }
+        if let obs = appBackgroundObserver {
             NotificationCenter.default.removeObserver(obs)
         }
         NotificationCenter.default.removeObserver(self)

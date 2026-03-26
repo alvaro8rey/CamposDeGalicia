@@ -1,13 +1,42 @@
 import Foundation
 import Combine
 
+/// ✅ FIX: Actor para cache thread-safe de extras
+private actor ExtrasCache {
+    private var cache: [UUID: CampoDetailExtras] = [:]
+
+    func get(_ key: UUID) -> CampoDetailExtras? {
+        cache[key]
+    }
+
+    func set(_ key: UUID, value: CampoDetailExtras) {
+        cache[key] = value
+    }
+
+    func remove(_ key: UUID) {
+        cache.removeValue(forKey: key)
+    }
+
+    func removeAll() {
+        cache.removeAll()
+    }
+
+    func removeExpired(isValid: (CampoDetailExtras) -> Bool) -> Int {
+        let expiredKeys = cache.filter { !isValid($0.value) }.map { $0.key }
+        expiredKeys.forEach { cache.removeValue(forKey: $0) }
+        return expiredKeys.count
+    }
+}
+
 @MainActor
 final class CamposViewModel: ObservableObject {
     @Published private(set) var campos: [CampoModel] = []
     @Published private(set) var isLoading: Bool = false
     @Published private(set) var lastUpdated: Date?
     @Published var errorMessage: String?
-    @Published private(set) var campoExtras: [UUID: CampoDetailExtras] = [:]
+
+    // ✅ FIX: Usar actor para evitar data race
+    private let extrasCache = ExtrasCache()
 
     private let supabaseManager: SupabaseManager
     private let cacheStore: CamposCacheStore
@@ -71,16 +100,15 @@ final class CamposViewModel: ObservableObject {
 
     func refreshCampos() async {
         await supabaseManager.invalidateCamposCache()
-        campoExtras.removeAll()
+        await extrasCache.removeAll()
         await loadCampos(forceRefresh: true)
     }
 
     /// Limpia el caché de extras expirados para liberar memoria
-    func cleanExpiredExtras() {
-        let expiredKeys = campoExtras.filter { !isExtrasValid($0.value) }.map { $0.key }
-        expiredKeys.forEach { campoExtras.removeValue(forKey: $0) }
-        if !expiredKeys.isEmpty {
-            Logger.debug("🗑️ Cleaned \(expiredKeys.count) expired extras from memory")
+    func cleanExpiredExtras() async {
+        let count = await extrasCache.removeExpired(isValid: isExtrasValid)
+        if count > 0 {
+            Logger.debug("🗑️ Cleaned \(count) expired extras from memory")
         }
     }
 
@@ -88,8 +116,8 @@ final class CamposViewModel: ObservableObject {
         campos.first { $0.id == id }
     }
 
-    func extras(for campoID: UUID) -> CampoDetailExtras? {
-        campoExtras[campoID]
+    func extras(for campoID: UUID) async -> CampoDetailExtras? {
+        await extrasCache.get(campoID)
     }
 
     /// Carga los extras de un campo (contribuciones)
@@ -97,7 +125,7 @@ final class CamposViewModel: ObservableObject {
     /// ❌ NO guarda en disco (evita crecimiento exponencial)
     func loadExtras(for campoID: UUID, forceRefresh: Bool = false) async throws -> CampoDetailExtras {
         // Si está en memoria y es válido, devolver
-        if !forceRefresh, let extras = campoExtras[campoID], isExtrasValid(extras) {
+        if !forceRefresh, let extras = await extrasCache.get(campoID), isExtrasValid(extras) {
             Logger.debug("✅ Extras from memory cache for campo: \(campoID)")
             return extras
         }
@@ -109,13 +137,13 @@ final class CamposViewModel: ObservableObject {
             let extras = CampoDetailExtras(contribuciones: contribuciones, lastUpdated: Date())
 
             // Solo guardar en memoria (NO en disco)
-            campoExtras[campoID] = extras
+            await extrasCache.set(campoID, value: extras)
 
             Logger.debug("✅ Extras loaded: \(contribuciones.count) contribuciones")
             return extras
         } catch {
             // Si hay error y tenemos caché en memoria (aunque esté expirado), usarlo
-            if let cachedExtras = campoExtras[campoID] {
+            if let cachedExtras = await extrasCache.get(campoID) {
                 Logger.warning("⚠️ Using expired memory cache due to error: \(error.localizedDescription)")
                 return cachedExtras
             }
@@ -124,8 +152,8 @@ final class CamposViewModel: ObservableObject {
     }
 
     /// Invalida el caché en memoria de extras para un campo
-    func invalidateExtras(for campoID: UUID) {
-        campoExtras.removeValue(forKey: campoID)
+    func invalidateExtras(for campoID: UUID) async {
+        await extrasCache.remove(campoID)
         Logger.debug("🗑️ Memory cache invalidated for campo: \(campoID)")
     }
 

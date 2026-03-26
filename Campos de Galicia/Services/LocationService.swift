@@ -7,6 +7,7 @@ final class LocationService: NSObject, CLLocationManagerDelegate {
     private let manager = CLLocationManager()
     private var continuation: CheckedContinuation<CLLocation?, Never>?
     private var timeoutTask: Task<Void, Never>?
+    private var continuationResumed = false  // ✅ FIX: Flag para evitar double resume
 
     private override init() {
         super.init()
@@ -54,6 +55,8 @@ final class LocationService: NSObject, CLLocationManagerDelegate {
     private func requestPermissionsAndLocation() async -> CLLocation? {
         Logger.debug("📍 LocationService: Solicitando permisos...")
 
+        continuationResumed = false  // ✅ Reset flag
+
         return await withCheckedContinuation { continuation in
             self.continuation = continuation
             manager.requestWhenInUseAuthorization()
@@ -61,8 +64,9 @@ final class LocationService: NSObject, CLLocationManagerDelegate {
             // Timeout de 5 segundos para que el usuario responda
             timeoutTask = Task { @MainActor in
                 try? await Task.sleep(nanoseconds: 5_000_000_000)
-                if let cont = self.continuation {
+                if let cont = self.continuation, !self.continuationResumed {
                     Logger.warning("⏱️ LocationService: Timeout esperando permisos")
+                    self.continuationResumed = true
                     self.continuation = nil
                     cont.resume(returning: nil)
                 }
@@ -74,6 +78,8 @@ final class LocationService: NSObject, CLLocationManagerDelegate {
     private func requestLocation() async -> CLLocation? {
         Logger.debug("📍 LocationService: Solicitando ubicación...")
 
+        continuationResumed = false  // ✅ Reset flag
+
         return await withCheckedContinuation { continuation in
             self.continuation = continuation
             self.manager.requestLocation()
@@ -81,8 +87,9 @@ final class LocationService: NSObject, CLLocationManagerDelegate {
             // Timeout reducido a 3 segundos
             timeoutTask = Task { @MainActor in
                 try? await Task.sleep(nanoseconds: 3_000_000_000)
-                if let cont = self.continuation {
+                if let cont = self.continuation, !self.continuationResumed {
                     Logger.warning("⏱️ LocationService: Timeout obteniendo ubicación")
+                    self.continuationResumed = true
                     self.continuation = nil
                     cont.resume(returning: nil)
                 }
@@ -100,7 +107,7 @@ final class LocationService: NSObject, CLLocationManagerDelegate {
     func locationManager(_ manager: CLLocationManager, didChangeAuthorization status: CLAuthorizationStatus) {
         Logger.debug("🔐 LocationService: Cambio de autorización: \(status.rawValue)")
 
-        guard let continuation = self.continuation else { return }
+        guard let continuation = self.continuation, !continuationResumed else { return }
 
         switch status {
         case .authorizedWhenInUse, .authorizedAlways:
@@ -113,6 +120,7 @@ final class LocationService: NSObject, CLLocationManagerDelegate {
             // Permisos denegados
             Logger.warning("❌ LocationService: Permisos denegados")
             cancelTimeout()
+            continuationResumed = true
             self.continuation = nil
             continuation.resume(returning: nil)
 
@@ -123,13 +131,14 @@ final class LocationService: NSObject, CLLocationManagerDelegate {
         @unknown default:
             Logger.warning("⚠️ LocationService: Estado desconocido")
             cancelTimeout()
+            continuationResumed = true
             self.continuation = nil
             continuation.resume(returning: nil)
         }
     }
 
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
-        guard let continuation = self.continuation else { return }
+        guard let continuation = self.continuation, !continuationResumed else { return }
 
         cancelTimeout()
 
@@ -151,6 +160,7 @@ final class LocationService: NSObject, CLLocationManagerDelegate {
             Logger.warning("⚠️ LocationService: No se encontró ubicación válida")
         }
 
+        continuationResumed = true
         self.continuation = nil
         continuation.resume(returning: best)
     }
@@ -158,9 +168,10 @@ final class LocationService: NSObject, CLLocationManagerDelegate {
     func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
         Logger.error("❌ LocationService: Error obteniendo ubicación: \(error.localizedDescription)")
 
-        guard let continuation = self.continuation else { return }
+        guard let continuation = self.continuation, !continuationResumed else { return }
 
         cancelTimeout()
+        continuationResumed = true
         self.continuation = nil
         continuation.resume(returning: nil)
     }

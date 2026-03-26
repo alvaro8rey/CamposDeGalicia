@@ -233,35 +233,45 @@ struct ContentView: View {
             return
         }
 
-        let normalizedSearch = searchText
-            .folding(options: [.diacriticInsensitive, .caseInsensitive], locale: .current)
+        // ✅ FIX: Mover cálculo de Levenshtein a background thread para evitar congelación de UI
+        let searchText = self.searchText
+        let campos = camposViewModel.campos
 
-        let camposConSimilitud = camposViewModel.campos.compactMap { campo -> (campo: CampoModel, score: Double)? in
-            let normalizedNombre = campo.nombre
+        Task(priority: .userInitiated) {
+            let normalizedSearch = searchText
                 .folding(options: [.diacriticInsensitive, .caseInsensitive], locale: .current)
-            let normalizedLocalidad = (campo.localidad ?? "")
-                .folding(options: [.diacriticInsensitive, .caseInsensitive], locale: .current)
 
-            // Buscar en nombre y localidad, quedarse con el mejor score
-            let scoreNombre = calculateMatchScore(search: normalizedSearch, target: normalizedNombre)
-            let scoreLocalidad = calculateMatchScore(search: normalizedSearch, target: normalizedLocalidad)
-            let bestScore = max(scoreNombre, scoreLocalidad)
+            // Cálculo pesado en background thread
+            let camposConSimilitud = campos.compactMap { campo -> (campo: CampoModel, score: Double)? in
+                let normalizedNombre = campo.nombre
+                    .folding(options: [.diacriticInsensitive, .caseInsensitive], locale: .current)
+                let normalizedLocalidad = (campo.localidad ?? "")
+                    .folding(options: [.diacriticInsensitive, .caseInsensitive], locale: .current)
 
-            // Umbral mínimo del 50%
-            if bestScore >= 0.5 {
-                return (campo, bestScore)
+                // Buscar en nombre y localidad, quedarse con el mejor score
+                let scoreNombre = self.calculateMatchScore(search: normalizedSearch, target: normalizedNombre)
+                let scoreLocalidad = self.calculateMatchScore(search: normalizedSearch, target: normalizedLocalidad)
+                let bestScore = max(scoreNombre, scoreLocalidad)
+
+                // Umbral mínimo del 50%
+                if bestScore >= 0.5 {
+                    return (campo, bestScore)
+                }
+
+                return nil
             }
 
-            return nil
+            let sorted = camposConSimilitud
+                .sorted { $0.score > $1.score }
+                .map { $0.campo }
+
+            // Solo actualizar UI en main thread
+            await MainActor.run {
+                self.filteredCampos = sorted
+                self.camposMostrados = sorted.count
+                AnalyticsManager.shared.trackSearch(query: searchText, resultsCount: sorted.count)
+            }
         }
-
-        filteredCampos = camposConSimilitud
-            .sorted { $0.score > $1.score }
-            .map { $0.campo }
-
-        camposMostrados = filteredCampos.count
-
-        AnalyticsManager.shared.trackSearch(query: searchText, resultsCount: filteredCampos.count)
     }
 
     private func calculateMatchScore(search: String, target: String) -> Double {

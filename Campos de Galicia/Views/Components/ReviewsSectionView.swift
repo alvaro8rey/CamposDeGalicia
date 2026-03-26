@@ -102,8 +102,20 @@ struct ReviewsSectionView: View {
             .buttonStyle(.plain)
             .padding(.horizontal)
 
-            // Error / Empty States
-            if let errorMessage = reviewsManager.errorMessage {
+            // ✅ FIX: Mostrar loading indicator cuando se están cargando reseñas
+            if reviewsManager.isLoading {
+                HStack {
+                    Spacer()
+                    VStack(spacing: 12) {
+                        ProgressView()
+                        Text("Cargando reseñas...")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                    }
+                    .padding(.vertical, 40)
+                    Spacer()
+                }
+            } else if let errorMessage = reviewsManager.errorMessage {
                 ErrorView(message: errorMessage) {
                     Task { await loadReviews() }
                 }

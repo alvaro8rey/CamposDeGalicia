@@ -170,6 +170,21 @@ final class LocationService: NSObject, CLLocationManagerDelegate {
 
         guard let continuation = self.continuation, !continuationResumed else { return }
 
+        // ✅ FIX: Mostrar error al usuario
+        let errorCode = (error as NSError).code
+        let errorMessage: String
+
+        switch errorCode {
+        case 0: // kCLErrorLocationUnknown
+            errorMessage = "No se pudo determinar tu ubicación. Intenta de nuevo."
+        case 1: // kCLErrorDenied
+            errorMessage = "Permisos de ubicación denegados. Actívalos en Ajustes."
+        default:
+            errorMessage = "Error al obtener ubicación: \(error.localizedDescription)"
+        }
+
+        ToastManager.shared.error(errorMessage)
+
         cancelTimeout()
         continuationResumed = true
         self.continuation = nil

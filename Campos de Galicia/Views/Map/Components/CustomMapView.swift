@@ -32,7 +32,7 @@ struct CustomMapView: UIViewRepresentable {
         mapView.showsUserLocation = true
         mapView.showsTraffic = false
         mapView.showsBuildings = true
-        mapView.showsScale = true
+        mapView.showsScale = false
         mapView.register(MKMarkerAnnotationView.self, forAnnotationViewWithReuseIdentifier: "CampoAnnotation")
         mapView.setRegion(region, animated: false)
 

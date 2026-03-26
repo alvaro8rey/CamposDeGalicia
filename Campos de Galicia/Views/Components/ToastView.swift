@@ -75,13 +75,13 @@ struct ToastView: View {
     @State private var shimmerOffset: CGFloat = -200
 
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: Spacing.md) {
             // Icono con animación especial para level up
             ZStack {
                 if toast.type == .levelUp {
                     // Círculo de fondo brillante
                     Circle()
-                        .fill(Color.white.opacity(0.3))
+                        .fill(Color.white.opacity(Opacity.strong))
                         .frame(width: 40, height: 40)
                         .scaleEffect(scale * 1.2)
                 }
@@ -105,26 +105,26 @@ struct ToastView: View {
             Button(action: onDismiss) {
                 Image(systemName: "xmark.circle.fill")
                     .font(.title3)
-                    .foregroundColor(.white.opacity(0.8))
+                    .foregroundColor(.white.opacity(Opacity.strong))
             }
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 16)
+        .paddingHorizontal()
+        .paddingVertical()
         .background(
             ZStack {
                 // Fondo base
-                RoundedRectangle(cornerRadius: 16)
+                RoundedRectangle(cornerRadius: CornerRadius.lg)
                     .fill(backgroundGradient)
-                    .shadow(color: Color.black.opacity(0.3), radius: 12, x: 0, y: 6)
+                    .shadowLarge()
 
                 // Efecto shimmer para level up y XP
                 if toast.type == .levelUp || toast.type == .xp {
-                    RoundedRectangle(cornerRadius: 16)
+                    RoundedRectangle(cornerRadius: CornerRadius.lg)
                         .fill(
                             LinearGradient(
                                 colors: [
                                     Color.white.opacity(0),
-                                    Color.white.opacity(0.4),
+                                    Color.white.opacity(Opacity.semitransparent),
                                     Color.white.opacity(0)
                                 ],
                                 startPoint: .leading,
@@ -132,11 +132,11 @@ struct ToastView: View {
                             )
                         )
                         .offset(x: shimmerOffset)
-                        .mask(RoundedRectangle(cornerRadius: 16))
+                        .mask(RoundedRectangle(cornerRadius: CornerRadius.lg))
                 }
             }
         )
-        .padding(.horizontal, 16)
+        .paddingHorizontal()
         .offset(y: offset)
         .opacity(opacity)
         .scaleEffect(scale)
@@ -193,13 +193,13 @@ struct ToastView: View {
         switch toast.type {
         case .levelUp:
             return LinearGradient(
-                colors: [Color.green, Color.green.opacity(0.8)],
+                colors: [Color.green, Color.green.opacity(Opacity.strong)],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
         case .xp:
             return LinearGradient(
-                colors: [Color.purple, Color.purple.opacity(0.8)],
+                colors: [Color.purple, Color.purple.opacity(Opacity.strong)],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
@@ -211,7 +211,7 @@ struct ToastView: View {
             )
         default:
             return LinearGradient(
-                colors: [toast.type.backgroundColor, toast.type.backgroundColor.opacity(0.8)],
+                colors: [toast.type.backgroundColor, toast.type.backgroundColor.opacity(Opacity.strong)],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )

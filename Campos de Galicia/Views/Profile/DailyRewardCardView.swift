@@ -9,7 +9,7 @@ struct DailyRewardCardView: View {
     let onClaim: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 18) {
+        VStack(alignment: .leading, spacing: Spacing.lg + 2) {
             // Header
             headerSection
 
@@ -19,17 +19,17 @@ struct DailyRewardCardView: View {
             // Action Button
             actionButton
         }
-        .padding(20)
+        .padding(Spacing.xl)
         .background(cardBackground)
-        .cornerRadius(20)
-        .shadow(color: Color.black.opacity(0.08), radius: 10, x: 0, y: 4)
+        .cornerRadius(CornerRadius.xl)
+        .shadowLarge()
     }
 
     // MARK: - Header
     private var headerSection: some View {
         HStack(alignment: .top) {
-            VStack(alignment: .leading, spacing: 6) {
-                HStack(spacing: 8) {
+            VStack(alignment: .leading, spacing: Spacing.xs + 2) {
+                HStack(spacing: Spacing.sm) {
                     Image(systemName: "gift.fill")
                         .font(.title2)
                         .foregroundColor(.orange)
@@ -46,7 +46,7 @@ struct DailyRewardCardView: View {
             Spacer()
 
             // Streak Counter
-            VStack(spacing: 2) {
+            VStack(spacing: Spacing.xs - 2) {
                 Text("\(currentDay)")
                     .font(.system(size: 24, weight: .heavy))
                     .foregroundColor(.orange)
@@ -56,11 +56,11 @@ struct DailyRewardCardView: View {
                     .foregroundColor(.secondary)
                     .textCase(.uppercase)
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
+            .padding(.horizontal, Spacing.md)
+            .padding(.vertical, Spacing.sm)
             .background(
                 Capsule()
-                    .fill(Color.orange.opacity(0.1))
+                    .fill(Color.orange.opacity(Opacity.light))
             )
         }
     }
@@ -68,7 +68,7 @@ struct DailyRewardCardView: View {
     // MARK: - Days Progress
     private var daysProgressView: some View {
         ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 12) {
+            HStack(spacing: Spacing.md) {
                 ForEach(1...7, id: \.self) { day in
                     DayCircleView(
                         day: day,
@@ -91,7 +91,7 @@ struct DailyRewardCardView: View {
                 HapticFeedback.medium()
                 onClaim()
             }) {
-                HStack(spacing: 8) {
+                HStack(spacing: Spacing.sm) {
                     if isProcessing {
                         ProgressView()
                             .progressViewStyle(CircularProgressViewStyle(tint: .white))
@@ -106,7 +106,7 @@ struct DailyRewardCardView: View {
                 }
                 .foregroundColor(.white)
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, 16)
+                .padding(.vertical, Spacing.lg)
                 .background(
                     isProcessing ?
                         AnyView(Color.gray) :
@@ -118,14 +118,14 @@ struct DailyRewardCardView: View {
                             )
                         )
                 )
-                .cornerRadius(14)
-                .shadow(color: isProcessing ? .clear : Color.orange.opacity(0.4), radius: 8, x: 0, y: 4)
+                .cornerRadius(CornerRadius.md + 2)
+                .shadow(color: isProcessing ? .clear : Color.orange.opacity(Opacity.semitransparent), radius: 8, x: 0, y: 4)
             }
             .disabled(isProcessing)
             .scaleEffect(isProcessing ? 0.98 : 1.0)
             .animation(.spring(response: 0.3), value: isProcessing)
         } else if hasClaimedToday {
-            HStack(spacing: 8) {
+            HStack(spacing: Spacing.sm) {
                 Image(systemName: "checkmark.circle.fill")
                     .foregroundColor(.green)
                 Text(L(.dailyRewardClaimedToday))
@@ -133,11 +133,11 @@ struct DailyRewardCardView: View {
                     .foregroundColor(.secondary)
             }
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 14)
+            .padding(.vertical, Spacing.md + 2)
             .background(
-                Color.green.opacity(0.1)
+                Color.green.opacity(Opacity.light)
             )
-            .cornerRadius(14)
+            .cornerRadius(CornerRadius.md + 2)
         }
     }
 

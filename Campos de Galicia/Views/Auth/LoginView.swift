@@ -68,9 +68,9 @@ struct LoginView: View {
                     }
 
                     // Form Card
-                    VStack(spacing: 20) {
+                    VStack(spacing: Spacing.xl) {
                         // Email field
-                        VStack(alignment: .leading, spacing: 8) {
+                        VStack(alignment: .leading, spacing: Spacing.sm) {
                             Label(L(.loginEmail), systemImage: "envelope.fill")
                                 .font(.subheadline)
                                 .fontWeight(.medium)
@@ -79,14 +79,14 @@ struct LoginView: View {
                             TextField(L(.loginEmailPlaceholder), text: $email)
                                 .padding()
                                 .background(Color(UIColor.secondarySystemBackground))
-                                .cornerRadius(12)
+                                .cornerRadius(CornerRadius.md)
                                 .autocapitalization(.none)
                                 .keyboardType(.emailAddress)
                                 .disabled(isLoading)
                         }
 
                         // Password field
-                        VStack(alignment: .leading, spacing: 8) {
+                        VStack(alignment: .leading, spacing: Spacing.sm) {
                             Label(L(.loginPassword), systemImage: "lock.fill")
                                 .font(.subheadline)
                                 .fontWeight(.medium)
@@ -95,13 +95,13 @@ struct LoginView: View {
                             SecureField("********", text: $password)
                                 .padding()
                                 .background(Color(UIColor.secondarySystemBackground))
-                                .cornerRadius(12)
+                                .cornerRadius(CornerRadius.md)
                                 .disabled(isLoading)
                         }
 
                         // Error message
                         if let errorMessage = errorMessage {
-                            HStack(spacing: 8) {
+                            HStack(spacing: Spacing.sm) {
                                 Image(systemName: "exclamationmark.triangle.fill")
                                     .foregroundColor(.red)
                                 Text(errorMessage)
@@ -110,13 +110,13 @@ struct LoginView: View {
                             }
                             .padding()
                             .frame(maxWidth: .infinity, alignment: .leading)
-                            .background(Color.red.opacity(0.1))
-                            .cornerRadius(10)
+                            .background(Color.red.opacity(Opacity.light))
+                            .cornerRadius(CornerRadius.sm + 2)
                         }
 
                         // Login button
                         Button(action: { Task { await loginAction() } }) {
-                            HStack(spacing: 8) {
+                            HStack(spacing: Spacing.sm) {
                                 if isLoading {
                                     ProgressView()
                                         .progressViewStyle(CircularProgressViewStyle(tint: .white))
@@ -126,7 +126,7 @@ struct LoginView: View {
                                     .fontWeight(.semibold)
                             }
                             .frame(maxWidth: .infinity)
-                            .padding(.vertical, 16)
+                            .padding(.vertical, Spacing.lg)
                             .background(
                                 LinearGradient(
                                     gradient: Gradient(colors: isLoginButtonDisabled ? [.gray, .gray] : [.blue, .green]),
@@ -135,8 +135,8 @@ struct LoginView: View {
                                 )
                             )
                             .foregroundColor(.white)
-                            .cornerRadius(12)
-                            .shadow(color: isLoginButtonDisabled ? .clear : .blue.opacity(0.3), radius: 8, x: 0, y: 4)
+                            .cornerRadius(CornerRadius.md)
+                            .shadow(color: isLoginButtonDisabled ? .clear : .blue.opacity(Opacity.strong), radius: 8, x: 0, y: 4)
                         }
                         .disabled(isLoginButtonDisabled || isLoading)
 
@@ -149,12 +149,12 @@ struct LoginView: View {
                         }
                         .disabled(isLoading)
                     }
-                    .padding(.horizontal, 24)
-                    .padding(.vertical, 32)
+                    .padding(.horizontal, Spacing.xxl)
+                    .padding(.vertical, Spacing.xxxl)
                     .background(Color(UIColor.systemBackground))
-                    .cornerRadius(20)
-                    .shadow(color: Color.black.opacity(0.1), radius: 10, x: 0, y: 5)
-                    .padding(.horizontal, 20)
+                    .cornerRadius(CornerRadius.xl)
+                    .shadowLarge()
+                    .padding(.horizontal, Spacing.xl)
 
                     // Register prompt
                     VStack(spacing: 12) {

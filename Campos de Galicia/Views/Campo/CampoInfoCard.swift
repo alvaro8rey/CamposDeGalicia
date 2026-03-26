@@ -8,13 +8,13 @@ struct CampoInfoCard: View {
     let onContribute: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: Spacing.md) {
             // Nombre del campo
             Text(campo.nombre)
                 .font(.system(size: 22, weight: .bold))
                 .foregroundStyle(
                     LinearGradient(
-                        colors: [.primary, .primary.opacity(0.8)],
+                        colors: [.primary, .primary.opacity(Opacity.strong)],
                         startPoint: .leading,
                         endPoint: .trailing
                     )
@@ -23,7 +23,7 @@ struct CampoInfoCard: View {
                 .fixedSize(horizontal: false, vertical: true)
 
             // Subtítulo con ubicación
-            HStack(spacing: 6) {
+            HStack(spacing: Spacing.xs + 2) {
                 Image(systemName: "location.fill")
                     .font(.caption)
                     .foregroundColor(.secondary)
@@ -34,7 +34,7 @@ struct CampoInfoCard: View {
             }
 
             // Badges informativos
-            HStack(spacing: 10) {
+            HStack(spacing: Spacing.sm + 2) {
                 // Badge tipo de campo
                 InfoBadge(
                     icon: "sportscourt.fill",
@@ -53,7 +53,7 @@ struct CampoInfoCard: View {
             // Botón de contribuir (solo si está logueado y ha visitado el campo)
             if isLoggedIn && isVisited {
                 Button(action: onContribute) {
-                    HStack(spacing: 8) {
+                    HStack(spacing: Spacing.sm) {
                         Image(systemName: "plus.circle.fill")
                             .font(.body)
                         Text(L(.campoContribute))
@@ -62,34 +62,34 @@ struct CampoInfoCard: View {
                     }
                     .foregroundColor(.white)
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 12)
+                    .padding(.vertical, Spacing.md)
                     .background(
                         LinearGradient(
-                            colors: [.blue, .blue.opacity(0.8)],
+                            colors: [.blue, .blue.opacity(Opacity.strong)],
                             startPoint: .leading,
                             endPoint: .trailing
                         )
                     )
-                    .clipShape(RoundedRectangle(cornerRadius: 14))
-                    .shadow(color: .blue.opacity(0.3), radius: 8, x: 0, y: 4)
+                    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md + 2))
+                    .shadow(color: .blue.opacity(Opacity.strong), radius: 8, x: 0, y: 4)
                 }
             }
         }
-        .padding(16)
+        .padding(Spacing.lg)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             ZStack {
                 // Fondo con glassmorphism
-                RoundedRectangle(cornerRadius: 20)
+                RoundedRectangle(cornerRadius: CornerRadius.xl)
                     .fill(.ultraThinMaterial)
 
                 // Gradiente sutil
-                RoundedRectangle(cornerRadius: 20)
+                RoundedRectangle(cornerRadius: CornerRadius.xl)
                     .fill(
                         LinearGradient(
                             colors: [
-                                Color.blue.opacity(0.05),
-                                Color.green.opacity(0.05)
+                                Color.blue.opacity(Opacity.subtle),
+                                Color.green.opacity(Opacity.subtle)
                             ],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
@@ -98,12 +98,12 @@ struct CampoInfoCard: View {
             }
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 20)
+            RoundedRectangle(cornerRadius: CornerRadius.xl)
                 .strokeBorder(
                     LinearGradient(
                         colors: [
-                            Color.white.opacity(0.3),
-                            Color.white.opacity(0.1)
+                            Color.white.opacity(Opacity.strong),
+                            Color.white.opacity(Opacity.light)
                         ],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
@@ -111,8 +111,8 @@ struct CampoInfoCard: View {
                     lineWidth: 1
                 )
         )
-        .shadow(color: Color.black.opacity(0.08), radius: 12, x: 0, y: 6)
-        .padding(.horizontal, 16)
+        .shadowLarge()
+        .paddingHorizontal()
     }
 }
 
@@ -123,10 +123,10 @@ struct InfoBadge: View {
     let color: Color
 
     var body: some View {
-        HStack(spacing: 5) {
+        HStack(spacing: Spacing.xs + 1) {
             ZStack {
                 Circle()
-                    .fill(color.opacity(0.15))
+                    .fill(color.opacity(Opacity.medium))
                     .frame(width: 24, height: 24)
 
                 Image(systemName: icon)
@@ -139,15 +139,15 @@ struct InfoBadge: View {
                 .fontWeight(.medium)
                 .foregroundColor(.primary)
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 6)
+        .padding(.horizontal, Spacing.sm + 2)
+        .padding(.vertical, Spacing.xs + 2)
         .background(
             Capsule()
-                .fill(color.opacity(0.08))
+                .fill(color.opacity(Opacity.light - 0.02))
         )
         .overlay(
             Capsule()
-                .strokeBorder(color.opacity(0.2), lineWidth: 1)
+                .strokeBorder(color.opacity(Opacity.border), lineWidth: 1)
         )
     }
 }

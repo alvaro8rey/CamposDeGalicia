@@ -26,7 +26,7 @@ struct CampoHeroImage: View {
                     } placeholder: {
                         ZStack {
                             LinearGradient(
-                                colors: [Color.blue.opacity(0.3), Color.green.opacity(0.3)],
+                                colors: [Color.blue.opacity(Opacity.strong), Color.green.opacity(Opacity.strong)],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
                             )
@@ -41,7 +41,7 @@ struct CampoHeroImage: View {
                 LinearGradient(
                     gradient: Gradient(colors: [
                         Color.black.opacity(0),
-                        Color.black.opacity(0.6)
+                        Color.black.opacity(Opacity.disabled)
                     ]),
                     startPoint: .center,
                     endPoint: .bottom
@@ -52,8 +52,8 @@ struct CampoHeroImage: View {
                 LinearGradient(
                     gradient: Gradient(colors: [
                         Color.clear,
-                        Color(UIColor.systemBackground).opacity(0.3),
-                        Color(UIColor.systemBackground).opacity(0.7)
+                        Color(UIColor.systemBackground).opacity(Opacity.strong),
+                        Color(UIColor.systemBackground).opacity(Opacity.disabled + 0.1)
                     ]),
                     startPoint: UnitPoint(x: 0.5, y: 0.85),
                     endPoint: .bottom
@@ -66,7 +66,7 @@ struct CampoHeroImage: View {
                         HapticFeedback.medium()
                         onToggleVisit()
                     }) {
-                        HStack(spacing: 6) {
+                        HStack(spacing: Spacing.xs + 2) {
                             if isCheckingLocation {
                                 ProgressView()
                                     .progressViewStyle(CircularProgressViewStyle(tint: .white))
@@ -82,31 +82,31 @@ struct CampoHeroImage: View {
                                 .fontWeight(.semibold)
                         }
                         .foregroundColor(.white)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 8)
+                        .padding(.horizontal, Spacing.md)
+                        .padding(.vertical, Spacing.sm)
                         .background(
                             ZStack {
                                 // Glassmorphism effect
-                                RoundedRectangle(cornerRadius: 20)
+                                RoundedRectangle(cornerRadius: CornerRadius.xl)
                                     .fill(
                                         (isVisited ? Color.green : Color.blue)
-                                            .opacity(0.8)
+                                            .opacity(Opacity.strong)
                                     )
                                     .background(
-                                        RoundedRectangle(cornerRadius: 20)
+                                        RoundedRectangle(cornerRadius: CornerRadius.xl)
                                             .fill(.ultraThinMaterial)
                                     )
                             }
                         )
                         .clipShape(Capsule())
-                        .shadow(color: Color.black.opacity(0.3), radius: 8, x: 0, y: 4)
+                        .shadowMedium()
                         .overlay(
                             Capsule()
-                                .strokeBorder(Color.white.opacity(0.2), lineWidth: 1)
+                                .strokeBorder(Color.white.opacity(Opacity.border), lineWidth: 1)
                         )
                     }
                     .disabled(isCheckingLocation)
-                    .padding(16)
+                    .padding(Spacing.lg)
                     .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isVisited)
                     .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isCheckingLocation)
                 }

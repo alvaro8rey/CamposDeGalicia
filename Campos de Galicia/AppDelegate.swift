@@ -15,7 +15,6 @@ class AppDelegate: NSObject, UIApplicationDelegate {
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
         Logger.debug("🚀 App lanzada - didFinishLaunchingWithOptions")
-        Logger.debug("CarPlay disponible: \(application.supportsMultipleScenes)")
 
         // Configurar Firebase
         configureFirebase()
@@ -147,20 +146,7 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         Logger.debug("🔧 Configurando escena: \(connectingSceneSession.role.rawValue)")
         Logger.debug("Configuración: \(connectingSceneSession.configuration.name ?? "sin nombre")")
 
-        // Verificar si es una sesión de CarPlay
-        if connectingSceneSession.role == .carTemplateApplication {
-            Logger.debug("🚗 Detectada sesión de CarPlay")
-
-            let sceneConfig = UISceneConfiguration(name: "CarPlay",
-                                                   sessionRole: connectingSceneSession.role)
-            sceneConfig.delegateClass = CarPlaySceneDelegate.self
-
-            Logger.debug("✅ Scene config creada con delegate: \(String(describing: sceneConfig.delegateClass))")
-            return sceneConfig
-        }
-
         // Configuración por defecto para la app principal
-        Logger.debug("📱 Configurando escena principal (no CarPlay)")
         let sceneConfig = UISceneConfiguration(name: "Default",
                                                sessionRole: connectingSceneSession.role)
         return sceneConfig

@@ -664,7 +664,7 @@ struct EditProfileView: View {
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) {
-                        Button(L(.close)) {
+                        Button(L(.cancel)) {
                             showFullSizeImage = false
                         }
                     }

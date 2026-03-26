@@ -104,7 +104,7 @@ struct ReviewsSectionView: View {
 
             // ✅ FIX: Mostrar loading indicator cuando se están cargando reseñas
             if reviewsManager.isLoading {
-                LoadingView(message: L(.reviewsLoading), style: .spinner)
+                LoadingView(message: "Cargando reseñas...", style: .spinner)
                     .frame(minHeight: 120)
                     .padding(.horizontal)
             } else if let errorMessage = reviewsManager.errorMessage {

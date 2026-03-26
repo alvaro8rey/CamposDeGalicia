@@ -122,6 +122,9 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         AnalyticsManager.shared.track(.appBackgrounded(sessionDuration: sessionDuration))
         AnalyticsManager.shared.endSession()
 
+        // Limpiar caché de memoria al entrar en background para liberar recursos
+        CacheManager.shared.clearMemoryCache()
+
         // Programar tarea de verificación
         AppDelegate.scheduleBackgroundDwellCheck()
     }

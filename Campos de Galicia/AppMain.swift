@@ -169,12 +169,8 @@ struct AppMain: App {
         let viewModel = CamposViewModel()
         _camposViewModel = StateObject(wrappedValue: viewModel)
 
-        // Reducir cache para evitar problemas de memoria
-        let imageCache = URLCache(
-            memoryCapacity: 15_000_000,  // 15 MB (antes 50 MB)
-            diskCapacity: 40_000_000      // 40 MB (antes 100 MB)
-        )
-        URLCache.shared = imageCache
+        // Configurar caché inteligente según el dispositivo
+        CacheManager.shared.setupCache()
 
         Task { @MainActor in
             NetworkMonitor.shared.startMonitoring()
@@ -231,6 +227,9 @@ struct AppMain: App {
                         try? await Task.sleep(nanoseconds: 5 * 60 * 1_000_000_000)
                         guard !Task.isCancelled else { break }
                         await camposViewModel.cleanExpiredExtras()
+
+                        // Limpieza periódica de caché
+                        CacheManager.shared.performPeriodicCleanupIfNeeded()
                     }
                 }
 

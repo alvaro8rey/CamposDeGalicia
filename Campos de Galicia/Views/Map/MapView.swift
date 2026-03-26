@@ -398,10 +398,13 @@ struct MapaView: View {
     // MARK: - Funciones de Búsqueda
     
     private func selectCampoFromSearch(_ campo: CampoModel) {
+        // ❌ DESHABILITADO: Ya no detenemos navegación interna (no existe)
+        /*
         // Si hay una ruta marcada o estamos navegando, la detenemos para mostrar todas las chinchetas de nuevo
         if showRouteSummary || externalIsNavigating {
             stopNavigation()
         }
+        */
 
         searchText = ""
         isSearching = false

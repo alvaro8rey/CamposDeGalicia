@@ -12,13 +12,7 @@ struct CampoInfoCard: View {
             // Nombre del campo
             Text(campo.nombre)
                 .font(.system(size: 22, weight: .bold))
-                .foregroundStyle(
-                    LinearGradient(
-                        colors: [.primary, .primary.opacity(Opacity.strong)],
-                        startPoint: .leading,
-                        endPoint: .trailing
-                    )
-                )
+                .foregroundColor(.primary)
                 .lineLimit(3)
                 .fixedSize(horizontal: false, vertical: true)
 

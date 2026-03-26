@@ -28,6 +28,7 @@ struct EditProfileView: View {
     @State private var selectedPhotoData: Data?
     @State private var isUploadingPhoto: Bool = false
     @State private var showDeletePhotoConfirmation: Bool = false
+    @State private var showFullSizeImage: Bool = false
 
     // MARK: - Initialization
     init(nombre: String, apellidos: String, email: String) {
@@ -43,22 +44,30 @@ struct EditProfileView: View {
                 // MARK: - Profile Photo Section
                 Section {
                     VStack(spacing: 16) {
-                        // Avatar Preview
-                        UserAvatarView(
-                            avatarURL: selectedPhotoData != nil ? nil : authViewModel.avatarURL,
-                            userName: nombre.isEmpty ? "U" : nombre,
-                            size: 100
-                        )
-                        .overlay {
-                            if let photoData = selectedPhotoData,
-                               let uiImage = UIImage(data: photoData) {
-                                Image(uiImage: uiImage)
-                                    .resizable()
-                                    .scaledToFill()
-                                    .frame(width: 100, height: 100)
-                                    .clipShape(Circle())
+                        // Avatar Preview (tap to view full size)
+                        Button(action: {
+                            if authViewModel.avatarURL != nil || selectedPhotoData != nil {
+                                showFullSizeImage = true
+                            }
+                        }) {
+                            UserAvatarView(
+                                avatarURL: selectedPhotoData != nil ? nil : authViewModel.avatarURL,
+                                userName: nombre.isEmpty ? "U" : nombre,
+                                size: 100
+                            )
+                            .overlay {
+                                if let photoData = selectedPhotoData,
+                                   let uiImage = UIImage(data: photoData) {
+                                    Image(uiImage: uiImage)
+                                        .resizable()
+                                        .scaledToFill()
+                                        .frame(width: 100, height: 100)
+                                        .clipShape(Circle())
+                                }
                             }
                         }
+                        .buttonStyle(.plain)
+                        .disabled(authViewModel.avatarURL == nil && selectedPhotoData == nil)
 
                         // Photo Picker Button
                         PhotosPicker(selection: $selectedPhotoItem, matching: .images) {
@@ -69,7 +78,10 @@ struct EditProfileView: View {
                             .font(.subheadline)
                             .fontWeight(.medium)
                             .foregroundColor(.blue)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 8)
                         }
+                        .buttonStyle(.borderless)
                         .onChange(of: selectedPhotoItem) { oldItem, newItem in
                             Task {
                                 if let data = try? await newItem?.loadTransferable(type: Data.self) {
@@ -91,7 +103,10 @@ struct EditProfileView: View {
                                 Label(L(.editProfileDeletePhoto), systemImage: "trash.fill")
                                     .font(.subheadline)
                                     .fontWeight(.medium)
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 8)
                             }
+                            .buttonStyle(.borderless)
                         }
                     }
                     .frame(maxWidth: .infinity)
@@ -230,6 +245,46 @@ struct EditProfileView: View {
                 }
             } message: {
                 Text(L(.editProfileDeletePhotoConfirm))
+            }
+            .sheet(isPresented: $showFullSizeImage) {
+                if let photoData = selectedPhotoData, let uiImage = UIImage(data: photoData) {
+                    NavigationView {
+                        Image(uiImage: uiImage)
+                            .resizable()
+                            .scaledToFit()
+                            .navigationBarTitleDisplayMode(.inline)
+                            .toolbar {
+                                ToolbarItem(placement: .cancellationAction) {
+                                    Button(L(.close)) {
+                                        showFullSizeImage = false
+                                    }
+                                }
+                            }
+                    }
+                } else if let avatarURL = authViewModel.avatarURL, let url = URL(string: avatarURL) {
+                    NavigationView {
+                        AsyncImage(url: url) { phase in
+                            switch phase {
+                            case .success(let image):
+                                image
+                                    .resizable()
+                                    .scaledToFit()
+                            case .failure, .empty:
+                                ProgressView()
+                            @unknown default:
+                                ProgressView()
+                            }
+                        }
+                        .navigationBarTitleDisplayMode(.inline)
+                        .toolbar {
+                            ToolbarItem(placement: .cancellationAction) {
+                                Button(L(.close)) {
+                                    showFullSizeImage = false
+                                }
+                            }
+                        }
+                    }
+                }
             }
             .overlay {
                 if isLoading {

@@ -39,8 +39,12 @@ struct MapaView: View {
     // Filtro para mostrar solo visitados
     @State private var showOnlyVisited: Bool = false
 
-    init(externalIsNavigating: Binding<Bool>) {
+    // ✅ NUEVO: Campo preseleccionado desde otra vista
+    let preselectedCampoId: UUID?
+
+    init(externalIsNavigating: Binding<Bool>, preselectedCampoId: UUID? = nil) {
         self._externalIsNavigating = externalIsNavigating
+        self.preselectedCampoId = preselectedCampoId
         let initialRegion = MKCoordinateRegion(
             center: CLLocationCoordinate2D(latitude: 42.75508, longitude: -7.86621),
             span: MKCoordinateSpan(latitudeDelta: 2.5, longitudeDelta: 2.5)
@@ -264,10 +268,14 @@ struct MapaView: View {
                             .transition(.opacity.combined(with: .move(edge: .top)))
                         }
                     }
-                } else if let route = route {
+                }
+                // ❌ DESHABILITADO: Header de navegación activa
+                /*
+                else if let route = route {
                     navigationHeader(route: route)
                 }
-                
+                */
+
                 Spacer()
                 
                 if showRouteSummary, let route = route, let dest = pendingDestination {
@@ -280,6 +288,8 @@ struct MapaView: View {
                 Color.clear
 
                 VStack(spacing: 12) {
+                    // ❌ DESHABILITADO: Botón para detener navegación
+                    /*
                     if externalIsNavigating || showRouteSummary {
                         Button {
                             HapticFeedback.light()
@@ -292,6 +302,7 @@ struct MapaView: View {
                         }
                         .liquidGlass(color: .red)
                     }
+                    */
 
                     Button {
                         HapticFeedback.light()
@@ -357,6 +368,16 @@ struct MapaView: View {
         .onAppear {
             loadVisitedCampos()
             applyFiltros()
+
+            // ✅ NUEVO: Si hay un campo preseleccionado, seleccionarlo y centrarlo
+            if let campoId = preselectedCampoId {
+                if let campo = camposViewModel.campos.first(where: { $0.id == campoId }) {
+                    // Delay para asegurar que el mapa está renderizado
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                        self.selectCampoFromSearch(campo)
+                    }
+                }
+            }
         }
         .onChange(of: authViewModel.isAuthenticated) { _, isAuthenticated in
             if !isAuthenticated {
@@ -444,6 +465,8 @@ struct MapaView: View {
         applyFiltros()
     }
 
+    // ❌ DESHABILITADO: UI de navegación activa
+    /*
     private func navigationHeader(route: MKRoute) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 12) {
@@ -548,7 +571,10 @@ struct MapaView: View {
         .padding(.top, 10)
         .shadow(color: .black.opacity(0.15), radius: 12, x: 0, y: 4)
     }
+    */
 
+    // ❌ DESHABILITADO: Helpers de navegación
+    /*
     // Helper para elegir icono según el tipo de maniobra
     private func directionIcon(for step: MKRoute.Step) -> String {
         let instruction = step.instructions.lowercased()
@@ -594,7 +620,8 @@ struct MapaView: View {
         // Si la maniobra está cerca (< 1.5 km) o no es importante, mostrar la instrucción original
         return currentStep.instructions.isEmpty ? L(.mapContinueStraight) : currentStep.instructions
     }
-    
+    */
+
     private func formatTime(seconds: TimeInterval) -> String {
         let minutes = Int(seconds / 60)
         if minutes >= 60 {
@@ -681,10 +708,10 @@ struct MapaView: View {
             .padding(.vertical, 16)
             .padding(.horizontal, 20)
 
-            // 🚀 Botón de iniciar
+            // 🚀 Botón de iniciar (abre Maps externo)
             Button {
                 HapticFeedback.medium()
-                startNavigation()
+                openInExternalMaps()
             } label: {
                 HStack(spacing: 10) {
                     Image(systemName: "location.fill")
@@ -775,6 +802,8 @@ struct MapaView: View {
 
                 Logger.debug("✅ [PrepareRoute] Ruta \(self.externalIsNavigating ? "recalculada" : "calculada") - Distancia: \(String(format: "%.1f", route.distance / 1000)) km, Pasos: \(route.steps.count)")
 
+                // ❌ DESHABILITADO: Lógica de navegación paso a paso
+                /*
                 // ✅ Si estamos navegando, encontrar el paso correcto basado en la ubicación actual
                 if self.externalIsNavigating, route.steps.count > 0,
                    let currentUserLocation = self.mapView?.userLocation.location?.coordinate {
@@ -819,10 +848,35 @@ struct MapaView: View {
                     self.distanceToNextStep = newDistance
                     Logger.debug("✅ [PrepareRoute] Distancia UI actualizada: \(String(format: "%.0f", newDistance))m")
                 }
+                */
             }
         }
     }
     
+    // ✅ NUEVO: Abrir ruta en Maps externo (Google Maps o Apple Maps)
+    private func openInExternalMaps() {
+        guard let destination = pendingDestination else { return }
+        guard let lat = destination.campo.latitud, let lon = destination.campo.longitud else { return }
+
+        // Intentar abrir en Google Maps primero
+        let googleMapsURL = URL(string: "comgooglemaps://?saddr=&daddr=\(lat),\(lon)&directionsmode=driving")
+        if let url = googleMapsURL, UIApplication.shared.canOpenURL(url) {
+            Logger.debug("📍 Abriendo ruta en Google Maps")
+            UIApplication.shared.open(url)
+        } else {
+            // Si no tiene Google Maps, abrir en Apple Maps
+            Logger.debug("📍 Abriendo ruta en Apple Maps")
+            let coordinate = CLLocationCoordinate2D(latitude: lat, longitude: lon)
+            let mapItem = MKMapItem(placemark: MKPlacemark(coordinate: coordinate))
+            mapItem.name = destination.campo.nombre
+            mapItem.openInMaps(launchOptions: [
+                MKLaunchOptionsDirectionsModeKey: MKLaunchOptionsDirectionsModeDriving
+            ])
+        }
+    }
+
+    // ❌ DESHABILITADO: Navegación interna (no funciona perfectamente)
+    /*
     private func startNavigation() {
         Logger.debug("🚀 [StartNav] Iniciando navegación...")
         Logger.debug("📍 [StartNav] Ubicación del usuario: \(mapView?.userLocation.location?.coordinate.latitude ?? 0), \(mapView?.userLocation.location?.coordinate.longitude ?? 0)")
@@ -861,8 +915,10 @@ struct MapaView: View {
 
         Logger.debug("🧭 [StartNav] User tracking mode: \(userTrackingMode == .followWithHeading ? "followWithHeading" : "otro")")
     }
+    */
 
-    // Helper para calcular la coordenada al final de un paso específico
+    // ❌ DESHABILITADO: Helper para calcular coordenada al final de un paso
+    /*
     private func calculateStepEndCoordinate(route: MKRoute, stepIndex: Int) -> CLLocationCoordinate2D {
         // Calcular la distancia total hasta el final del paso
         var distanceToEndOfStep: CLLocationDistance = 0
@@ -895,7 +951,10 @@ struct MapaView: View {
         // Si no encontramos el punto, devolver el último punto de la polyline
         return points[polyline.pointCount - 1].coordinate
     }
-    
+    */
+
+    // ❌ DESHABILITADO: Función para detener navegación
+    /*
     private func stopNavigation() {
         Logger.debug("🛑 Deteniendo navegación...")
         self.externalIsNavigating = false
@@ -912,6 +971,7 @@ struct MapaView: View {
 
         resetMapToInitialState()
     }
+    */
 
     private var trackingIcon: String {
         switch userTrackingMode {

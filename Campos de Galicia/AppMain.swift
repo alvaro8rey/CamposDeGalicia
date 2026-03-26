@@ -32,6 +32,9 @@ struct AppMain: App {
     @State private var shouldShowLogros: Bool = false
     @State private var isProcessingDeepLink: Bool = false
 
+    // ✅ NUEVO: Campo preseleccionado para abrir en mapa
+    @State private var mapSelectedCampoId: UUID? = nil
+
     // Task de limpieza periódica
     @State private var cleanupTask: Task<Void, Never>?
 
@@ -83,7 +86,7 @@ struct AppMain: App {
 
     private var mapTab: some View {
         NavigationView {
-            MapaView(externalIsNavigating: $isMapNavigating)
+            MapaView(externalIsNavigating: $isMapNavigating, preselectedCampoId: mapSelectedCampoId)
                 .environmentObject(camposViewModel)
                 .environmentObject(authViewModel)
         }
@@ -259,6 +262,14 @@ struct AppMain: App {
             }
             .onReceive(NotificationCenter.default.publisher(for: .didTapNotification)) { notification in
                 handleNotificationNavigation(notification: notification)
+            }
+            .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("ShowCampoInMap"))) { notification in
+                // ✅ NUEVO: Abrir campo en el mapa
+                if let campoIdString = notification.userInfo?["campoId"] as? String,
+                   let campoId = UUID(uuidString: campoIdString) {
+                    mapSelectedCampoId = campoId
+                    selectedTab = 1 // Cambiar a tab de mapa
+                }
             }
             .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in
                 // Recovery fallback: cuando la app vuelve de background con el flag activo

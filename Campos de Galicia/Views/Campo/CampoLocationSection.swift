@@ -139,32 +139,71 @@ struct CampoLocationSection: View {
 
                 // Botón grande de direcciones (solo visible cuando está expandido)
                 if let lat = campo.latitud, let lon = campo.longitud {
-                    Button(action: {
-                        openDirections(latitude: lat, longitude: lon)
-                    }) {
-                        HStack(spacing: 10) {
-                            Image(systemName: "location.north.circle.fill")
-                                .font(.title3)
-                            Text(L(.campoHowToGet))
-                                .font(.subheadline)
-                                .fontWeight(.semibold)
-                            Spacer()
-                            Image(systemName: "arrow.right")
-                                .font(.caption)
-                                .fontWeight(.bold)
-                        }
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 20)
-                        .padding(.vertical, 14)
-                        .background(
-                            LinearGradient(
-                                colors: [.blue, .blue.opacity(0.8)],
-                                startPoint: .leading,
-                                endPoint: .trailing
+                    VStack(spacing: 12) {
+                        // Botón "Cómo llegar" (abre Maps externo)
+                        Button(action: {
+                            openDirections(latitude: lat, longitude: lon)
+                        }) {
+                            HStack(spacing: 10) {
+                                Image(systemName: "location.north.circle.fill")
+                                    .font(.title3)
+                                Text(L(.campoHowToGet))
+                                    .font(.subheadline)
+                                    .fontWeight(.semibold)
+                                Spacer()
+                                Image(systemName: "arrow.right")
+                                    .font(.caption)
+                                    .fontWeight(.bold)
+                            }
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 20)
+                            .padding(.vertical, 14)
+                            .background(
+                                LinearGradient(
+                                    colors: [.blue, .blue.opacity(0.8)],
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
                             )
-                        )
-                        .clipShape(RoundedRectangle(cornerRadius: 14))
-                        .shadow(color: .blue.opacity(0.4), radius: 10, x: 0, y: 5)
+                            .clipShape(RoundedRectangle(cornerRadius: 14))
+                            .shadow(color: .blue.opacity(0.4), radius: 10, x: 0, y: 5)
+                        }
+
+                        // ✅ NUEVO: Botón "Ver en el mapa" (abre mapa de la app)
+                        Button(action: {
+                            openInAppMap()
+                        }) {
+                            HStack(spacing: 10) {
+                                Image(systemName: "map.circle.fill")
+                                    .font(.title3)
+                                Text("Ver en el mapa")
+                                    .font(.subheadline)
+                                    .fontWeight(.semibold)
+                                Spacer()
+                                Image(systemName: "arrow.right")
+                                    .font(.caption)
+                                    .fontWeight(.bold)
+                            }
+                            .foregroundColor(.blue)
+                            .padding(.horizontal, 20)
+                            .padding(.vertical, 14)
+                            .background(
+                                RoundedRectangle(cornerRadius: 14)
+                                    .fill(.white)
+                                    .shadow(color: .blue.opacity(0.2), radius: 8, x: 0, y: 4)
+                            )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 14)
+                                    .stroke(
+                                        LinearGradient(
+                                            colors: [.blue, .blue.opacity(0.6)],
+                                            startPoint: .leading,
+                                            endPoint: .trailing
+                                        ),
+                                        lineWidth: 2
+                                    )
+                            )
+                        }
                     }
                     .transition(.asymmetric(
                         insertion: .move(edge: .bottom).combined(with: .opacity),
@@ -223,6 +262,15 @@ struct CampoLocationSection: View {
                 UIApplication.shared.open(webUrl)
             }
         }
+    }
+
+    // ✅ NUEVO: Abrir campo en el mapa de la app
+    private func openInAppMap() {
+        NotificationCenter.default.post(
+            name: NSNotification.Name("ShowCampoInMap"),
+            object: nil,
+            userInfo: ["campoId": campo.id.uuidString]
+        )
     }
 }
 

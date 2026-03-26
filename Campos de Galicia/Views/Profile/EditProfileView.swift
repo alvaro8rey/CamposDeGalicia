@@ -247,44 +247,7 @@ struct EditProfileView: View {
                 Text(L(.editProfileDeletePhotoConfirm))
             }
             .sheet(isPresented: $showFullSizeImage) {
-                if let photoData = selectedPhotoData, let uiImage = UIImage(data: photoData) {
-                    NavigationView {
-                        Image(uiImage: uiImage)
-                            .resizable()
-                            .scaledToFit()
-                            .navigationBarTitleDisplayMode(.inline)
-                            .toolbar {
-                                ToolbarItem(placement: .cancellationAction) {
-                                    Button(L(.close)) {
-                                        showFullSizeImage = false
-                                    }
-                                }
-                            }
-                    }
-                } else if let avatarURL = authViewModel.avatarURL, let url = URL(string: avatarURL) {
-                    NavigationView {
-                        AsyncImage(url: url) { phase in
-                            switch phase {
-                            case .success(let image):
-                                image
-                                    .resizable()
-                                    .scaledToFit()
-                            case .failure, .empty:
-                                ProgressView()
-                            @unknown default:
-                                ProgressView()
-                            }
-                        }
-                        .navigationBarTitleDisplayMode(.inline)
-                        .toolbar {
-                            ToolbarItem(placement: .cancellationAction) {
-                                Button(L(.close)) {
-                                    showFullSizeImage = false
-                                }
-                            }
-                        }
-                    }
-                }
+                fullSizeImageView
             }
             .overlay {
                 if isLoading {
@@ -664,6 +627,49 @@ struct EditProfileView: View {
         } catch {
             ToastManager.shared.error("No se pudo eliminar la foto. Inténtalo de nuevo")
             Logger.error("❌ Error al eliminar foto: \(error.localizedDescription)")
+        }
+    }
+
+    // MARK: - Full Size Image View
+    @ViewBuilder
+    private var fullSizeImageView: some View {
+        if let photoData = selectedPhotoData, let uiImage = UIImage(data: photoData) {
+            NavigationView {
+                Image(uiImage: uiImage)
+                    .resizable()
+                    .scaledToFit()
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        ToolbarItem(placement: .cancellationAction) {
+                            Button(L(.close)) {
+                                showFullSizeImage = false
+                            }
+                        }
+                    }
+            }
+        } else if let avatarURL = authViewModel.avatarURL, let url = URL(string: avatarURL) {
+            NavigationView {
+                AsyncImage(url: url) { phase in
+                    switch phase {
+                    case .success(let image):
+                        image
+                            .resizable()
+                            .scaledToFit()
+                    case .failure, .empty:
+                        ProgressView()
+                    @unknown default:
+                        ProgressView()
+                    }
+                }
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button(L(.close)) {
+                            showFullSizeImage = false
+                        }
+                    }
+                }
+            }
         }
     }
 }

@@ -268,11 +268,7 @@ struct LogrosView: View {
 
         return VStack(alignment: .leading, spacing: 16) {
             if grouped.isEmpty {
-                EmptyStateView(
-                    icon: "checkmark.seal.fill",
-                    title: L(.logrosAllCompleted),
-                    message: L(.logrosAllCompletedMessage)
-                )
+                EmptyStateView.noAchievements(type: .pending)
             } else {
                 ForEach(grouped, id: \.title) { group in
                     if !group.items.isEmpty {
@@ -305,11 +301,7 @@ struct LogrosView: View {
 
         return VStack(alignment: .leading, spacing: 16) {
             if grouped.isEmpty {
-                EmptyStateView(
-                    icon: "trophy",
-                    title: L(.logrosNone),
-                    message: L(.logrosNoneMessage)
-                )
+                EmptyStateView.noAchievements(type: .completed)
             } else {
                 ForEach(grouped, id: \.title) { group in
                     if !group.items.isEmpty {
@@ -1079,28 +1071,3 @@ struct LogroDetailView: View {
     }
 }
 
-struct EmptyStateView: View {
-    let icon: String
-    let title: String
-    let message: String
-
-    var body: some View {
-        VStack(spacing: 16) {
-            Image(systemName: icon)
-                .font(.system(size: 60))
-                .foregroundColor(.secondary.opacity(0.5))
-
-            Text(title)
-                .font(.system(size: 20, weight: .bold, design: .rounded))
-                .foregroundColor(.primary)
-
-            Text(message)
-                .font(.system(size: 15, design: .rounded))
-                .foregroundColor(.secondary)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 32)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 40)
-    }
-}

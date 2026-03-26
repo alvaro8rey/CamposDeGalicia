@@ -24,6 +24,7 @@ struct CachedAsyncImage<Content: View, Placeholder: View>: View {
 
     @State private var loadedImage: UIImage? = nil
     @State private var isLoading: Bool = false
+    @State private var loadingFailed: Bool = false
 
     init(
         url: URL?,
@@ -41,6 +42,21 @@ struct CachedAsyncImage<Content: View, Placeholder: View>: View {
         Group {
             if let image = loadedImage {
                 content(Image(uiImage: image))
+            } else if loadingFailed {
+                // Error state - imagen no cargada
+                ZStack {
+                    Color.gray.opacity(0.15)
+
+                    VStack(spacing: 8) {
+                        Image(systemName: "photo.fill")
+                            .font(.system(size: 32))
+                            .foregroundColor(.secondary.opacity(0.5))
+
+                        Text("No disponible")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+                }
             } else {
                 placeholder()
                     .onAppear {
@@ -80,6 +96,9 @@ struct CachedAsyncImage<Content: View, Placeholder: View>: View {
                   let response = response,
                   error == nil else {
                 Logger.warning("⚠️ Error cargando imagen: \(error?.localizedDescription ?? "desconocido")")
+                DispatchQueue.main.async {
+                    self.loadingFailed = true
+                }
                 return
             }
 
@@ -90,6 +109,9 @@ struct CachedAsyncImage<Content: View, Placeholder: View>: View {
             // Downsample para reducir memoria
             guard let downsampledImage = downsampleImage(data: data, to: targetSize) else {
                 Logger.warning("⚠️ Error procesando imagen")
+                DispatchQueue.main.async {
+                    self.loadingFailed = true
+                }
                 return
             }
 

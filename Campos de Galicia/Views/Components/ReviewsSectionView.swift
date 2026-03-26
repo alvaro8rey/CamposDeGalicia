@@ -104,25 +104,24 @@ struct ReviewsSectionView: View {
 
             // ✅ FIX: Mostrar loading indicator cuando se están cargando reseñas
             if reviewsManager.isLoading {
-                HStack {
-                    Spacer()
-                    VStack(spacing: 12) {
-                        ProgressView()
-                        Text("Cargando reseñas...")
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                    }
-                    .padding(.vertical, 40)
-                    Spacer()
-                }
+                LoadingView(message: L(.reviewsLoading), style: .spinner)
+                    .frame(minHeight: 120)
+                    .padding(.horizontal)
             } else if let errorMessage = reviewsManager.errorMessage {
-                ErrorView(message: errorMessage) {
-                    Task { await loadReviews() }
-                }
+                ErrorStateView(
+                    message: errorMessage,
+                    onRetry: {
+                        Task { await loadReviews() }
+                    }
+                )
                 .padding(.horizontal)
             } else if reviewsManager.reviews.isEmpty {
-                EmptyReviewsView()
-                    .padding(.horizontal)
+                EmptyStateView.noReviews(
+                    onAddReview: (authViewModel.isAuthenticated && canUserReview) ? {
+                        showAddReview = true
+                    } : nil
+                )
+                .padding(.horizontal)
             } else {
                 // SLIDER DE RESEÑAS DESTACADAS
                 if !featuredReviews.isEmpty {
@@ -405,40 +404,4 @@ struct AlreadyReviewedView: View {
     }
 }
 
-/// Vista de error con retry
-struct ErrorView: View {
-    let message: String
-    let onRetry: () -> Void
-
-    var body: some View {
-        VStack(spacing: 12) {
-            Image(systemName: "exclamationmark.triangle.fill")
-                .font(.largeTitle)
-                .foregroundColor(.orange)
-
-            Text(message)
-                .font(.subheadline)
-                .foregroundColor(.secondary)
-                .multilineTextAlignment(.center)
-
-            Button(action: onRetry) {
-                HStack {
-                    Image(systemName: "arrow.clockwise")
-                    Text(L(.reviewRetry))
-                }
-                .font(.subheadline)
-                .fontWeight(.semibold)
-                .foregroundColor(.white)
-                .padding(.horizontal, 20)
-                .padding(.vertical, 10)
-                .background(Color.orange)
-                .cornerRadius(10)
-            }
-        }
-        .padding(40)
-        .frame(maxWidth: .infinity)
-        .background(Color(UIColor.secondarySystemBackground))
-        .cornerRadius(16)
-    }
-}
 

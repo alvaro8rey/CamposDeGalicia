@@ -237,12 +237,11 @@ struct EditProfileView: View {
                         Color.black.opacity(0.3)
                             .ignoresSafeArea()
 
-                        VStack(spacing: 12) {
-                            ProgressView()
-                                .scaleEffect(1.5)
-                            Text(L(.editProfileSavingChanges))
-                                .foregroundColor(.white)
-                        }
+                        LoadingView(
+                            message: L(.editProfileSavingChanges),
+                            style: .spinner
+                        )
+                        .foregroundColor(.white)
                         .padding()
                         .background(Color(UIColor.systemBackground))
                         .cornerRadius(12)

@@ -247,12 +247,11 @@ struct AddReviewView: View {
                     Color.black.opacity(0.3)
                         .ignoresSafeArea()
 
-                    VStack(spacing: 16) {
-                        ProgressView()
-                            .scaleEffect(1.5)
-                        Text(isEditMode ? L(.reviewUpdating) : L(.reviewPublishing))
-                            .foregroundColor(.white)
-                    }
+                    LoadingView(
+                        message: isEditMode ? L(.reviewUpdating) : L(.reviewPublishing),
+                        style: .spinner
+                    )
+                    .foregroundColor(.white)
                     .padding(24)
                     .background(Color(UIColor.systemBackground))
                     .cornerRadius(16)

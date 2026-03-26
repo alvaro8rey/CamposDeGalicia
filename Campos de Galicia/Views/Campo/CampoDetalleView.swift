@@ -111,12 +111,37 @@ struct CampoDetalleView: View {
 
                         // Error Message
                         if let errorMessage = errorMessage {
-                            Text(errorMessage)
-                                .foregroundColor(.red)
-                                .font(.caption)
-                                .multilineTextAlignment(.center)
-                                .padding(.vertical, 12)
-                                .frame(maxWidth: .infinity)
+                            HStack(spacing: 12) {
+                                Image(systemName: "exclamationmark.circle.fill")
+                                    .font(.system(size: 20))
+                                    .foregroundColor(.red)
+
+                                Text(errorMessage)
+                                    .font(.subheadline)
+                                    .foregroundColor(.primary)
+                                    .multilineTextAlignment(.leading)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                                Button {
+                                    withAnimation {
+                                        self.errorMessage = nil
+                                    }
+                                } label: {
+                                    Image(systemName: "xmark.circle.fill")
+                                        .font(.system(size: 18))
+                                        .foregroundColor(.secondary)
+                                }
+                            }
+                            .padding(16)
+                            .background(Color.red.opacity(0.1))
+                            .cornerRadius(12)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .stroke(Color.red.opacity(0.3), lineWidth: 1)
+                            )
+                            .padding(.horizontal)
+                            .padding(.vertical, 8)
+                            .transition(.opacity.combined(with: .move(edge: .top)))
                         }
 
                         // Reviews Section

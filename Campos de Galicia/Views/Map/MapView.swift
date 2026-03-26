@@ -711,28 +711,58 @@ struct MapaView: View {
             .padding(.vertical, 16)
             .padding(.horizontal, 20)
 
-            // 🚀 Botón de iniciar (abre Maps externo)
-            Button {
-                HapticFeedback.medium()
-                openInExternalMaps()
-            } label: {
-                HStack(spacing: 10) {
-                    Image(systemName: "location.fill")
-                        .font(.system(size: 18, weight: .semibold))
-                    Text(L(.mapStartNavigation))
-                        .font(.system(size: 17, weight: .semibold))
-                }
-                .foregroundColor(.white)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 16)
-                .background(
-                    LinearGradient(
-                        gradient: Gradient(colors: [Color.blue, Color.blue.opacity(0.8)]),
-                        startPoint: .leading,
-                        endPoint: .trailing
+            // ✨ Botones de acción (Cancelar + Iniciar navegación)
+            HStack(spacing: 12) {
+                // ❌ Botón Cancelar
+                Button {
+                    HapticFeedback.light()
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                        resetMapToInitialState()
+                    }
+                } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.system(size: 16, weight: .semibold))
+                        Text("Cancelar")
+                            .font(.system(size: 15, weight: .semibold))
+                    }
+                    .foregroundColor(.red)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(
+                        RoundedRectangle(cornerRadius: 14)
+                            .fill(Color.red.opacity(0.1))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 14)
+                                    .stroke(Color.red.opacity(0.3), lineWidth: 1.5)
+                            )
                     )
-                )
-                .cornerRadius(16)
+                }
+
+                // 🚀 Botón Iniciar Navegación
+                Button {
+                    HapticFeedback.medium()
+                    openInExternalMaps()
+                } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: "location.fill")
+                            .font(.system(size: 16, weight: .semibold))
+                        Text("Navegar")
+                            .font(.system(size: 15, weight: .semibold))
+                    }
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(
+                        LinearGradient(
+                            gradient: Gradient(colors: [Color.blue, Color.blue.opacity(0.8)]),
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+                    .cornerRadius(14)
+                    .shadow(color: .blue.opacity(0.3), radius: 8, x: 0, y: 4)
+                }
             }
             .padding(.horizontal, 20)
             .padding(.bottom, 20)

@@ -79,9 +79,6 @@ struct CachedAsyncImage<Content: View, Placeholder: View>: View {
                     self.loadedImage = downsampledImage
                     self.isLoading = false
                 }
-
-                // Verificar uso del caché periódicamente
-                CacheManager.shared.performPeriodicCleanupIfNeeded()
                 return
             }
         }
